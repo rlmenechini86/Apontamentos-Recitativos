@@ -11,6 +11,7 @@ import {
   X,
   Calendar,
   RefreshCw,
+  ArrowUpDown,
 } from 'lucide-react';
 import { ComumCongregacao, Setor } from '../types';
 import { Pagination } from './Pagination';
@@ -44,6 +45,16 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
   const [editingId, setEditingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -86,6 +97,27 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
 
     return matchesSearch && matchesUserComum && matchesFilterComum;
   });
+
+  if (sortConfig) {
+    filtered.sort((a, b) => {
+      let valA: any = a[sortConfig.key as keyof typeof a];
+      let valB: any = b[sortConfig.key as keyof typeof b];
+
+      if (sortConfig.key === 'comum_nome') {
+        const comumA = comuns.find(c => c.id === a.comum_id)?.nome || '';
+        const comumB = comuns.find(c => c.id === b.comum_id)?.nome || '';
+        valA = comumA;
+        valB = comumB;
+      }
+
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  } else {
+    // Default sort by name asc
+    filtered.sort((a, b) => a.nome.localeCompare(b.nome));
+  }
 
   useEffect(() => {
     setCurrentPage(1);
@@ -240,10 +272,18 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
           <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
             <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="px-5 py-3.5">Nome Completo / Contato</th>
-                <th className="px-5 py-3.5">Detalhes</th>
-                <th className="px-5 py-3.5">Comum Congregação</th>
-                <th className="px-5 py-3.5 text-center">Status</th>
+                <th className="px-5 py-3.5 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('nome')}>
+                  <div className="flex items-center space-x-1"><span>Nome Completo / Contato</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-5 py-3.5 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('sexo')}>
+                  <div className="flex items-center space-x-1"><span>Detalhes</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-5 py-3.5 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('comum_nome')}>
+                  <div className="flex items-center space-x-1"><span>Comum Congregação</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-5 py-3.5 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('ativo')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Status</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
                 <th className="px-5 py-3.5 text-right">Ações</th>
               </tr>
             </thead>

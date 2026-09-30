@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, User } from 'lucide-react';
+import { Users, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, User, ArrowUpDown } from 'lucide-react';
 import { ContagemMocidade, ComumCongregacao } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from './Pagination';
-import { clearApiCache } from '../utils/api';
+import { apiGet, clearApiCache } from '../utils/api';
 
 interface ContagensMocidadeViewProps {
   comuns: ComumCongregacao[];
@@ -26,10 +26,20 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ContagemMocidade | null>(null);
 
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
   const fetchContagens = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/contagens');
+      const res = await apiGet('/api/contagens');
       if (res.ok) {
         const json = await res.json();
         setContagens(json.data || []);
@@ -73,6 +83,28 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
 
     return matchesSearch && matchesComum && matchesYear && matchesTipo && matchesUserComum && matchesSecretario;
   });
+
+  if (sortConfig) {
+    filtered.sort((a, b) => {
+      let valA: any = a[sortConfig.key as keyof typeof a];
+      let valB: any = b[sortConfig.key as keyof typeof b];
+
+      if (sortConfig.key === 'comum_congregacao.nome') {
+        valA = a.comum_congregacao?.nome || '';
+        valB = b.comum_congregacao?.nome || '';
+      } else if (sortConfig.key === 'usuario.nome_completo') {
+        valA = a.usuario?.nome_completo || '';
+        valB = b.usuario?.nome_completo || '';
+      }
+
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  } else {
+    // Default sort by data desc
+    filtered.sort((a, b) => new Date(b.data || 0).getTime() - new Date(a.data || 0).getTime());
+  }
 
   useEffect(() => {
     setCurrentPage(1);
@@ -183,15 +215,25 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
+        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
           <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
             <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider sticky top-0 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="px-6 py-4">Data</th>
-                <th className="px-6 py-4">Comum Congregação</th>
-                <th className="px-6 py-4">Tipo</th>
-                <th className="px-6 py-4 text-center font-bold">Quantidade</th>
-                <th className="px-6 py-4">Cadastrado por</th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('data')}>
+                  <div className="flex items-center space-x-1"><span>Data</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('comum_congregacao.nome')}>
+                  <div className="flex items-center space-x-1"><span>Comum Congregação</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('tipo')}>
+                  <div className="flex items-center space-x-1"><span>Tipo</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-6 py-4 text-center font-bold cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('quantidade')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Quantidade</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('usuario.nome_completo')}>
+                  <div className="flex items-center space-x-1"><span>Cadastrado por</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
             </thead>
@@ -349,6 +391,7 @@ const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
       });
 
       if (res.ok) {
+        clearApiCache('/api/contagens');
         onSuccess();
         onClose();
       } else {
@@ -379,7 +422,15 @@ const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
               required
               value={formData.data}
               onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-              className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500"
+              onKeyDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                try {
+                  if ('showPicker' in HTMLInputElement.prototype) {
+                    (e.target as HTMLInputElement).showPicker();
+                  }
+                } catch (err) {}
+              }}
+              className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 cursor-pointer"
             />
           </div>
 

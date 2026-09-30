@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Edit2, Trash2, ShieldAlert, CheckCircle2, Search } from 'lucide-react';
+import { UserPlus, Edit2, Trash2, ShieldAlert, CheckCircle2, Search, ArrowUpDown } from 'lucide-react';
 import { Anciao } from '../types';
 import { Pagination } from './Pagination';
 
@@ -11,6 +11,16 @@ export const AdminAnciaosView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const handleSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
   
   const [formData, setFormData] = useState({
     nome: '',
@@ -87,6 +97,25 @@ export const AdminAnciaosView: React.FC = () => {
     !searchTerm || a.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  if (sortConfig) {
+    filtered.sort((a, b) => {
+      let valA: any = a[sortConfig.key as keyof typeof a];
+      let valB: any = b[sortConfig.key as keyof typeof b];
+
+      if (sortConfig.key === 'data_cadastro') {
+        valA = a.data_cadastro ? new Date(a.data_cadastro).getTime() : 0;
+        valB = b.data_cadastro ? new Date(b.data_cadastro).getTime() : 0;
+      }
+
+      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  } else {
+    // Default sort by name
+    filtered.sort((a, b) => a.nome.localeCompare(b.nome));
+  }
+
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedAnciaos = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
@@ -128,9 +157,15 @@ export const AdminAnciaosView: React.FC = () => {
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
             <tr>
-              <th className="px-6 py-4">Nome</th>
-              <th className="px-6 py-4">Data de Cadastro</th>
-              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('nome')}>
+                <div className="flex items-center space-x-1"><span>Nome</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+              </th>
+              <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('data_cadastro')}>
+                <div className="flex items-center space-x-1"><span>Data de Cadastro</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+              </th>
+              <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('ativo')}>
+                <div className="flex items-center space-x-1"><span>Status</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+              </th>
               <th className="px-6 py-4 text-right">Ações</th>
             </tr>
           </thead>

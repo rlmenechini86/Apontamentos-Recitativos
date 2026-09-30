@@ -189,7 +189,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
 
       {/* Tabela de Controle */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
+        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
           <table className="w-full text-center text-sm">
             <thead className="bg-[#242424] text-white sticky top-0 z-10">
               <tr>

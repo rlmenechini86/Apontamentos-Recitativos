@@ -18,6 +18,7 @@ import {
   Sun,
   Moon,
   LogOut,
+  ArrowUpDown,
 } from 'lucide-react';
 import { Sidebar, NavRoute } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
@@ -67,6 +68,15 @@ export default function App() {
   const [selectedSecretarioId, setSelectedSecretarioId] = useState('');
   const [comunsPage, setComunsPage] = useState(1);
   const comunsPerPage = 10;
+  const [comunsSortConfig, setComunsSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  const handleComunsSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (comunsSortConfig && comunsSortConfig.key === key && comunsSortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setComunsSortConfig({ key, direction });
+  };
 
   useEffect(() => {
     setComunsPage(1);
@@ -290,6 +300,28 @@ export default function App() {
     return matchesSearch && matchesAnciao && matchesSecretario;
   });
 
+  if (comunsSortConfig) {
+    filteredComuns.sort((a, b) => {
+      let valA: any = a[comunsSortConfig.key as keyof typeof a];
+      let valB: any = b[comunsSortConfig.key as keyof typeof b];
+
+      if (comunsSortConfig.key === 'anciao') {
+        valA = anciaos.find(an => an.id === a.anciao_id)?.nome || '';
+        valB = anciaos.find(an => an.id === b.anciao_id)?.nome || '';
+      } else if (comunsSortConfig.key === 'secretario') {
+        valA = usuarios.find(u => u.id === a.secretario_id)?.nome_completo || '';
+        valB = usuarios.find(u => u.id === b.secretario_id)?.nome_completo || '';
+      }
+
+      if (valA < valB) return comunsSortConfig.direction === 'asc' ? -1 : 1;
+      if (valA > valB) return comunsSortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  } else {
+    // Default sort by nome
+    filteredComuns.sort((a, b) => a.nome.localeCompare(b.nome));
+  }
+
   const comunsTotalPages = Math.ceil(filteredComuns.length / comunsPerPage);
   const paginatedComuns = filteredComuns.slice((comunsPage - 1) * comunsPerPage, comunsPage * comunsPerPage);
 
@@ -463,7 +495,7 @@ export default function App() {
         </header>
 
         {/* Conteúdo Central da Página */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto print:p-0 print:max-w-none print:block">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[98%] w-full mx-auto print:p-0 print:max-w-none print:block">
           {/* Banner de Feedback */}
           {feedbackMsg && (
             <div
@@ -595,16 +627,28 @@ export default function App() {
 
               {/* Tabela de Comuns Congregações */}
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
-                <div className="overflow-x-auto overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
+                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
                   <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
                     <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider sticky top-0 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
                       <tr>
-                        <th className="px-6 py-4">Código (Controle Interno)</th>
-                        <th className="px-6 py-4">Comum Congregação</th>
-                        <th className="px-6 py-4">Ancião</th>
-                        <th className="px-6 py-4">Secretário / CJM</th>
-                        <th className="px-6 py-4">Reunião de Jovens</th>
-                        <th className="px-6 py-4">Status</th>
+                        <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleComunsSort('codigo')}>
+                          <div className="flex items-center space-x-1"><span>Código (Controle Interno)</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                        </th>
+                        <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleComunsSort('nome')}>
+                          <div className="flex items-center space-x-1"><span>Comum Congregação</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                        </th>
+                        <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleComunsSort('anciao')}>
+                          <div className="flex items-center space-x-1"><span>Ancião</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                        </th>
+                        <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleComunsSort('secretario')}>
+                          <div className="flex items-center space-x-1"><span>Secretário / CJM</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                        </th>
+                        <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleComunsSort('dia_reuniao_jovens')}>
+                          <div className="flex items-center space-x-1"><span>Reunião de Jovens</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                        </th>
+                        <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleComunsSort('ativo')}>
+                          <div className="flex items-center space-x-1"><span>Status</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                        </th>
                         <th className="px-6 py-4 text-right">Ações</th>
                       </tr>
                     </thead>

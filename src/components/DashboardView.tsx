@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Building2,
   Users,
@@ -9,8 +9,9 @@ import {
   ArrowRight,
   CheckCircle2,
 } from 'lucide-react';
-import { ComumCongregacao, Setor, Usuario } from '../types';
+import { ComumCongregacao, Setor, Usuario, ContagemMocidade, Anciao, AuxiliarJovens } from '../types';
 import { NavRoute } from './Sidebar';
+import { apiGet } from '../utils/api';
 
 interface DashboardViewProps {
   comuns: ComumCongregacao[];
@@ -32,6 +33,67 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const ativas = comuns.filter((c) => c.ativo).length;
   const reunioes10hs = comuns.filter((c) => c.dia_reuniao_jovens === 'Domingo 10hs').length;
   const reunioes1430hs = comuns.filter((c) => c.dia_reuniao_jovens === 'Domingo 14:30hs').length;
+
+  const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
+  const [anciaos, setAnciaos] = useState<Anciao[]>([]);
+  const [auxiliares, setAuxiliares] = useState<AuxiliarJovens[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [resContagens, resAnciaos, resAuxiliares] = await Promise.all([
+          apiGet('/api/contagens'),
+          apiGet('/api/anciaos'),
+          apiGet('/api/auxiliares')
+        ]);
+        if (resContagens.ok) {
+          const json = await resContagens.json();
+          setContagens(json.data || []);
+        }
+        if (resAnciaos.ok) {
+          const json = await resAnciaos.json();
+          setAnciaos(json.data || []);
+        }
+        if (resAuxiliares.ok) {
+          const json = await resAuxiliares.json();
+          setAuxiliares(json.data || []);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const currentYear = new Date().getFullYear().toString();
+
+  const totalMocidade = useMemo(() => {
+    const maxPorComum: Record<string, number> = {};
+    contagens.forEach(c => {
+      if (c.tipo === 'Mocidade' && c.data?.startsWith(currentYear)) {
+        if (!maxPorComum[c.comum_id] || c.quantidade > maxPorComum[c.comum_id]) {
+          maxPorComum[c.comum_id] = c.quantidade;
+        }
+      }
+    });
+    return Object.values(maxPorComum).reduce((a, b) => a + b, 0);
+  }, [contagens, currentYear]);
+
+  const totalSantaCeia = useMemo(() => {
+    const maxPorComum: Record<string, number> = {};
+    contagens.forEach(c => {
+      if (c.tipo === 'Santa Ceia' && c.data?.startsWith(currentYear)) {
+        if (!maxPorComum[c.comum_id] || c.quantidade > maxPorComum[c.comum_id]) {
+          maxPorComum[c.comum_id] = c.quantidade;
+        }
+      }
+    });
+    return Object.values(maxPorComum).reduce((a, b) => a + b, 0);
+  }, [contagens, currentYear]);
+
+  const totalCJM = usuarios.filter(u => u.cargo_ministerio?.toLowerCase().includes('cjm') && u.ativo).length;
+  const totalAnciaos = anciaos.filter(a => a.ativo).length;
+  const totalAuxiliares = auxiliares.filter(a => a.ativo).length;
 
   return (
     <div className="space-y-6">
@@ -81,7 +143,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Cards de Métricas Principais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {/* Card 1: Comuns */}
         <div
           onClick={() => onNavigate('admin-comuns')}
@@ -89,7 +151,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Comuns Congregações
+              Comuns
             </span>
             <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition">
               <Building2 className="w-5 h-5" />
@@ -100,50 +162,74 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">({ativas} ativas)</span>
           </div>
           <div className="mt-3 flex items-center text-xs text-slate-500 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition">
-            <span>Gerenciar congregações</span>
+            <span>Ver congregações</span>
             <ArrowRight className="w-3.5 h-3.5 ml-1" />
           </div>
         </div>
 
-        {/* Card 2: Usuários */}
-        <div
-          onClick={() => onNavigate('admin-usuarios')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-500/40 rounded-xl p-5 shadow-xs transition group cursor-pointer"
-        >
+        {/* Card Mocidade */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Usuários do Sistema
+              Total Mocidade ({currentYear})
             </span>
-            <div className="w-9 h-9 rounded-lg bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-500/20 flex items-center justify-center text-sky-600 dark:text-sky-400 group-hover:scale-105 transition">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
               <Users className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline space-x-2">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{usuarios.length}</span>
-            <span className="text-xs text-sky-700 dark:text-sky-400 font-medium">Operadores</span>
-          </div>
-          <div className="mt-3 flex items-center text-xs text-slate-500 group-hover:text-sky-700 dark:group-hover:text-sky-400 transition">
-            <span>Administrar acessos</span>
-            <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{totalMocidade}</span>
           </div>
         </div>
 
-        {/* Card 3: Setores */}
+        {/* Card Santa Ceia */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Setores Regionais
+              Santa Ceia ({currentYear})
             </span>
-            <div className="w-9 h-9 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400">
+            <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
               <Layers className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline space-x-2">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{setores.length}</span>
-            <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">Hierarquia Ativa</span>
+            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{totalSantaCeia}</span>
           </div>
-          <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 truncate">
-            Centro • Aeroporto • Bonsucesso • Pimentas
+        </div>
+
+        {/* Card CJM */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              CJM Ativos
+            </span>
+            <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <CheckCircle2 className="w-5 h-5" />
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline space-x-2">
+            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{totalCJM}</span>
+          </div>
+        </div>
+
+        {/* Card Anciãos e Auxiliares */}
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Liderança
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Anciãos</p>
+                <span className="text-xl font-extrabold text-slate-900 dark:text-white">{totalAnciaos}</span>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Aux. Jovens</p>
+                <span className="text-xl font-extrabold text-slate-900 dark:text-white">{totalAuxiliares}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
