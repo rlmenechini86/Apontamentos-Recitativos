@@ -164,6 +164,7 @@ export class ComumCongregacaoService {
       nome: dto.nome.trim(),
       dia_reuniao_jovens: dto.dia_reuniao_jovens?.trim() || 'Domingo 10hs',
       anciao_id: (dto as any).anciao_id || null,
+      secretario_id: (dto as any).secretario_id || null,
       ativo: dto.ativo !== undefined ? dto.ativo : true,
     };
 
@@ -268,6 +269,7 @@ export class ComumCongregacaoService {
     if (dto.codigo !== undefined) updatePayload.codigo = dto.codigo.trim();
     if (dto.dia_reuniao_jovens !== undefined) updatePayload.dia_reuniao_jovens = dto.dia_reuniao_jovens?.trim() || null;
     if ((dto as any).anciao_id !== undefined) updatePayload.anciao_id = (dto as any).anciao_id || null;
+    if ((dto as any).secretario_id !== undefined) updatePayload.secretario_id = (dto as any).secretario_id || null;
     if (dto.ativo !== undefined) updatePayload.ativo = dto.ativo;
 
     try {

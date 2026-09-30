@@ -29,12 +29,15 @@ export const ComumFormModal: React.FC<ComumFormModalProps> = ({
   setores,
   usuarios = [],
 }) => {
+  const secretarios = usuarios.filter((u) => u.cargo_ministerio === 'Secretário / CJM' && u.ativo);
+
   const [formData, setFormData] = useState({
     nome: '',
     setor_id: '',
     codigo: '',
     dia_reuniao_jovens: 'Domingo 10hs',
     anciao_id: '',
+    secretario_id: '',
     ativo: true,
   });
 
@@ -64,6 +67,7 @@ export const ComumFormModal: React.FC<ComumFormModalProps> = ({
           setor_id: initialData.setor_id || '',
           dia_reuniao_jovens: initialData.dia_reuniao_jovens || 'Domingo 10hs',
           anciao_id: initialData.anciao_id || '',
+          secretario_id: initialData.secretario_id || '',
           ativo: initialData.ativo !== undefined ? initialData.ativo : true,
         });
         setAutoCodigo(initialData.codigo || '');
@@ -74,6 +78,7 @@ export const ComumFormModal: React.FC<ComumFormModalProps> = ({
           setor_id: defaultSetorId,
           dia_reuniao_jovens: 'Domingo 10hs',
           anciao_id: '',
+          secretario_id: '',
           ativo: true,
         });
 
@@ -116,6 +121,7 @@ export const ComumFormModal: React.FC<ComumFormModalProps> = ({
         setor_pertencente: selectedSetor?.nome || undefined,
         dia_reuniao_jovens: formData.dia_reuniao_jovens?.trim() || 'Domingo 10hs',
         anciao_id: formData.anciao_id || null,
+        secretario_id: formData.secretario_id || null,
         ativo: formData.ativo !== undefined ? formData.ativo : true,
       });
       onClose();
@@ -227,6 +233,26 @@ export const ComumFormModal: React.FC<ComumFormModalProps> = ({
               {anciaos.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Secretário de Atendimento */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center space-x-1">
+              <User className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 mr-1" />
+              <span>Secretário / CJM Responsável</span>
+            </label>
+            <select
+              value={formData.secretario_id}
+              onChange={(e) => setFormData({ ...formData, secretario_id: e.target.value })}
+              className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent cursor-pointer"
+            >
+              <option value="">Nenhum Secretário Selecionado</option>
+              {secretarios.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nome_completo}
                 </option>
               ))}
             </select>

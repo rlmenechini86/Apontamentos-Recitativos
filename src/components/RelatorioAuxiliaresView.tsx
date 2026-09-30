@@ -6,12 +6,16 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList, Cell
 } from 'recharts';
 import { ComumCongregacao, Usuario, ContagemMocidade, AuxiliarJovens } from '../types';
+import { apiGet } from '../utils/api';
 
-export const RelatorioAuxiliaresView: React.FC = () => {
+interface Props {
+  comuns: ComumCongregacao[];
+  usuarios: Usuario[];
+}
+
+export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, usuarios: propUsuarios }) => {
   const [loading, setLoading] = useState(true);
 
-  const [comuns, setComuns] = useState<ComumCongregacao[]>([]);
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
   const [auxiliares, setAuxiliares] = useState<AuxiliarJovens[]>([]);
 
@@ -19,22 +23,16 @@ export const RelatorioAuxiliaresView: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [resComuns, resUsuarios, resContagens, resAuxiliares] = await Promise.all([
-          fetch('/api/comuns'),
-          fetch('/api/usuarios'),
-          fetch('/api/contagens'),
-          fetch('/api/auxiliares').catch(() => ({ ok: true, json: () => ({ data: [] }) })) // Caso a API ainda não exista
+        const [resContagens, resAuxiliares] = await Promise.all([
+          apiGet('/api/contagens'),
+          apiGet('/api/auxiliares').catch(() => ({ ok: true, json: () => ({ data: [] }) }))
         ]);
         
-        const [jsonComuns, jsonUsuarios, jsonContagens, jsonAuxiliares] = await Promise.all([
-          resComuns.ok ? resComuns.json() : { data: [] },
-          resUsuarios.ok ? resUsuarios.json() : { data: [] },
+        const [jsonContagens, jsonAuxiliares] = await Promise.all([
           resContagens.ok ? resContagens.json() : { data: [] },
           'ok' in resAuxiliares ? resAuxiliares.json() : { data: [] }
         ]);
 
-        setComuns(jsonComuns.data?.filter((c: any) => c.ativo) || []);
-        setUsuarios(jsonUsuarios.data || []);
         setContagens(jsonContagens.data || []);
         setAuxiliares(jsonAuxiliares.data || []);
       } catch (err) {
@@ -46,6 +44,9 @@ export const RelatorioAuxiliaresView: React.FC = () => {
 
     fetchData();
   }, []);
+
+  const comuns = propComuns;
+  const usuarios = propUsuarios;
 
   const totalCjms = useMemo(() => {
     return usuarios.filter(u => u.cargo_ministerio?.toLowerCase().includes('cjm') && u.ativo).length;

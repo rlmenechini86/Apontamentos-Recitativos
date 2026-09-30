@@ -20,56 +20,81 @@ export const PerfisAcessoView: React.FC<PerfisAcessoViewProps> = ({
   perfis,
   usuarios,
 }) => {
-  const matrizPermissoes = [
+  const defaultMatriz = [
     {
+      id: 'dashboard',
       funcionalidade: 'Visualizar Dashboard Geral',
       admin: true,
       cjm: true,
       apontamento: true,
     },
     {
+      id: 'lancar_apontamento',
       funcionalidade: 'Lançar Apontamento da Comum',
       admin: true,
       cjm: true,
       apontamento: true,
     },
     {
+      id: 'editar_apontamento',
       funcionalidade: 'Editar Apontamentos do Setor',
       admin: true,
       cjm: true,
       apontamento: false,
     },
     {
+      id: 'gerenciar_comuns',
       funcionalidade: 'Gerenciar Comuns Congregações (CRUD)',
       admin: true,
       cjm: false,
       apontamento: false,
     },
     {
+      id: 'gerenciar_usuarios',
       funcionalidade: 'Gerenciar Usuários e Atribuir Perfis',
       admin: true,
       cjm: false,
       apontamento: false,
     },
     {
+      id: 'gerenciar_auxiliares',
       funcionalidade: 'Gerenciar Cadastro de Auxiliares e CJM',
       admin: true,
       cjm: true,
       apontamento: false,
     },
     {
+      id: 'visualizar_setores',
       funcionalidade: 'Visualizar Dados de Outros Setores',
       admin: true,
       cjm: false,
       apontamento: false,
     },
     {
+      id: 'exportar_relatorios',
       funcionalidade: 'Consolidação e Exportação de Relatórios',
       admin: true,
       cjm: true,
       apontamento: false,
     },
   ];
+
+  const [matrizPermissoes, setMatrizPermissoes] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem('ccb_permissoes');
+      return saved ? JSON.parse(saved) : defaultMatriz;
+    } catch {
+      return defaultMatriz;
+    }
+  });
+
+  const togglePermission = (rowIndex: number, role: 'admin' | 'cjm' | 'apontamento') => {
+    const newMatriz = [...matrizPermissoes];
+    newMatriz[rowIndex][role] = !newMatriz[rowIndex][role];
+    setMatrizPermissoes(newMatriz);
+    localStorage.setItem('ccb_permissoes', JSON.stringify(newMatriz));
+    window.dispatchEvent(new Event('permissions-updated'));
+  };
 
   return (
     <div className="space-y-6">
@@ -180,31 +205,37 @@ export const PerfisAcessoView: React.FC<PerfisAcessoViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
-              {matrizPermissoes.map((p, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+              {matrizPermissoes.map((p: any, idx: number) => (
+                <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                   <td className="px-6 py-3 font-medium text-slate-900 dark:text-slate-200">
                     {p.funcionalidade}
                   </td>
                   <td className="px-6 py-3 text-center">
-                    {p.admin ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mx-auto" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-slate-300 dark:text-slate-600 mx-auto" />
-                    )}
+                    <button onClick={() => togglePermission(idx, 'admin')} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer">
+                      {p.admin ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-slate-300 dark:text-slate-600 mx-auto" />
+                      )}
+                    </button>
                   </td>
                   <td className="px-6 py-3 text-center">
-                    {p.cjm ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mx-auto" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-slate-300 dark:text-slate-600 mx-auto" />
-                    )}
+                    <button onClick={() => togglePermission(idx, 'cjm')} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer">
+                      {p.cjm ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-slate-300 dark:text-slate-600 mx-auto" />
+                      )}
+                    </button>
                   </td>
                   <td className="px-6 py-3 text-center">
-                    {p.apontamento ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mx-auto" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-slate-300 dark:text-slate-600 mx-auto" />
-                    )}
+                    <button onClick={() => togglePermission(idx, 'apontamento')} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer">
+                      {p.apontamento ? (
+                        <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mx-auto" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-slate-300 dark:text-slate-600 mx-auto" />
+                      )}
+                    </button>
                   </td>
                 </tr>
               ))}

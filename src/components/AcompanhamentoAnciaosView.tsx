@@ -6,41 +6,42 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList
 } from 'recharts';
 import { ComumCongregacao, Recitativo, ContagemMocidade, Anciao } from '../types';
+import { apiGet } from '../utils/api';
 
-export const AcompanhamentoAnciaosView: React.FC = () => {
+import { useAuth } from '../context/AuthContext';
+
+interface Props {
+  comuns: ComumCongregacao[];
+  anciaos: Anciao[];
+}
+
+export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns, anciaos: propAnciaos }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useState<string>(''); // Vazio = Ano Inteiro
   const [selectedAnciaoId, setSelectedAnciaoId] = useState<string>('');
 
   // Data states
-  const [comuns, setComuns] = useState<ComumCongregacao[]>([]);
   const [recitativos, setRecitativos] = useState<Recitativo[]>([]);
   const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
-  const [anciaos, setAnciaos] = useState<Anciao[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [resComuns, resRecitativos, resContagens, resAnciaos] = await Promise.all([
-          fetch('/api/comuns'),
-          fetch('/api/recitativos'),
-          fetch('/api/contagens'),
-          fetch('/api/anciaos')
+        const [resRecitativos, resContagens] = await Promise.all([
+          apiGet('/api/recitativos'),
+          apiGet('/api/contagens')
         ]);
         
-        const [jsonComuns, jsonRecitativos, jsonContagens, jsonAnciaos] = await Promise.all([
-          resComuns.ok ? resComuns.json() : { data: [] },
+        const [jsonRecitativos, jsonContagens] = await Promise.all([
           resRecitativos.ok ? resRecitativos.json() : { data: [] },
-          resContagens.ok ? resContagens.json() : { data: [] },
-          resAnciaos.ok ? resAnciaos.json() : { data: [] }
+          resContagens.ok ? resContagens.json() : { data: [] }
         ]);
 
-        setComuns(jsonComuns.data?.filter((c: any) => c.ativo) || []);
         setRecitativos(jsonRecitativos.data || []);
         setContagens(jsonContagens.data || []);
-        setAnciaos(jsonAnciaos.data?.filter((a: any) => a.ativo) || []);
       } catch (err) {
         console.error('Erro ao carregar dados:', err);
       } finally {
@@ -50,6 +51,10 @@ export const AcompanhamentoAnciaosView: React.FC = () => {
 
     fetchData();
   }, []);
+
+  const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
+  const comuns = propComuns.filter((c: any) => isRestrictedProfile ? c.id === user?.comum_congregacao_id : true);
+  const anciaos = propAnciaos;
 
   // Filter available years
   const availableYears = useMemo(() => {
@@ -205,13 +210,13 @@ export const AcompanhamentoAnciaosView: React.FC = () => {
 
           <div className="p-6 pt-16 h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={tableData} margin={{ top: 25, right: 30, left: 0, bottom: 20 }}>
+              <BarChart data={tableData} margin={{ top: 25, right: 30, left: 0, bottom: 20 }} barGap={8} barCategoryGap="25%">
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" opacity={0.5} />
                 <XAxis 
                   dataKey="comumNome" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fill: '#475569', fontSize: 12, fontWeight: 'bold' }} 
+                  tick={{ fill: '#475569', fontSize: 11, fontWeight: 'bold' }} 
                   interval={0}
                   tickMargin={10}
                 />
@@ -222,11 +227,11 @@ export const AcompanhamentoAnciaosView: React.FC = () => {
                 />
                 <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" wrapperStyle={{ right: -10 }} />
                 
-                <Bar dataKey="totalRecitativos" name="Recitativos" fill="#1890ff" barSize={35}>
-                  <LabelList dataKey="totalRecitativos" position="top" fill="#1e293b" fontSize={14} fontWeight="bold" />
+                <Bar dataKey="totalRecitativos" name="Recitativos" fill="#1890ff" barSize={25}>
+                  <LabelList dataKey="totalRecitativos" position="top" fill="#1e293b" fontSize={13} fontWeight="bold" />
                 </Bar>
-                <Bar dataKey="expectativa" name="Expectativa" fill="#141414" barSize={35}>
-                  <LabelList dataKey="expectativa" position="top" fill="#1e293b" fontSize={14} fontWeight="bold" />
+                <Bar dataKey="expectativa" name="Expectativa" fill="#141414" barSize={25}>
+                  <LabelList dataKey="expectativa" position="top" fill="#1e293b" fontSize={13} fontWeight="bold" />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>

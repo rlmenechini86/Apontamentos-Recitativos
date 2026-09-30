@@ -46,6 +46,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ perfis, comuns }) => {
 
   // Status & feedback
   const [loading, setLoading] = useState(false);
+  
+  const maskPhone = (v: string) => {
+    let r = v.replace(/\D/g, "");
+    r = r.replace(/^(\d{2})(\d)/g, "($1) $2");
+    r = r.replace(/(\d)(\d{4})$/, "$1-$2");
+    return r.substring(0, 15);
+  };
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -225,39 +232,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ perfis, comuns }) => {
             </div>
           )}
 
-          {/* Abas Alternadoras: Entrar / Cadastro */}
-          <div className="flex border-b border-slate-200 dark:border-slate-800 mb-6">
-            <button
-              type="button"
-              onClick={() => {
-                setMode('login');
-                setErrorMsg(null);
-                setSuccessMsg(null);
-              }}
-              className={`flex-1 pb-3 text-xs font-semibold text-center border-b-2 transition-colors cursor-pointer ${
-                mode === 'login'
-                  ? 'border-emerald-600 text-emerald-700 dark:border-emerald-500 dark:text-emerald-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-              }`}
-            >
-              Entrar no Sistema
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode('register');
-                setErrorMsg(null);
-                setSuccessMsg(null);
-              }}
-              className={`flex-1 pb-3 text-xs font-semibold text-center border-b-2 transition-colors cursor-pointer ${
-                mode === 'register'
-                  ? 'border-emerald-600 text-emerald-700 dark:border-emerald-500 dark:text-emerald-400'
-                  : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-              }`}
-            >
-              Cadastrar com Senha
-            </button>
-          </div>
 
           {/* 1. FORMULÁRIO DE LOGIN */}
           {mode === 'login' && (
@@ -330,46 +304,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ perfis, comuns }) => {
                 )}
               </button>
 
-              {/* Contas Demo Rápidas */}
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-800 mt-4">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-2 text-center">
-                  Contas de Demonstração Rápida
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fillDemoAccount('admin@ccb.org.br', 'Admin@2026!')}
-                    className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-left transition cursor-pointer"
-                  >
-                    <span className="text-[11px] font-bold text-purple-700 dark:text-purple-400 block truncate">
-                      Admin
-                    </span>
-                    <span className="text-[9px] text-slate-500 block">Global</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => fillDemoAccount('marcos.oliveira@ccb.org.br', 'Cjm@2026!')}
-                    className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-left transition cursor-pointer"
-                  >
-                    <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 block truncate">
-                      CJM
-                    </span>
-                    <span className="text-[9px] text-slate-500 block">Setor</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => fillDemoAccount('debora.santos@ccb.org.br', 'Comum@2026!')}
-                    className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-left transition cursor-pointer"
-                  >
-                    <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 block truncate">
-                      Comum
-                    </span>
-                    <span className="text-[9px] text-slate-500 block">Local</span>
-                  </button>
-                </div>
-              </div>
             </form>
           )}
 
@@ -433,7 +367,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ perfis, comuns }) => {
                         type="text"
                         placeholder="(11) 98765-4321"
                         value={celular}
-                        onChange={(e) => setCelular(e.target.value)}
+                        onChange={(e) => setCelular(maskPhone(e.target.value))}
                         required
                         className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />

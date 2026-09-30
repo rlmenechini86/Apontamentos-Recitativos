@@ -2,9 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Building2, ClipboardCheck, Calendar, Search, CheckCircle2, XCircle, Info
 } from 'lucide-react';
-import { ComumCongregacao, Recitativo, ContagemMocidade } from '../types';
+import { ComumCongregacao, Recitativo, ContagemMocidade, Usuario } from '../types';
+import { apiGet } from '../utils/api';
 
-export const ControleApontamentosView: React.FC = () => {
+interface ControleApontamentosViewProps {
+  usuarios?: Usuario[];
+}
+
+export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> = ({ usuarios = [] }) => {
   const [loading, setLoading] = useState(true);
   
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
@@ -12,6 +17,7 @@ export const ControleApontamentosView: React.FC = () => {
   const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonth);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSecretarioId, setSelectedSecretarioId] = useState('');
 
   const [comuns, setComuns] = useState<ComumCongregacao[]>([]);
   const [recitativos, setRecitativos] = useState<Recitativo[]>([]);
@@ -22,9 +28,9 @@ export const ControleApontamentosView: React.FC = () => {
       setLoading(true);
       try {
         const [resComuns, resRecitativos, resContagens] = await Promise.all([
-          fetch('/api/comuns'),
-          fetch('/api/recitativos'),
-          fetch('/api/contagens')
+          apiGet('/api/comuns'),
+          apiGet('/api/recitativos'),
+          apiGet('/api/contagens')
         ]);
         
         const [jsonComuns, jsonRecitativos, jsonContagens] = await Promise.all([
@@ -85,9 +91,11 @@ export const ControleApontamentosView: React.FC = () => {
     return days;
   }, [selectedYear, selectedMonth]);
 
-  const filteredComuns = comuns.filter(c => 
-    !searchTerm || c.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  ).sort((a, b) => a.nome.localeCompare(b.nome));
+  const filteredComuns = comuns.filter(c => {
+    const matchesSearch = !searchTerm || c.nome.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSecretario = !selectedSecretarioId || c.secretario_id === selectedSecretarioId;
+    return matchesSearch && matchesSecretario;
+  }).sort((a, b) => a.nome.localeCompare(b.nome));
 
   // Função para formatar data de YYYY-MM-DD para DD/MM/YYYY
   const formatHeaderDate = (dateStr: string) => {
@@ -148,6 +156,18 @@ export const ControleApontamentosView: React.FC = () => {
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
+          <select 
+            value={selectedSecretarioId}
+            onChange={(e) => setSelectedSecretarioId(e.target.value)}
+            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold cursor-pointer"
+          >
+            <option value="">Secretário (Todos)</option>
+            {usuarios
+              .filter(u => u.cargo_ministerio === 'Secretário / CJM' && u.ativo)
+              .map((u) => (
+                <option key={u.id} value={u.id}>{u.nome_completo}</option>
+              ))}
+          </select>
         </div>
       </div>
 
@@ -169,9 +189,9 @@ export const ControleApontamentosView: React.FC = () => {
 
       {/* Tabela de Controle */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
           <table className="w-full text-center text-sm">
-            <thead className="bg-[#242424] text-white">
+            <thead className="bg-[#242424] text-white sticky top-0 z-10">
               <tr>
                 <th className="py-3 px-4 border-r border-[#444] text-left">Comum</th>
                 {sundays.map(sunday => (

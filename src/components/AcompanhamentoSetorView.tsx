@@ -8,43 +8,43 @@ import {
   LineChart, Line, ReferenceLine
 } from 'recharts';
 import { ComumCongregacao, Recitativo, ContagemMocidade, Usuario } from '../types';
+import { apiGet } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
-export const AcompanhamentoSetorView: React.FC = () => {
+interface Props {
+  comuns: ComumCongregacao[];
+  usuarios: Usuario[];
+}
+
+export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, usuarios: propUsuarios }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedComumId, setSelectedComumId] = useState<string>('');
 
   // Data states
-  const [comuns, setComuns] = useState<ComumCongregacao[]>([]);
   const [recitativos, setRecitativos] = useState<Recitativo[]>([]);
   const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [auxiliares, setAuxiliares] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [resComuns, resRecitativos, resContagens, resUsuarios, resAuxiliares] = await Promise.all([
-          fetch('/api/comuns'),
-          fetch('/api/recitativos'),
-          fetch('/api/contagens'),
-          fetch('/api/usuarios'),
-          fetch('/api/auxiliares')
+        const [resRecitativos, resContagens, resAuxiliares] = await Promise.all([
+          apiGet('/api/recitativos'),
+          apiGet('/api/contagens'),
+          apiGet('/api/auxiliares')
         ]);
         
-        const [jsonComuns, jsonRecitativos, jsonContagens, jsonUsuarios, jsonAuxiliares] = await Promise.all([
-          resComuns.ok ? resComuns.json() : { data: [] },
+        const [jsonRecitativos, jsonContagens, jsonAuxiliares] = await Promise.all([
           resRecitativos.ok ? resRecitativos.json() : { data: [] },
           resContagens.ok ? resContagens.json() : { data: [] },
-          resUsuarios.ok ? resUsuarios.json() : { data: [] },
           resAuxiliares.ok ? resAuxiliares.json() : { data: [] },
         ]);
 
-        setComuns(jsonComuns.data || []);
         setRecitativos(jsonRecitativos.data || []);
         setContagens(jsonContagens.data || []);
-        setUsuarios(jsonUsuarios.data || []);
         setAuxiliares(jsonAuxiliares.data || []);
       } catch (err) {
         console.error('Erro ao carregar dados:', err);
@@ -55,6 +55,10 @@ export const AcompanhamentoSetorView: React.FC = () => {
 
     fetchData();
   }, []);
+
+  const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
+  const comuns = propComuns.filter(c => isRestrictedProfile ? c.id === user?.comum_congregacao_id : true);
+  const usuarios = propUsuarios;
 
   // Apply Filters
   const filteredComuns = selectedComumId ? comuns.filter(c => c.id === selectedComumId) : comuns;
@@ -364,8 +368,8 @@ export const AcompanhamentoSetorView: React.FC = () => {
             </div>
           </div>
 
-          <div className="border-t border-slate-200 dark:border-slate-800">
-            <table className="w-full text-center text-xs text-slate-700 dark:text-slate-300">
+          <div className="overflow-x-auto border-t border-slate-200 dark:border-slate-800">
+            <table className="min-w-full text-center text-xs text-slate-700 dark:text-slate-300">
               <thead className="bg-slate-600 text-white">
                 <tr>
                    <th className="py-2 px-2 border-r border-slate-500">Ano</th>
@@ -440,8 +444,8 @@ export const AcompanhamentoSetorView: React.FC = () => {
             </div>
           </div>
 
-          <div className="border-t border-slate-200 dark:border-slate-800">
-            <table className="w-full text-center text-xs text-slate-700 dark:text-slate-300">
+          <div className="overflow-x-auto border-t border-slate-200 dark:border-slate-800">
+            <table className="min-w-full text-center text-xs text-slate-700 dark:text-slate-300">
               <thead className="bg-slate-600 text-white">
                 <tr>
                   <th className="py-2 px-2 border-r border-slate-500">Mês</th>

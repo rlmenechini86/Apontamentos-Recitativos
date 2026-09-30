@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ComumCongregacao, Setor } from '../types';
 import { Pagination } from './Pagination';
+import { useAuth } from '../context/AuthContext';
 
 export interface AuxiliarJovens {
   id: string;
@@ -34,9 +35,11 @@ interface AuxiliaresCJMViewProps {
 }
 
 export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, setores }) => {
+  const { user } = useAuth();
   const [auxiliares, setAuxiliares] = useState<AuxiliarJovens[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedComumId, setSelectedComumId] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -77,7 +80,11 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
       item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.celular && item.celular.includes(searchTerm));
 
-    return matchesSearch;
+    const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
+    const matchesUserComum = isRestrictedProfile ? item.comum_id === user?.comum_congregacao_id : true;
+    const matchesFilterComum = selectedComumId ? item.comum_id === selectedComumId : true;
+
+    return matchesSearch && matchesUserComum && matchesFilterComum;
   });
 
   useEffect(() => {
@@ -86,6 +93,13 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedAuxiliares = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const maskPhone = (v: string) => {
+    let r = v.replace(/\D/g, "");
+    r = r.replace(/^(\d{2})(\d)/g, "($1) $2");
+    r = r.replace(/(\d)(\d{4})$/, "$1-$2");
+    return r.substring(0, 15);
+  };
 
   const handleOpenNew = () => {
     setEditingId(null);
@@ -202,6 +216,17 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
               className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
+
+          <select
+            value={selectedComumId}
+            onChange={(e) => setSelectedComumId(e.target.value)}
+            className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          >
+            <option value="">Todas as Congregações</option>
+            {comuns.map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
         </div>
 
         <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -300,13 +325,6 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(aux.id, aux.nome)}
-                          className="p-1 rounded text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                          title="Excluir"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -392,7 +410,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                     type="text"
                     placeholder="(11) 99999-9999"
                     value={formData.celular}
-                    onChange={(e) => setFormData({ ...formData, celular: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, celular: maskPhone(e.target.value) })}
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-emerald-500"
                   />
                 </div>

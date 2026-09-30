@@ -82,6 +82,13 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
 
   const selectedPerfil = perfis.find((p) => p.id === formData.perfil_id);
 
+  const maskPhone = (v: string) => {
+    let r = v.replace(/\D/g, "");
+    r = r.replace(/^(\d{2})(\d)/g, "($1) $2");
+    r = r.replace(/(\d)(\d{4})$/, "$1-$2");
+    return r.substring(0, 15);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -201,7 +208,7 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                 type="text"
                 placeholder="(11) 98765-4321"
                 value={formData.celular}
-                onChange={(e) => setFormData({ ...formData, celular: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, celular: maskPhone(e.target.value) })}
                 className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 required
               />
@@ -219,7 +226,8 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
               onChange={(e) => setFormData({ ...formData, cargo_ministerio: e.target.value })}
               className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent cursor-pointer"
             >
-              <option value="">-- Nenhum --</option>
+              <option value="Nenhum">Nenhum</option>
+              <option value="Secretário / CJM">Secretário / CJM</option>
               <option value="Auxiliar de Jovens">Auxiliar de Jovens</option>
               <option value="CJM">CJM</option>
               <option value="Ancião">Ancião</option>

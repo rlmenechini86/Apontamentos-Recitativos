@@ -49,6 +49,7 @@ export default function App() {
   // Dados de Comuns e Setores
   const [comuns, setComuns] = useState<ComumCongregacao[]>([]);
   const [setores, setSetores] = useState<Setor[]>([]);
+  const [anciaos, setAnciaos] = useState<Anciao[]>([]);
 
   // Dados de Usuários e Perfis
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -62,9 +63,14 @@ export default function App() {
 
   // Filtros Comuns
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSetorId, setSelectedSetorId] = useState('');
+  const [selectedAnciaoId, setSelectedAnciaoId] = useState('');
+  const [selectedSecretarioId, setSelectedSecretarioId] = useState('');
   const [comunsPage, setComunsPage] = useState(1);
   const comunsPerPage = 10;
+
+  useEffect(() => {
+    setComunsPage(1);
+  }, [searchTerm, selectedAnciaoId, selectedSecretarioId]);
 
   // Modais Comum
   const [isComumModalOpen, setIsComumModalOpen] = useState(false);
@@ -101,6 +107,18 @@ export default function App() {
     }
   };
 
+  const fetchAnciaos = async () => {
+    try {
+      const res = await fetch('/api/anciaos');
+      if (res.ok) {
+        const json = await res.json();
+        setAnciaos(json.data?.filter((a: any) => a.ativo) || []);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar anciãos:', err);
+    }
+  };
+
   const fetchPerfis = async () => {
     try {
       const res = await fetch('/api/usuarios/meta/perfis');
@@ -118,7 +136,6 @@ export default function App() {
       setLoadingComuns(true);
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
-      if (selectedSetorId) params.append('setor_id', selectedSetorId);
 
       const res = await fetch(`/api/comuns?${params.toString()}`);
       if (res.ok) {
@@ -152,6 +169,7 @@ export default function App() {
   useEffect(() => {
     fetchStatus();
     fetchSetores();
+    fetchAnciaos();
     fetchPerfis();
     fetchComuns();
     fetchUsuarios();
@@ -266,9 +284,10 @@ export default function App() {
       item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.codigo?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesSetor = !selectedSetorId || item.setor_id === selectedSetorId;
+    const matchesAnciao = !selectedAnciaoId || item.anciao_id === selectedAnciaoId;
+    const matchesSecretario = !selectedSecretarioId || item.secretario_id === selectedSecretarioId;
 
-    return matchesSearch && matchesSetor;
+    return matchesSearch && matchesAnciao && matchesSecretario;
   });
 
   const comunsTotalPages = Math.ceil(filteredComuns.length / comunsPerPage);
@@ -481,39 +500,34 @@ export default function App() {
             />
           )}
 
-          {/* ROTA 2: APONTAMENTOS (Reunião de Jovens Semanal) */}
-          {currentRoute === 'apontamentos' && (
-            <ApontamentosView comuns={comuns} setores={setores} />
-          )}
-
           {/* ROTA 2.1: ACOMPANHAMENTO SETOR */}
           {currentRoute === 'acompanhamento-setor' && (
-            <AcompanhamentoSetorView />
+            <AcompanhamentoSetorView comuns={comuns} usuarios={usuarios} />
           )}
 
           {/* ROTA 2.2: ACOMPANHAMENTO ANCIÃOS */}
           {currentRoute === 'acompanhamento-anciaos' && (
-            <AcompanhamentoAnciaosView />
+            <AcompanhamentoAnciaosView comuns={comuns} anciaos={anciaos} />
           )}
 
           {/* ROTA 2.3: CONTROLE DE APONTAMENTOS */}
           {currentRoute === 'controle-apontamentos' && (
-            <ControleApontamentosView />
+            <ControleApontamentosView usuarios={usuarios} />
           )}
 
           {/* ROTA 2.4: RELATORIO DE AUXILIARES */}
           {currentRoute === 'relatorio-auxiliares' && (
-            <RelatorioAuxiliaresView />
+            <RelatorioAuxiliaresView comuns={comuns} usuarios={usuarios} />
           )}
 
           {/* ROTA 2.3: APONTAMENTOS - RECITATIVOS */}
           {currentRoute === 'apontamentos-recitativos' && (
-            <RecitativosView comuns={comuns} />
+            <RecitativosView comuns={comuns} usuarios={usuarios} />
           )}
 
           {/* ROTA 2.3: APONTAMENTOS - CONTAGENS */}
           {currentRoute === 'apontamentos-contagens' && (
-            <ContagensMocidadeView comuns={comuns} />
+            <ContagensMocidadeView comuns={comuns} usuarios={usuarios} />
           )}
 
           {/* ROTA 3: ADMINISTRAÇÃO -> COMUM CONGREGAÇÃO */}
@@ -533,18 +547,34 @@ export default function App() {
                     />
                   </div>
 
-                  <div className="w-full sm:w-64">
+                  <div className="w-full sm:w-48">
                     <select
-                      value={selectedSetorId}
-                      onChange={(e) => setSelectedSetorId(e.target.value)}
+                      value={selectedAnciaoId}
+                      onChange={(e) => setSelectedAnciaoId(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                     >
-                      <option value="">Todos os Setores</option>
-                      {setores.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.nome}
+                      <option value="">Ancião (Todos)</option>
+                      {anciaos.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.nome}
                         </option>
                       ))}
+                    </select>
+                  </div>
+                  <div className="w-full sm:w-48">
+                    <select
+                      value={selectedSecretarioId}
+                      onChange={(e) => setSelectedSecretarioId(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                    >
+                      <option value="">Secretário (Todos)</option>
+                      {usuarios
+                        .filter(u => u.cargo_ministerio === 'Secretário / CJM' && u.ativo)
+                        .map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.nome_completo}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 </div>
@@ -565,13 +595,14 @@ export default function App() {
 
               {/* Tabela de Comuns Congregações */}
               <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
                   <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
-                    <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                    <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider sticky top-0 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
                       <tr>
                         <th className="px-6 py-4">Código (Controle Interno)</th>
                         <th className="px-6 py-4">Comum Congregação</th>
-                        <th className="px-6 py-4">Setor Pertencente</th>
+                        <th className="px-6 py-4">Ancião</th>
+                        <th className="px-6 py-4">Secretário / CJM</th>
                         <th className="px-6 py-4">Reunião de Jovens</th>
                         <th className="px-6 py-4">Status</th>
                         <th className="px-6 py-4 text-right">Ações</th>
@@ -607,8 +638,13 @@ export default function App() {
                               {item.nome}
                             </td>
                             <td className="px-6 py-4">
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-800 text-sky-700 dark:text-sky-400 border border-slate-200 dark:border-slate-700">
-                                {item.setor_pertencente || item.setores?.nome || 'Setor Vinculado'}
+                              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                                {anciaos.find(a => a.id === item.anciao_id)?.nome || '-'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                                {usuarios.find(u => u.id === item.secretario_id)?.nome_completo || '-'}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-300">

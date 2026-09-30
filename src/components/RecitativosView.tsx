@@ -3,18 +3,22 @@ import { CheckCircle2, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Buildin
 import { Recitativo, ComumCongregacao } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from './Pagination';
+import { clearApiCache } from '../utils/api';
 
 interface RecitativosViewProps {
   comuns: ComumCongregacao[];
+  usuarios?: Usuario[];
 }
 
-export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns }) => {
+export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuarios = [] }) => {
+  const { user } = useAuth();
   const [recitativos, setRecitativos] = useState<Recitativo[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString().padStart(2, '0'));
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedSecretarioId, setSelectedSecretarioId] = useState('');
   
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -46,6 +50,7 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns }) => {
     try {
       const res = await fetch(`/api/recitativos/${id}`, { method: 'DELETE' });
       if (res.ok) {
+        clearApiCache('/api/recitativos');
         fetchRecitativos();
       } else {
         alert('Erro ao excluir recitativo.');
@@ -64,12 +69,17 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns }) => {
 
     const matchesSearch = item.comum_congregacao?.nome?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesComum = selectedComumId ? item.comum_id === selectedComumId : true;
-    return matchesSearch && matchesComum && matchesMonth && matchesYear;
+    const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
+    const matchesUserComum = isRestrictedProfile ? item.comum_id === user?.comum_congregacao_id : true;
+
+    const matchesSecretario = !selectedSecretarioId || comuns.find(c => c.id === item.comum_id)?.secretario_id === selectedSecretarioId;
+
+    return matchesSearch && matchesComum && matchesMonth && matchesYear && matchesUserComum && matchesSecretario;
   });
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedComumId, selectedMonth, selectedYear]);
+  }, [searchTerm, selectedComumId, selectedMonth, selectedYear, selectedSecretarioId]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -137,6 +147,20 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns }) => {
               ))}
             </select>
           </div>
+          <div className="w-full sm:w-48">
+            <select
+              value={selectedSecretarioId}
+              onChange={(e) => setSelectedSecretarioId(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              <option value="">Secretário (Todos)</option>
+              {usuarios
+                .filter(u => u.cargo_ministerio === 'Secretário / CJM' && u.ativo)
+                .map((u) => (
+                  <option key={u.id} value={u.id}>{u.nome_completo}</option>
+                ))}
+            </select>
+          </div>
         </div>
 
         <div className="flex items-center space-x-2 w-full lg:w-auto justify-end">
@@ -161,9 +185,9 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns }) => {
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
           <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
-            <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+            <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider sticky top-0 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
               <tr>
                 <th className="px-6 py-4">Data</th>
                 <th className="px-6 py-4">Comum Congregação</th>
@@ -224,6 +248,7 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns }) => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
+                      {user?.perfis?.nome !== 'Apontamento' && (
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => {
@@ -234,13 +259,8 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns }) => {
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-800 transition cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -317,6 +337,19 @@ const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (formData.data) {
+      const [y, m, d] = formData.data.split('-');
+      const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
+      const dayOfWeek = dateObj.getDay();
+      if (dayOfWeek !== 0) {
+        const days = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+        if (!window.confirm(`A data escolhida é ${days[dayOfWeek]}. Tem certeza que deseja salvar esse apontamento nesta data?`)) {
+          return;
+        }
+      }
+    }
+
     try {
       setLoading(true);
 
@@ -368,6 +401,15 @@ const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, data: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500"
               />
+              {formData.data && (
+                <div className={`text-[11px] mt-1 font-semibold ${
+                  new Date(Number(formData.data.split('-')[0]), Number(formData.data.split('-')[1]) - 1, Number(formData.data.split('-')[2])).getDay() === 0
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-amber-600 dark:text-amber-500'
+                }`}>
+                  {['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'][new Date(Number(formData.data.split('-')[0]), Number(formData.data.split('-')[1]) - 1, Number(formData.data.split('-')[2])).getDay()]}
+                </div>
+              )}
             </div>
             <div className="space-y-1">
               <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Comum Congregação *</label>

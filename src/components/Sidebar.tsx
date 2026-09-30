@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   ClipboardCheck,
@@ -22,6 +22,7 @@ import {
 import { DbStatus } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { hasPermission } from '../utils/permissions';
 
 export type NavRoute =
   | 'dashboard'
@@ -62,6 +63,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isAdminExpanded, setIsAdminExpanded] = useState(true);
   const [isApontamentosExpanded, setIsApontamentosExpanded] = useState(true);
   const [isRelatoriosExpanded, setIsRelatoriosExpanded] = useState(true);
+  const [permsVersion, setPermsVersion] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => setPermsVersion(v => v + 1);
+    window.addEventListener('permissions-updated', handleUpdate);
+    return () => window.removeEventListener('permissions-updated', handleUpdate);
+  }, []);
 
   const isAdminRouteActive = [
     'admin-comuns',
@@ -220,6 +228,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Relatórios */}
+          {hasPermission(user, 'exportar_relatorios') && (
           <div className="space-y-1">
             <button
               onClick={() => setIsRelatoriosExpanded(!isRelatoriosExpanded)}
@@ -297,8 +306,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
           </div>
+          )}
 
           {/* 3. Administração (com Submódulos) */}
+          {(hasPermission(user, 'gerenciar_comuns') || hasPermission(user, 'gerenciar_usuarios') || hasPermission(user, 'gerenciar_auxiliares')) && (
           <div className="space-y-1">
             <button
               onClick={() => setIsAdminExpanded(!isAdminExpanded)}
@@ -323,6 +334,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {isAdminExpanded && (
               <div className="pl-4 pr-1 py-1 space-y-1 border-l-2 border-slate-200 dark:border-slate-800 ml-4 my-1 animate-in fade-in slide-in-from-top-1 duration-150">
                 {/* 3.1 Comum Congregação */}
+                {hasPermission(user, 'gerenciar_comuns') && (
                 <button
                   onClick={() => handleNavClick('admin-comuns')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -339,8 +351,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {comunsCount}
                   </span>
                 </button>
+                )}
 
                 {/* 3.2 Usuários */}
+                {hasPermission(user, 'gerenciar_usuarios') && (
                 <button
                   onClick={() => handleNavClick('admin-usuarios')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -357,8 +371,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     {usuariosCount}
                   </span>
                 </button>
+                )}
 
                 {/* 3.3 Cadastro de Anciãos */}
+                {user?.perfis?.nome !== 'CJM' && (
                 <button
                   onClick={() => handleNavClick('admin-anciaos')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -372,8 +388,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span>Cadastro de Anciãos</span>
                   </div>
                 </button>
+                )}
 
                 {/* 3.4 Perfis de Acesso */}
+                {user?.perfis?.nome !== 'CJM' && (
                 <button
                   onClick={() => handleNavClick('admin-perfis')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -390,8 +408,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     3
                   </span>
                 </button>
+                )}
 
                 {/* 3.4 Cadastro de Auxiliares de Jovens */}
+                {hasPermission(user, 'gerenciar_auxiliares') && (
                 <button
                   onClick={() => handleNavClick('admin-auxiliares')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -408,53 +428,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     Ativo
                   </span>
                 </button>
+                )}
               </div>
             )}
           </div>
+          )}
+
         </div>
 
-        {/* Rodapé da Sidebar */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 space-y-3">
-          {/* Seletor de Tema Modo Claro / Modo Escuro */}
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-            <span className="text-slate-600 dark:text-slate-400 font-medium">Tema:</span>
-            <button
-              onClick={toggleTheme}
-              className="flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
-              title="Alternar entre Modo Claro e Modo Escuro"
-            >
-              {theme === 'dark' ? (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Modo Escuro</span>
-                </>
-              ) : (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Modo Claro</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Status do Banco Supabase */}
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-            <div className="flex items-center space-x-2">
-              <Database className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-slate-600 dark:text-slate-400 font-medium">Supabase:</span>
-            </div>
-            {status?.connected && status?.tableExists ? (
-              <span className="flex items-center text-emerald-700 dark:text-emerald-400 font-semibold text-[11px]">
-                <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600 dark:text-emerald-400" />
-                Online
-              </span>
-            ) : (
-              <span className="flex items-center text-amber-700 dark:text-amber-400 font-semibold text-[11px]">
-                <AlertTriangle className="w-3 h-3 mr-1 text-amber-600 dark:text-amber-400" />
-                Conectado
-              </span>
-            )}
-          </div>
+      {/* Rodapé da Sidebar */}
+      <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 space-y-3">
 
           {/* Usuário logado atual */}
           <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50">

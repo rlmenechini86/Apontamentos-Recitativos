@@ -24,6 +24,7 @@ export interface ComumCongregacao {
   estado?: string;
   cep?: string;
   anciao_id?: string | null;
+  secretario_id?: string | null;
   setores?: Partial<Setor>;
 }
 

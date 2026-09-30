@@ -3,18 +3,22 @@ import { Users, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, Use
 import { ContagemMocidade, ComumCongregacao } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from './Pagination';
+import { clearApiCache } from '../utils/api';
 
 interface ContagensMocidadeViewProps {
   comuns: ComumCongregacao[];
+  usuarios?: Usuario[];
 }
 
-export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ comuns }) => {
+export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ comuns, usuarios = [] }) => {
+  const { user } = useAuth();
   const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedTipo, setSelectedTipo] = useState('');
+  const [selectedSecretarioId, setSelectedSecretarioId] = useState('');
   
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -46,6 +50,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
     try {
       const res = await fetch(`/api/contagens/${id}`, { method: 'DELETE' });
       if (res.ok) {
+        clearApiCache('/api/contagens');
         fetchContagens();
       } else {
         alert('Erro ao excluir contagem.');
@@ -61,12 +66,17 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
     const matchesComum = selectedComumId ? item.comum_id === selectedComumId : true;
     const matchesYear = selectedYear ? item.data?.startsWith(selectedYear) : true;
     const matchesTipo = selectedTipo ? item.tipo === selectedTipo : true;
-    return matchesSearch && matchesComum && matchesYear && matchesTipo;
+    const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
+    const matchesUserComum = isRestrictedProfile ? item.comum_id === user?.comum_congregacao_id : true;
+    
+    const matchesSecretario = !selectedSecretarioId || comuns.find(c => c.id === item.comum_id)?.secretario_id === selectedSecretarioId;
+
+    return matchesSearch && matchesComum && matchesYear && matchesTipo && matchesUserComum && matchesSecretario;
   });
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedComumId, selectedYear, selectedTipo]);
+  }, [searchTerm, selectedComumId, selectedYear, selectedTipo, selectedSecretarioId]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -133,6 +143,21 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
                 <option value="Santa Ceia">Santa Ceia</option>
               </select>
             </div>
+            <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase mb-1 block">Secretário</span>
+              <select
+                value={selectedSecretarioId}
+                onChange={(e) => setSelectedSecretarioId(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+              >
+                <option value="">Todos</option>
+                {usuarios
+                  .filter(u => u.cargo_ministerio === 'Secretário / CJM' && u.ativo)
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>{u.nome_completo}</option>
+                  ))}
+              </select>
+            </div>
           </div>
 
         <div className="flex items-center space-x-2 w-full md:w-auto justify-end">
@@ -158,9 +183,9 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-auto max-h-[60vh] scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
           <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
-            <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+            <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider sticky top-0 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
               <tr>
                 <th className="px-6 py-4">Data</th>
                 <th className="px-6 py-4">Comum Congregação</th>
@@ -223,6 +248,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
+                      {user?.perfis?.nome !== 'Apontamento' && (
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => {
@@ -233,13 +259,8 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-800 transition cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
+                      )}
                     </td>
                   </tr>
                 ))

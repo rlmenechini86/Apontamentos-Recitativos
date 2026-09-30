@@ -81,7 +81,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* Cards de Métricas Principais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Card 1: Comuns */}
         <div
           onClick={() => onNavigate('admin-comuns')}
@@ -144,31 +144,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="mt-3 text-xs text-slate-500 dark:text-slate-400 truncate">
             Centro • Aeroporto • Bonsucesso • Pimentas
-          </div>
-        </div>
-
-        {/* Card 4: Apontamentos Semanais */}
-        <div
-          onClick={() => onNavigate('apontamentos')}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-400 dark:hover:border-emerald-500/40 rounded-xl p-5 shadow-xs transition group cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Apontamentos
-            </span>
-            <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-105 transition">
-              <ClipboardCheck className="w-5 h-5" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline space-x-2">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">Semanal</span>
-            <span className="text-xs text-emerald-700 dark:text-emerald-400 font-medium flex items-center">
-              <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600 dark:text-emerald-400" /> Em dia
-            </span>
-          </div>
-          <div className="mt-3 flex items-center text-xs text-slate-500 group-hover:text-purple-700 dark:group-hover:text-purple-400 transition">
-            <span>Acessar registros</span>
-            <ArrowRight className="w-3.5 h-3.5 ml-1" />
           </div>
         </div>
       </div>
