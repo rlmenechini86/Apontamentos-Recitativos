@@ -208,9 +208,9 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
             {selectedMonth ? 'MÉDIA MENSAL' : 'MÉDIA ANUAL'}
           </div>
 
-          <div className="p-6 pt-16 h-[400px]">
+          <div className="p-6 pt-16 h-[450px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={tableData} margin={{ top: 25, right: 30, left: 0, bottom: 20 }} barGap={8} barCategoryGap="25%">
+              <BarChart data={tableData} margin={{ top: 25, right: 30, left: 0, bottom: 80 }} barGap={4} barCategoryGap="20%">
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" opacity={0.5} />
                 <XAxis 
                   dataKey="comumNome" 
@@ -219,19 +219,21 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
                   tick={{ fill: '#475569', fontSize: 11, fontWeight: 'bold' }} 
                   interval={0}
                   tickMargin={10}
+                  angle={-45}
+                  textAnchor="end"
                 />
                 <YAxis hide />
                 <RechartsTooltip 
                   cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
-                <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" wrapperStyle={{ right: -10 }} />
+                <Legend verticalAlign="top" align="right" layout="horizontal" iconType="circle" wrapperStyle={{ top: -10 }} />
                 
-                <Bar dataKey="totalRecitativos" name="Recitativos" fill="#1890ff" barSize={25}>
-                  <LabelList dataKey="totalRecitativos" position="top" fill="#1e293b" fontSize={13} fontWeight="bold" />
+                <Bar dataKey="totalRecitativos" name="Recitativos" fill="#1890ff" maxBarSize={30}>
+                  <LabelList dataKey="totalRecitativos" position="top" fill="#1e293b" fontSize={11} fontWeight="bold" />
                 </Bar>
-                <Bar dataKey="expectativa" name="Expectativa" fill="#141414" barSize={25}>
-                  <LabelList dataKey="expectativa" position="top" fill="#1e293b" fontSize={13} fontWeight="bold" />
+                <Bar dataKey="expectativa" name="Expectativa" fill="#141414" maxBarSize={30}>
+                  <LabelList dataKey="expectativa" position="top" fill="#1e293b" fontSize={11} fontWeight="bold" />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
