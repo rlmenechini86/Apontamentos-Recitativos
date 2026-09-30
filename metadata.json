@@ -1,0 +1,6 @@
+{
+  "name": "Sistema de Controle de Apontamentos de Jovens e Menores",
+  "description": "Módulo 1: Fundação do Banco de Dados e Módulo de Localidades e Usuários",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
