@@ -364,31 +364,31 @@ export const AcompanhamentoSetorView: React.FC = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto print:overflow-visible border-t border-slate-200 dark:border-slate-800">
-            <table className="w-full text-center text-sm print:text-[10px] text-slate-700 dark:text-slate-300">
+          <div className="border-t border-slate-200 dark:border-slate-800">
+            <table className="w-full text-center text-xs text-slate-700 dark:text-slate-300">
               <thead className="bg-slate-600 text-white">
                 <tr>
-                   <th className="py-2 px-3 print:py-0.5 border-r border-slate-500">Ano</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-500">Meninas</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-500">Meninos</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-500">Moças</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-500">Moços</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-500 font-bold">Subtotal</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-500 font-bold">Expectativa</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 font-bold">Resultado</th>
+                   <th className="py-2 px-2 border-r border-slate-500">Ano</th>
+                  <th className="py-2 px-2 border-r border-slate-500">Meninas</th>
+                  <th className="py-2 px-2 border-r border-slate-500">Meninos</th>
+                  <th className="py-2 px-2 border-r border-slate-500">Moças</th>
+                  <th className="py-2 px-2 border-r border-slate-500">Moços</th>
+                  <th className="py-2 px-2 border-r border-slate-500 font-bold">Subtotal</th>
+                  <th className="py-2 px-2 border-r border-slate-500 font-bold">Expectativa</th>
+                  <th className="py-2 px-2 font-bold">Resultado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {annualData.map((row) => (
                   <tr key={row.ano} className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800 font-semibold">{row.ano}</td>
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800 font-bold">{row.subtotal.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800 font-bold text-slate-500">{row.expectativa.toLocaleString('pt-BR')}</td>
-                    <td className={`py-2 px-3 print:py-0.5 print:px-1 font-bold ${row.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold">{row.ano}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold">{row.subtotal.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold text-slate-500">{row.expectativa.toLocaleString('pt-BR')}</td>
+                    <td className={`py-2 px-2 font-bold ${row.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {row.resultado.toLocaleString('pt-BR')}
                     </td>
                   </tr>
@@ -440,29 +440,29 @@ export const AcompanhamentoSetorView: React.FC = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto print:overflow-visible border-t border-slate-200 dark:border-slate-800">
-            <table className="w-full text-center text-sm print:text-[10px] text-slate-700 dark:text-slate-300">
+          <div className="border-t border-slate-200 dark:border-slate-800">
+            <table className="w-full text-center text-xs text-slate-700 dark:text-slate-300">
               <thead className="bg-slate-600 text-white">
                 <tr>
-                  <th className="py-2 px-3 print:py-0.5 border-r border-slate-500">Mês</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-500">Meninas</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-500">Meninos</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-500">Moças</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-500">Moços</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-500 font-bold">Subtotal</th>
-                  <th className="py-2 px-3 print:py-0.5 print:px-1 font-bold">Resultado</th>
+                  <th className="py-2 px-2 border-r border-slate-500">Mês</th>
+                  <th className="py-2 px-2 border-r border-slate-500">Meninas</th>
+                  <th className="py-2 px-2 border-r border-slate-500">Meninos</th>
+                  <th className="py-2 px-2 border-r border-slate-500">Moças</th>
+                  <th className="py-2 px-2 border-r border-slate-500">Moços</th>
+                  <th className="py-2 px-2 border-r border-slate-500 font-bold">Subtotal</th>
+                  <th className="py-2 px-2 font-bold">Resultado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {monthlyData.map((row) => (
                   <tr key={row.mes} className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800 font-semibold">{row.mes}</td>
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-3 print:py-0.5 print:px-1 border-r border-slate-200 dark:border-slate-800 font-bold">{row.subtotal.toLocaleString('pt-BR')}</td>
-                    <td className={`py-2 px-3 print:py-0.5 print:px-1 font-bold ${row.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold">{row.mes}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold">{row.subtotal.toLocaleString('pt-BR')}</td>
+                    <td className={`py-2 px-2 font-bold ${row.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {row.resultado.toLocaleString('pt-BR')}
                     </td>
                   </tr>

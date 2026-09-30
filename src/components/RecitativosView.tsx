@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, User, AlertCircle } from 'lucide-react';
 import { Recitativo, ComumCongregacao } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { Pagination } from './Pagination';
 
 interface RecitativosViewProps {
   comuns: ComumCongregacao[];
@@ -14,6 +15,9 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns }) => {
   const [selectedComumId, setSelectedComumId] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString().padStart(2, '0'));
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Recitativo | null>(null);
@@ -62,6 +66,13 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns }) => {
     const matchesComum = selectedComumId ? item.comum_id === selectedComumId : true;
     return matchesSearch && matchesComum && matchesMonth && matchesYear;
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedComumId, selectedMonth, selectedYear]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString());
 
@@ -183,7 +194,7 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns }) => {
                   </td>
                 </tr>
               ) : (
-                filtered.map((item) => (
+                paginatedItems.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
@@ -237,6 +248,13 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns }) => {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {isModalOpen && (

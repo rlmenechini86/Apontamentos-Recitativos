@@ -13,6 +13,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { ComumCongregacao, Setor } from '../types';
+import { Pagination } from './Pagination';
 
 export interface AuxiliarJovens {
   id: string;
@@ -38,6 +39,8 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -76,6 +79,13 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
 
     return matchesSearch;
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedAuxiliares = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleOpenNew = () => {
     setEditingId(null);
@@ -229,7 +239,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                   </td>
                 </tr>
               ) : (
-                filtered.map((aux) => (
+                paginatedAuxiliares.map((aux) => (
                   <tr key={aux.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                     <td className="px-5 py-3.5">
                       <div className="font-semibold text-slate-900 dark:text-slate-100">{aux.nome}</div>
@@ -305,6 +315,13 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Modal Novo / Editar Auxiliar */}

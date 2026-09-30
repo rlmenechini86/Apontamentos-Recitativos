@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, User } from 'lucide-react';
 import { ContagemMocidade, ComumCongregacao } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { Pagination } from './Pagination';
 
 interface ContagensMocidadeViewProps {
   comuns: ComumCongregacao[];
@@ -14,6 +15,9 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
   const [selectedComumId, setSelectedComumId] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedTipo, setSelectedTipo] = useState('');
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ContagemMocidade | null>(null);
@@ -59,6 +63,13 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
     const matchesTipo = selectedTipo ? item.tipo === selectedTipo : true;
     return matchesSearch && matchesComum && matchesYear && matchesTipo;
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedComumId, selectedYear, selectedTipo]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const availableYears = Array.from(new Set(contagens.map(c => c.data?.substring(0, 4)).filter(Boolean))).sort().reverse();
 
@@ -177,7 +188,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
                   </td>
                 </tr>
               ) : (
-                filtered.map((item) => (
+                paginatedItems.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
@@ -236,6 +247,13 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {isModalOpen && (

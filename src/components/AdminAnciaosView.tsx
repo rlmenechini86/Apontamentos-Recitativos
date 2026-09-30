@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { UserPlus, Edit2, Trash2, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { UserPlus, Edit2, Trash2, ShieldAlert, CheckCircle2, Search } from 'lucide-react';
 import { Anciao } from '../types';
+import { Pagination } from './Pagination';
 
 export const AdminAnciaosView: React.FC = () => {
   const [anciaos, setAnciaos] = useState<Anciao[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   const [formData, setFormData] = useState({
     nome: '',
@@ -79,6 +83,13 @@ export const AdminAnciaosView: React.FC = () => {
     }
   };
 
+  const filtered = anciaos.filter(a =>
+    !searchTerm || a.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedAnciaos = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   if (loading) {
     return <div className="p-8 text-center text-slate-500">Carregando...</div>;
   }
@@ -92,13 +103,25 @@ export const AdminAnciaosView: React.FC = () => {
             Gerencie o cadastro de Anciãos que atendem as congregações.
           </p>
         </div>
-        <button
-          onClick={handleOpenNew}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium flex items-center space-x-2"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>Novo Ancião</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar ancião..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <button
+            onClick={handleOpenNew}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium flex items-center space-x-2"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Novo Ancião</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -112,7 +135,7 @@ export const AdminAnciaosView: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-            {anciaos.map(a => (
+            {paginatedAnciaos.map(a => (
               <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                 <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">{a.nome}</td>
                 <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
@@ -139,13 +162,20 @@ export const AdminAnciaosView: React.FC = () => {
                 </td>
               </tr>
             ))}
-            {anciaos.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-slate-500">Nenhum ancião cadastrado.</td>
+                <td colSpan={4} className="px-6 py-8 text-center text-slate-500">Nenhum ancião encontrado.</td>
               </tr>
             )}
           </tbody>
         </table>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {isModalOpen && (

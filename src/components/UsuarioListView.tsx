@@ -13,6 +13,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { Usuario, Perfil, ComumCongregacao } from '../types';
+import { Pagination } from './Pagination';
 
 interface UsuarioListViewProps {
   usuarios: Usuario[];
@@ -40,6 +41,9 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPerfilId, setSelectedPerfilId] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
+  
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 10;
 
   const filteredUsuarios = usuarios.filter((user) => {
     const matchesSearch =
@@ -53,6 +57,13 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
 
     return matchesSearch && matchesPerfil && matchesComum;
   });
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedPerfilId, selectedComumId]);
+
+  const totalPages = Math.ceil(filteredUsuarios.length / itemsPerPage);
+  const paginatedUsuarios = filteredUsuarios.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const totalUsuarios = usuarios.length;
   const totalAdmins = usuarios.filter((u) => u.perfis?.nome === 'Administrador').length;
@@ -249,7 +260,7 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredUsuarios.map((user) => (
+                paginatedUsuarios.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
@@ -347,6 +358,13 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filteredUsuarios.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       </div>
     </div>
   );

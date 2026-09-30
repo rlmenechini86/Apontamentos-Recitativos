@@ -35,6 +35,7 @@ import { ComumFormModal } from './components/ComumFormModal';
 import { UsuarioFormModal } from './components/UsuarioFormModal';
 import { UsuarioListView } from './components/UsuarioListView';
 import { AdminAnciaosView } from './components/AdminAnciaosView';
+import { Pagination } from './components/Pagination';
 import { ComumCongregacao, Setor, Perfil, Usuario, DbStatus } from './types';
 import { useTheme } from './context/ThemeContext';
 import { useAuth } from './context/AuthContext';
@@ -62,6 +63,8 @@ export default function App() {
   // Filtros Comuns
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSetorId, setSelectedSetorId] = useState('');
+  const [comunsPage, setComunsPage] = useState(1);
+  const comunsPerPage = 10;
 
   // Modais Comum
   const [isComumModalOpen, setIsComumModalOpen] = useState(false);
@@ -267,6 +270,9 @@ export default function App() {
 
     return matchesSearch && matchesSetor;
   });
+
+  const comunsTotalPages = Math.ceil(filteredComuns.length / comunsPerPage);
+  const paginatedComuns = filteredComuns.slice((comunsPage - 1) * comunsPerPage, comunsPage * comunsPerPage);
 
   const getRouteTitle = () => {
     switch (currentRoute) {
@@ -592,7 +598,7 @@ export default function App() {
                           </td>
                         </tr>
                       ) : (
-                        filteredComuns.map((item) => (
+                        paginatedComuns.map((item) => (
                           <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                             <td className="px-6 py-4 font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                               {item.codigo || '-'}
@@ -649,6 +655,13 @@ export default function App() {
                     </tbody>
                   </table>
                 </div>
+                <Pagination
+                  currentPage={comunsPage}
+                  totalPages={comunsTotalPages}
+                  totalItems={filteredComuns.length}
+                  itemsPerPage={comunsPerPage}
+                  onPageChange={setComunsPage}
+                />
               </div>
             </div>
           )}

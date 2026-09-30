@@ -4,17 +4,33 @@ import { Recitativo, CreateRecitativoDTO, UpdateRecitativoDTO } from '../types/i
 export class RecitativosService {
   async getAll(): Promise<{ data: Recitativo[]; source: string }> {
     try {
-      const { data, error } = await supabase
-        .from('recitativos')
-        .select(`
-          *,
-          comum_congregacao:comum_id (id, codigo, nome),
-          usuario:cadastrado_por (id, nome_completo)
-        `)
-        .order('data', { ascending: false });
+      const allData: Recitativo[] = [];
+      const batchSize = 1000;
+      let from = 0;
+      let hasMore = true;
 
-      if (error) throw new Error(error.message);
-      return { data: (data as unknown as Recitativo[]) || [], source: 'supabase' };
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('recitativos')
+          .select(`
+            *,
+            comum_congregacao:comum_id (id, codigo, nome),
+            usuario:cadastrado_por (id, nome_completo)
+          `)
+          .order('data', { ascending: false })
+          .range(from, from + batchSize - 1);
+
+        if (error) throw new Error(error.message);
+        if (!data || data.length === 0) {
+          hasMore = false;
+        } else {
+          allData.push(...(data as unknown as Recitativo[]));
+          from += batchSize;
+          if (data.length < batchSize) hasMore = false;
+        }
+      }
+
+      return { data: allData, source: 'supabase' };
     } catch (err: any) {
       console.error('[RecitativosService] Exceção na listagem:', err.message);
       throw err;
