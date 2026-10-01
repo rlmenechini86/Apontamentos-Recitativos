@@ -47,23 +47,30 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      let res;
       if (editingItem) {
-        await fetch(`/api/reunioes-eventos/${editingItem.id}`, {
+        res = await fetch(`/api/reunioes-eventos/${editingItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData)
         });
       } else {
-        await fetch('/api/reunioes-eventos', {
+        res = await fetch('/api/reunioes-eventos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData)
         });
       }
+      
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Erro ao salvar');
+      }
+
       setIsModalOpen(false);
       onUpdate();
-    } catch (err) {
-      alert('Erro ao salvar.');
+    } catch (err: any) {
+      alert('Erro ao salvar: ' + err.message);
     }
   };
 

@@ -35,23 +35,30 @@ export const AdminTiposEventoView: React.FC<AdminTiposEventoViewProps> = ({ tipo
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      let res;
       if (editingItem) {
-        await fetch(`/api/tipos-evento/${editingItem.id}`, {
+        res = await fetch(`/api/tipos-evento/${editingItem.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData)
         });
       } else {
-        await fetch('/api/tipos-evento', {
+        res = await fetch('/api/tipos-evento', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData)
         });
       }
+      
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Erro ao salvar');
+      }
+
       setIsModalOpen(false);
       onUpdate();
-    } catch (err) {
-      alert('Erro ao salvar o tipo de evento.');
+    } catch (err: any) {
+      alert('Erro ao salvar o tipo de evento: ' + err.message);
     }
   };
 

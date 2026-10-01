@@ -100,9 +100,9 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({ reunioes }) => {
                           key={event.id}
                           className="px-2 py-1 text-[11px] font-medium text-white rounded shadow-sm truncate"
                           style={{ backgroundColor: event.tipos_evento?.cor || '#3b82f6' }}
-                          title={event.nome || event.tipos_evento?.nome}
+                          title={`${event.tipos_evento?.nome} - ${event.comum_congregacao?.nome || 'Regional/Geral'}`}
                         >
-                          {event.nome || event.tipos_evento?.nome}
+                          {event.tipos_evento?.nome} - {event.comum_congregacao?.nome || 'Regional/Geral'}
                         </div>
                       ))}
                     </div>
