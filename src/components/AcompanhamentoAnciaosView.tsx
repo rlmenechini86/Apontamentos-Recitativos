@@ -87,10 +87,10 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
   // Compute Data for Table and Chart
   const tableData = useMemo(() => {
     return comunsDoAnciao.map(comum => {
-      // 1. Mocidade (Filtra por Ano e opcionalmente Mês - Pega a contagem mais recente)
+      // 1. Mocidade (Filtra por Ano - Pega a contagem mais recente do ano para todos os meses)
       const mocidadeRegistros = contagens
         .filter(c => c.comum_id === comum.id && c.tipo === 'Mocidade' && 
-                     c.data.startsWith(selectedMonth ? `${selectedYear}-${selectedMonth}` : selectedYear))
+                     c.data.startsWith(selectedYear))
         .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
         
       const mocidadeTotal = mocidadeRegistros.length > 0 ? mocidadeRegistros[0].quantidade : 0;
