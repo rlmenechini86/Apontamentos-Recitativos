@@ -331,6 +331,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
             </Bar>
           </BarChart>
         </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
