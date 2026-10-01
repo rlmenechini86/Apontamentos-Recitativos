@@ -72,46 +72,50 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({ reunioes }) => {
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-          {weekDays.map(day => (
-            <div key={day} className="py-3 text-center text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
-              {day}
+        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
+          <div className="min-w-[800px]">
+            <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+              {weekDays.map(day => (
+                <div key={day} className="py-3 text-center text-sm font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
+                  {day}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 auto-rows-fr">
-          {calendarDays.map((day, idx) => {
-            const events = getEventsForDate(day);
-            const isToday = day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
+            <div className="grid grid-cols-7 auto-rows-fr">
+              {calendarDays.map((day, idx) => {
+                const events = getEventsForDate(day);
+                const isToday = day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth() && currentDate.getFullYear() === new Date().getFullYear();
 
-            return (
-              <div 
-                key={idx} 
-                className={`min-h-[120px] p-2 border-r border-b border-slate-100 dark:border-slate-800/60 ${!day ? 'bg-slate-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors'}`}
-              >
-                {day && (
-                  <div className="h-full flex flex-col">
-                    <span className={`text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-700 dark:text-slate-300'}`}>
-                      {day}
-                    </span>
-                    <div className="flex-1 flex flex-col gap-1 overflow-y-auto pr-1 custom-scrollbar">
-                      {events.map(event => (
-                        <div 
-                          key={event.id}
-                          className="px-2 py-1 text-[11px] font-medium text-white rounded shadow-sm flex flex-col leading-tight"
-                          style={{ backgroundColor: event.tipos_evento?.cor || '#3b82f6' }}
-                          title={`${event.tipos_evento?.nome} - ${event.comum_congregacao?.nome || 'Regional/Geral'}`}
-                        >
-                          <span className="font-bold truncate">{event.tipos_evento?.nome}</span>
-                          <span className="text-[10px] opacity-90 truncate">{event.comum_congregacao?.nome || 'Regional/Geral'}</span>
+                return (
+                  <div 
+                    key={idx} 
+                    className={`min-h-[120px] p-2 border-r border-b border-slate-100 dark:border-slate-800/60 ${!day ? 'bg-slate-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors'}`}
+                  >
+                    {day && (
+                      <div className="h-full flex flex-col">
+                        <span className={`text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full mb-1 ${isToday ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-700 dark:text-slate-300'}`}>
+                          {day}
+                        </span>
+                        <div className="flex-1 flex flex-col gap-1 overflow-y-auto pr-1 custom-scrollbar">
+                          {events.map(event => (
+                            <div 
+                              key={event.id}
+                              className="px-2 py-1 text-[11px] font-medium text-white rounded shadow-sm flex flex-col leading-tight"
+                              style={{ backgroundColor: event.tipos_evento?.cor || '#3b82f6' }}
+                              title={`${event.tipos_evento?.nome} - ${event.comum_congregacao?.nome || 'Regional/Geral'}`}
+                            >
+                              <span className="font-bold truncate">{event.tipos_evento?.nome}</span>
+                              <span className="text-[10px] opacity-90 truncate">{event.comum_congregacao?.nome || 'Regional/Geral'}</span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>
