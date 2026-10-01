@@ -98,16 +98,22 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
       // 2. Expectativa
       const expectativa = Math.round(mocidadeTotal * 0.70);
 
-      // 3. Total de Recitativos (Média ignorando zeros)
+      // 3. Total de Recitativos (Média individual por categoria, ignorando zeros)
       const recsPeriodo = recitativos.filter(r => r.comum_id === comum.id && 
                                                r.data.startsWith(selectedMonth ? `${selectedYear}-${selectedMonth}` : selectedYear));
-      const validRecs = recsPeriodo
-        .map(r => r.meninas + r.meninos + r.mocas + r.mocos)
-        .filter(total => total > 0);
       
-      const mediaAnual = validRecs.length > 0 
-        ? Math.round(validRecs.reduce((a, b) => a + b, 0) / validRecs.length) 
-        : 0;
+      const meninas = recsPeriodo.map(r => r.meninas).filter(v => v > 0);
+      const meninos = recsPeriodo.map(r => r.meninos).filter(v => v > 0);
+      const mocas = recsPeriodo.map(r => r.mocas).filter(v => v > 0);
+      const mocos = recsPeriodo.map(r => r.mocos).filter(v => v > 0);
+
+      let sumMeninas = 0, sumMeninos = 0, sumMocas = 0, sumMocos = 0;
+      if (meninas.length > 0) sumMeninas = Math.round(meninas.reduce((a, b) => a + b, 0) / meninas.length);
+      if (meninos.length > 0) sumMeninos = Math.round(meninos.reduce((a, b) => a + b, 0) / meninos.length);
+      if (mocas.length > 0) sumMocas = Math.round(mocas.reduce((a, b) => a + b, 0) / mocas.length);
+      if (mocos.length > 0) sumMocos = Math.round(mocos.reduce((a, b) => a + b, 0) / mocos.length);
+
+      const mediaAnual = sumMeninas + sumMeninos + sumMocas + sumMocos;
 
       // 4. Expectativa x Resultado
       const diff = mediaAnual - expectativa;
