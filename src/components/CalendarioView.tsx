@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ReuniaoEvento } from '../types';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, MapPin, Clock, Tag } from 'lucide-react';
 
 interface CalendarioViewProps {
   reunioes: ReuniaoEvento[];
@@ -8,6 +8,7 @@ interface CalendarioViewProps {
 
 export const CalendarioView: React.FC<CalendarioViewProps> = ({ reunioes }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedEvent, setSelectedEvent] = useState<ReuniaoEvento | null>(null);
 
   const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
@@ -100,12 +101,13 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({ reunioes }) => {
                           {events.map(event => (
                             <div 
                               key={event.id}
-                              className="px-2 py-1 text-[11px] font-medium text-white rounded shadow-sm flex flex-col leading-tight"
+                              onClick={() => setSelectedEvent(event)}
+                              className="px-2 py-1.5 text-[11px] font-medium text-white rounded shadow-sm flex flex-col leading-tight cursor-pointer hover:opacity-90 transition-opacity"
                               style={{ backgroundColor: event.tipos_evento?.cor || '#3b82f6' }}
                               title={`${event.tipos_evento?.nome} - ${event.comum_congregacao?.nome || 'Regional/Geral'}`}
                             >
-                              <span className="font-bold truncate">{event.tipos_evento?.nome}</span>
-                              <span className="text-[10px] opacity-90 truncate">{event.comum_congregacao?.nome || 'Regional/Geral'}</span>
+                              <span className="font-bold whitespace-normal break-words">{event.tipos_evento?.nome}</span>
+                              <span className="text-[10px] opacity-90 whitespace-normal break-words mt-0.5">{event.comum_congregacao?.nome || 'Regional/Geral'}</span>
                             </div>
                           ))}
                         </div>
@@ -118,6 +120,73 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({ reunioes }) => {
           </div>
         </div>
       </div>
+
+      {/* Modal de Detalhes do Evento (Somente Leitura) */}
+      {selectedEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xl w-full max-w-md border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+            <div 
+              className="p-4 flex items-center justify-between text-white"
+              style={{ backgroundColor: selectedEvent.tipos_evento?.cor || '#3b82f6' }}
+            >
+              <h3 className="font-bold text-lg">Detalhes do Evento</h3>
+              <button 
+                onClick={() => setSelectedEvent(null)}
+                className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <div className="flex items-start space-x-3">
+                <Tag className="w-5 h-5 text-slate-400 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Evento</p>
+                  <p className="text-base font-medium text-slate-800 dark:text-slate-100">{selectedEvent.tipos_evento?.nome}</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <MapPin className="w-5 h-5 text-slate-400 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Local (Comum)</p>
+                  <p className="text-base font-medium text-slate-800 dark:text-slate-100">{selectedEvent.comum_congregacao?.nome || 'Regional/Geral'}</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <Clock className="w-5 h-5 text-slate-400 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Data</p>
+                  <p className="text-base font-medium text-slate-800 dark:text-slate-100">
+                    {(() => {
+                      const [y, m, d] = selectedEvent.data.split('-');
+                      return `${d}/${m}/${y}`;
+                    })()}
+                  </p>
+                </div>
+              </div>
+              
+              {selectedEvent.nome && (
+                <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-2">
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Descrição Adicional</p>
+                  <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{selectedEvent.nome}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex justify-end">
+              <button 
+                onClick={() => setSelectedEvent(null)}
+                className="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 text-sm font-semibold rounded-lg transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
