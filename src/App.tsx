@@ -27,6 +27,7 @@ import { AcompanhamentoSetorView } from './components/AcompanhamentoSetorView';
 import { AcompanhamentoAnciaosView } from './components/AcompanhamentoAnciaosView';
 import { ControleApontamentosView } from './components/ControleApontamentosView';
 import { RelatorioAuxiliaresView } from './components/RelatorioAuxiliaresView';
+import { RelatorioTempoMinisterioView } from './components/RelatorioTempoMinisterioView';
 import { RecitativosView } from './components/RecitativosView';
 import { ContagensMocidadeView } from './components/ContagensMocidadeView';
 import { PerfisAcessoView } from './components/PerfisAcessoView';
@@ -550,6 +551,10 @@ export default function App() {
           {/* ROTA 2.4: RELATORIO DE AUXILIARES */}
           {currentRoute === 'relatorio-auxiliares' && (
             <RelatorioAuxiliaresView comuns={comuns} usuarios={usuarios} />
+          )}
+
+          {currentRoute === 'relatorio-ministerio' && (
+            <RelatorioTempoMinisterioView comuns={comuns} usuarios={usuarios} />
           )}
 
           {/* ROTA 2.3: APONTAMENTOS - RECITATIVOS */}
