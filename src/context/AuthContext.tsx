@@ -52,6 +52,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user, token]);
 
+  // Inactivity timeout logic
+  useEffect(() => {
+    let timeoutId: number;
+
+    const logoutDueToInactivity = () => {
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('ccb_user');
+      localStorage.removeItem('ccb_token');
+      // Optional: alert('Sessão expirada por inatividade. Faça login novamente.');
+    };
+
+    const resetTimer = () => {
+      window.clearTimeout(timeoutId);
+      if (user && token) {
+        timeoutId = window.setTimeout(logoutDueToInactivity, 10 * 60 * 1000); // 10 minutes
+      }
+    };
+
+    if (user && token) {
+      const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+      
+      events.forEach(event => window.addEventListener(event, resetTimer));
+      resetTimer();
+
+      return () => {
+        events.forEach(event => window.removeEventListener(event, resetTimer));
+        window.clearTimeout(timeoutId);
+      };
+    }
+  }, [user, token]);
+
   const login = async (email: string, senha: string) => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',

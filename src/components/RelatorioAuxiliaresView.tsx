@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Users, UserCheck, HeartHandshake, ArrowUpDown
+  Users, UserCheck, HeartHandshake, ArrowUpDown, BarChart as BarChartIcon
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList, Cell
@@ -260,28 +260,34 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
       </div>
 
       {/* Cards de Totais */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-0 bg-white rounded shadow-md overflow-hidden border border-slate-200 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         
         {/* Card CJMs */}
-        <div className="flex flex-col items-center justify-center p-4">
-          <div className="text-4xl font-black text-slate-800">{totalCjms}</div>
-          <div className="w-full bg-[#c0c0c0] text-[#333] text-center text-xs font-bold py-1.5 mt-2 rounded">
+        <div className="bg-slate-700 text-white rounded-xl overflow-hidden shadow-md flex flex-col">
+          <div className="p-4 flex-1 flex flex-col justify-center items-center text-center">
+            <span className="text-3xl font-bold">{totalCjms}</span>
+          </div>
+          <div className="bg-slate-800 py-2 text-center text-xs font-bold uppercase tracking-wider">
             Quantidade de CJMs
           </div>
         </div>
 
         {/* Card Auxiliares */}
-        <div className="flex flex-col items-center justify-center p-4">
-          <div className="text-4xl font-black text-slate-800">{totalAuxiliares}</div>
-          <div className="w-full bg-[#c0c0c0] text-[#333] text-center text-xs font-bold py-1.5 mt-2 rounded">
+        <div className="bg-slate-600 text-white rounded-xl overflow-hidden shadow-md flex flex-col">
+          <div className="p-4 flex-1 flex flex-col justify-center items-center text-center">
+            <span className="text-3xl font-bold">{totalAuxiliares}</span>
+          </div>
+          <div className="bg-slate-800 py-2 text-center text-xs font-bold uppercase tracking-wider">
             Quantidade de Auxiliares
           </div>
         </div>
 
         {/* Card Mocidade */}
-        <div className="flex flex-col items-center justify-center p-4">
-          <div className="text-4xl font-black text-slate-800">{totalMocidade.toLocaleString('pt-BR')}</div>
-          <div className="w-full bg-[#c0c0c0] text-[#333] text-center text-xs font-bold py-1.5 mt-2 rounded">
+        <div className="bg-slate-500 text-white rounded-xl overflow-hidden shadow-md flex flex-col">
+          <div className="p-4 flex-1 flex flex-col justify-center items-center text-center">
+            <span className="text-3xl font-bold">{totalMocidade.toLocaleString('pt-BR')}</span>
+          </div>
+          <div className="bg-slate-800 py-2 text-center text-xs font-bold uppercase tracking-wider">
             Quantidade de Mocidade
           </div>
         </div>
@@ -289,9 +295,15 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
       </div>
 
       {/* Gráfico Stacked */}
-      <div className="bg-white p-4 rounded shadow-md border border-slate-200 h-[600px] overflow-x-auto w-full">
-        <div style={{ minWidth: `${Math.max(1000, chartData.length * 45)}px`, height: '100%' }}>
-          <ResponsiveContainer width="100%" height="100%">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col">
+        <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex items-center">
+          <BarChartIcon className="w-5 h-5 mr-2 text-emerald-400" />
+          <h3 className="font-bold text-sm tracking-wider uppercase">RELATÓRIO DE AUXILIARES, CJM E MOCIDADE</h3>
+        </div>
+        
+        <div className="p-4 bg-slate-50 dark:bg-slate-950/50 overflow-x-auto w-full h-[600px]">
+          <div style={{ minWidth: `${Math.max(1000, chartData.length * 45)}px`, height: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 80, right: 10, left: 10, bottom: 150 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
               <XAxis 
