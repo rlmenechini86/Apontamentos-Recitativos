@@ -89,7 +89,7 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
     
     // 2. Lógica de compartilhamento de igrejas
     if (selectedAnciao) {
-      const nome = selectedAnciao.nome_completo || '';
+      const nome = selectedAnciao.nome || '';
       
       // Rafael Júnior e Clayton Barbosa atendem "Jd. Novo Portugal"
       if ((nome.includes('Rafael') || nome.includes('Clayton')) && c.nome.includes('Novo Portugal')) {
@@ -167,7 +167,7 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
           <div className="absolute inset-0 opacity-10 bg-[url('https://images.unsplash.com/photo-1548625361-ec4a572db0f8?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay"></div>
           
           <h1 className="text-3xl font-bold tracking-tight relative z-10 drop-shadow-md">
-            {selectedAnciao ? selectedAnciao.nome_completo : 'Selecione um Ancião'}
+            {selectedAnciao ? selectedAnciao.nome : 'Selecione um Ancião'}
           </h1>
         </div>
         
@@ -190,7 +190,7 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
           >
             <option value="">Selecione...</option>
             {anciaos.map(a => (
-              <option key={a.id} value={a.id}>{a.nome_completo}</option>
+              <option key={a.id} value={a.id}>{a.nome}</option>
             ))}
           </select>
         </div>
