@@ -96,8 +96,10 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
         return true;
       }
       
-      // Silvio Mesquita, Marcos do Carmo e Paulo Sérgio atendem qual igreja juntos?
-      // (Deixado preparado para quando o usuário informar)
+      // Silvio Mesquita, Marcos do Carmo e Paulo Sérgio atendem "Vila Nova Bonsucesso"
+      if ((nome.includes('Silvio') || nome.includes('Marcos') || nome.includes('Paulo')) && c.nome.includes('Bonsucesso')) {
+        return true;
+      }
     }
     
     return false;
