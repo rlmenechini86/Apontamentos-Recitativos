@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS tipos_evento (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  data DATE NOT NULL DEFAULT CURRENT_DATE,
+  nome TEXT NOT NULL,
+  cor TEXT NOT NULL DEFAULT '#3b82f6',
+  status BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS reunioes_eventos (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  data DATE NOT NULL,
+  tipo_evento_id UUID REFERENCES tipos_evento(id) ON DELETE RESTRICT,
+  nome TEXT,
+  status BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);

@@ -37,8 +37,11 @@ import { ComumFormModal } from './components/ComumFormModal';
 import { UsuarioFormModal } from './components/UsuarioFormModal';
 import { UsuarioListView } from './components/UsuarioListView';
 import { AdminAnciaosView } from './components/AdminAnciaosView';
+import { AdminTiposEventoView } from './components/AdminTiposEventoView';
+import { AdminReunioesEventosView } from './components/AdminReunioesEventosView';
+import { CalendarioView } from './components/CalendarioView';
 import { Pagination } from './components/Pagination';
-import { ComumCongregacao, Setor, Perfil, Usuario, DbStatus } from './types';
+import { ComumCongregacao, Setor, Perfil, Usuario, DbStatus, TipoEvento, ReuniaoEvento, Anciao } from './types';
 import { useTheme } from './context/ThemeContext';
 import { useAuth } from './context/AuthContext';
 
@@ -56,6 +59,10 @@ export default function App() {
   // Dados de Usuários e Perfis
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [perfis, setPerfis] = useState<Perfil[]>([]);
+  
+  // Dados de Eventos
+  const [tiposEvento, setTiposEvento] = useState<TipoEvento[]>([]);
+  const [reunioesEventos, setReunioesEventos] = useState<ReuniaoEvento[]>([]);
 
   // Estados de Carregamento e Conexão
   const [status, setStatus] = useState<DbStatus | null>(null);
@@ -142,6 +149,30 @@ export default function App() {
     }
   };
 
+  const fetchTiposEvento = async () => {
+    try {
+      const res = await fetch('/api/tipos-evento');
+      if (res.ok) {
+        const json = await res.json();
+        setTiposEvento(json.data || []);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar tipos de evento:', err);
+    }
+  };
+
+  const fetchReunioesEventos = async () => {
+    try {
+      const res = await fetch('/api/reunioes-eventos');
+      if (res.ok) {
+        const json = await res.json();
+        setReunioesEventos(json.data || []);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar reuniões/eventos:', err);
+    }
+  };
+
   const fetchComuns = async () => {
     try {
       setLoadingComuns(true);
@@ -184,6 +215,8 @@ export default function App() {
     fetchPerfis();
     fetchComuns();
     fetchUsuarios();
+    fetchTiposEvento();
+    fetchReunioesEventos();
   }, []);
 
   // --- HANDLERS COMUM ---
@@ -789,6 +822,25 @@ export default function App() {
           {/* ROTA 7: ADMINISTRAÇÃO -> AUXILIARES E CJM */}
           {currentRoute === 'admin-auxiliares' && (
             <AuxiliaresCJMView comuns={comuns} setores={setores} />
+          )}
+
+          {currentRoute === 'admin-tipos-evento' && (
+            <AdminTiposEventoView 
+              tiposEvento={tiposEvento} 
+              onUpdate={fetchTiposEvento} 
+            />
+          )}
+
+          {currentRoute === 'admin-reunioes-eventos' && (
+            <AdminReunioesEventosView 
+              reunioes={reunioesEventos} 
+              tiposEvento={tiposEvento}
+              onUpdate={fetchReunioesEventos} 
+            />
+          )}
+
+          {currentRoute === 'calendario' && (
+            <CalendarioView reunioes={reunioesEventos} />
           )}
         </main>
       </div>
