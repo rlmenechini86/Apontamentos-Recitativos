@@ -3,7 +3,7 @@ import {
   Users, BarChart as BarChartIcon, Clock, ArrowUpDown, Filter
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, LabelList
 } from 'recharts';
 import { ComumCongregacao, Usuario } from '../types';
 
@@ -211,6 +211,7 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
                 />
                 <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={60}>
+                  <LabelList dataKey="count" position="top" fill="#1e293b" fontSize={12} fontWeight="bold" />
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
