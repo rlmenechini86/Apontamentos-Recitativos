@@ -300,7 +300,6 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
           <BarChartIcon className="w-5 h-5 mr-2 text-emerald-400" />
           <h3 className="font-bold text-sm tracking-wider uppercase">RELATÓRIO DE AUXILIARES, CJM E MOCIDADE</h3>
         </div>
-        
         <div className="p-4 bg-slate-50 dark:bg-slate-950/50 overflow-x-auto w-full h-[600px]">
           <div style={{ minWidth: `${Math.max(1000, chartData.length * 45)}px`, height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -310,8 +309,9 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
                 dataKey="shortName" 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fill: '#475569', fontSize: 10, angle: -45, textAnchor: 'end' }} 
+                tick={{ fill: '#475569', fontSize: 11, angle: -45, textAnchor: 'end' }} 
                 interval={0}
+                tickMargin={10}
               />
               <YAxis hide domain={[0, (dataMax: number) => (dataMax === 0 ? 5 : Math.ceil(dataMax * 1.3))]} />
             <RechartsTooltip 
@@ -327,7 +327,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
             </Bar>
             <Bar dataKey="irmas" name="Moças (Rosa)" stackId="a" fill="#f472b6" barSize={20}>
               <LabelList dataKey="irmas" content={renderInsideLabel} />
-              <LabelList dataKey="total" content={renderTotalLabel} />
+              <LabelList content={renderTotalLabel} />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
