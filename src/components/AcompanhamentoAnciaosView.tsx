@@ -74,15 +74,58 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
     { value: '11', label: 'Novembro' }, { value: '12', label: 'Dezembro' }
   ];
 
-  // Select first anciao by default when loaded if none selected
-  useEffect(() => {
-    if (!selectedAnciaoId && anciaos.length > 0) {
-      setSelectedAnciaoId(anciaos[0].id);
-    }
-  }, [anciaos, selectedAnciaoId]);
+  // Group specific Anciãos together based on user request
+  const groupedAnciaos = useMemo(() => {
+    const groups: { id: string, name: string, ids: string[] }[] = [];
+    const usedIds = new Set<string>();
 
-  const selectedAnciao = anciaos.find(a => a.id === selectedAnciaoId);
-  const comunsDoAnciao = comuns.filter(c => c.anciao_id === selectedAnciaoId).sort((a, b) => a.nome.localeCompare(b.nome));
+    // Grupo 1: Rafael Júnior / Clayton Barbosa
+    const grupo1 = anciaos.filter(a => a.nome_completo.includes('Rafael') || a.nome_completo.includes('Clayton'));
+    if (grupo1.length > 0) {
+      const ids = grupo1.map(g => g.id);
+      ids.forEach(id => usedIds.add(id));
+      groups.push({
+        id: ids.join(','),
+        name: 'Rafael Júnior / Clayton Barbosa',
+        ids: ids
+      });
+    }
+
+    // Grupo 2: Silvio Mesquita / Marcos do Carmo / Paulo Sérgio
+    const grupo2 = anciaos.filter(a => a.nome_completo.includes('Silvio') || a.nome_completo.includes('Marcos') || a.nome_completo.includes('Paulo'));
+    if (grupo2.length > 0) {
+      const ids = grupo2.map(g => g.id);
+      ids.forEach(id => usedIds.add(id));
+      groups.push({
+        id: ids.join(','),
+        name: 'Silvio Mesquita / Marcos do Carmo / Paulo Sérgio',
+        ids: ids
+      });
+    }
+
+    // Add remaining anciaos individually
+    anciaos.forEach(a => {
+      if (!usedIds.has(a.id)) {
+        groups.push({
+          id: a.id,
+          name: a.nome_completo,
+          ids: [a.id]
+        });
+      }
+    });
+
+    return groups.sort((a, b) => a.name.localeCompare(b.name));
+  }, [anciaos]);
+
+  // Select first group by default when loaded if none selected
+  useEffect(() => {
+    if (!selectedAnciaoId && groupedAnciaos.length > 0) {
+      setSelectedAnciaoId(groupedAnciaos[0].id);
+    }
+  }, [groupedAnciaos, selectedAnciaoId]);
+
+  const selectedGroup = groupedAnciaos.find(g => g.id === selectedAnciaoId);
+  const comunsDoAnciao = comuns.filter(c => selectedGroup?.ids.includes(c.anciao_id)).sort((a, b) => a.nome.localeCompare(b.nome));
 
   // Compute Data for Table and Chart
   const tableData = useMemo(() => {
@@ -148,7 +191,7 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
           <div className="absolute inset-0 opacity-10 bg-[url('https://images.unsplash.com/photo-1548625361-ec4a572db0f8?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay"></div>
           
           <h1 className="text-3xl font-bold tracking-tight relative z-10 drop-shadow-md">
-            {selectedAnciao ? selectedAnciao.nome : 'Selecione um Ancião'}
+            {selectedGroup ? selectedGroup.name : 'Selecione um Ancião'}
           </h1>
         </div>
         
@@ -170,8 +213,8 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
             className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium"
           >
             <option value="">Selecione...</option>
-            {anciaos.map(a => (
-              <option key={a.id} value={a.id}>{a.nome}</option>
+            {groupedAnciaos.map(g => (
+              <option key={g.id} value={g.id}>{g.name}</option>
             ))}
           </select>
         </div>
