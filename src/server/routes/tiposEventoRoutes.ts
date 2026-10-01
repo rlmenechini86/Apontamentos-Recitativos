@@ -1,9 +1,7 @@
 import { Router } from 'express';
 import { tiposEventoService } from '../services/tiposEventoService.js';
-import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
-router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   try {

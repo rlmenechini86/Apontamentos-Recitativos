@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, User, ArrowUpDown } from 'lucide-react';
-import { ContagemMocidade, ComumCongregacao } from '../types';
+import { ContagemMocidade, ComumCongregacao, Usuario } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from './Pagination';
 import { apiGet, clearApiCache } from '../utils/api';

@@ -41,7 +41,8 @@ export type NavRoute =
   | 'admin-auxiliares'
   | 'admin-tipos-evento'
   | 'admin-reunioes-eventos'
-  | 'calendario';
+  | 'calendario'
+  | 'relatorio-ministerio';
 
 interface SidebarProps {
   currentRoute: NavRoute;

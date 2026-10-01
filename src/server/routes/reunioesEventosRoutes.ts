@@ -1,9 +1,7 @@
 import { Router } from 'express';
 import { reunioesEventosService } from '../services/reunioesEventosService.js';
-import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
-router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   try {

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { TipoEvento } from '../types';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
-import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api';
 
 interface AdminTiposEventoViewProps {
   tiposEvento: TipoEvento[];
@@ -37,9 +36,17 @@ export const AdminTiposEventoView: React.FC<AdminTiposEventoViewProps> = ({ tipo
     e.preventDefault();
     try {
       if (editingItem) {
-        await apiPut(`/api/tipos-evento/${editingItem.id}`, formData);
+        await fetch(`/api/tipos-evento/${editingItem.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
       } else {
-        await apiPost('/api/tipos-evento', formData);
+        await fetch('/api/tipos-evento', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
       }
       setIsModalOpen(false);
       onUpdate();
@@ -51,7 +58,7 @@ export const AdminTiposEventoView: React.FC<AdminTiposEventoViewProps> = ({ tipo
   const handleDelete = async (id: string) => {
     if (!confirm('Deseja realmente excluir este item?')) return;
     try {
-      await apiDelete(`/api/tipos-evento/${id}`);
+      await fetch(`/api/tipos-evento/${id}`, { method: 'DELETE' });
       onUpdate();
     } catch (err) {
       alert('Erro ao excluir. Verifique dependências.');
