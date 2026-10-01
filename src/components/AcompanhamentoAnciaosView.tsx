@@ -54,7 +54,7 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
 
   const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
   const comuns = propComuns.filter((c: any) => isRestrictedProfile ? c.id === user?.comum_congregacao_id : true);
-  const anciaos = propAnciaos;
+  const anciaos = propAnciaos.filter((a: any) => !a.nome.includes('/'));
 
   // Filter available years
   const availableYears = useMemo(() => {
