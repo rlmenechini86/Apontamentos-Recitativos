@@ -117,7 +117,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col gap-4 shadow-xs">
+      <div className="flex flex-col gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         
         <div className="flex flex-col md:flex-row gap-4 items-end justify-between w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 w-full flex-1">

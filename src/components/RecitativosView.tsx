@@ -122,7 +122,7 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
     <div className="space-y-6">
       
       {/* Filtros e Busca */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col lg:flex-row gap-4 items-center justify-between shadow-xs">
+      <div className="flex flex-col lg:flex-row gap-4 items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
         <div className="flex-1 flex flex-wrap lg:flex-nowrap gap-3 w-full">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />

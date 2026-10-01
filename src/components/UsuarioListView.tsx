@@ -159,7 +159,7 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
       </div>
 
       {/* Barra de Filtros e Busca */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between shadow-xs">
+      <div className="flex flex-col md:flex-row gap-3 items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
         <div className="flex-1 flex flex-col sm:flex-row gap-3 w-full">
           {/* Busca por Nome, Email ou Telefone */}
           <div className="relative flex-1">

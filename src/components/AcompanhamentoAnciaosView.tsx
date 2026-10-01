@@ -155,7 +155,7 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
       </div>
 
       {/* Filters and Controls */}
-      <div className="flex flex-col sm:flex-row justify-end items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row justify-end items-center gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Ancião:</span>
           <select

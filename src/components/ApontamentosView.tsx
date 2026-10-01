@@ -189,7 +189,7 @@ export const ApontamentosView: React.FC<ApontamentosViewProps> = ({ comuns, seto
       </div>
 
       {/* Filtros */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between shadow-xs">
+      <div className="flex flex-col md:flex-row gap-3 items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           {/* Filtro Setor */}
           <select
