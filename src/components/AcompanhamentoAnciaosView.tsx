@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Building2, Users, FileText, CheckCircle2, TrendingUp, Search
+  Building2, Users, FileText, CheckCircle2, TrendingUp, Search, BarChart as BarChartIcon, List
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList
@@ -202,13 +202,13 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
         
         {/* Left Side: Chart */}
-        <div className="xl:col-span-5 bg-[#e6e8eb] dark:bg-slate-800 rounded-xl shadow-md border border-slate-300 dark:border-slate-700 relative overflow-hidden">
-          
-          <div className="absolute top-4 left-4 bg-[#2a3449] text-white px-4 py-1.5 rounded text-sm font-bold shadow-md z-10">
-            {selectedMonth ? 'MÉDIA MENSAL' : 'MÉDIA ANUAL'}
+        <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col">
+          <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex items-center">
+            <BarChartIcon className="w-5 h-5 mr-2 text-emerald-400" />
+            <h3 className="font-bold text-sm tracking-wider uppercase">{selectedMonth ? 'MÉDIA MENSAL' : 'MÉDIA ANUAL DE RECITATIVOS'}</h3>
           </div>
 
-          <div className="p-6 pt-16 h-[450px]">
+          <div className="p-4 bg-slate-50 dark:bg-slate-950/50 h-[450px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={tableData} margin={{ top: 25, right: 30, left: 0, bottom: 80 }} barGap={4} barCategoryGap="20%">
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" opacity={0.5} />
@@ -241,13 +241,13 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
         </div>
 
         {/* Right Side: Table */}
-        <div className="xl:col-span-7 bg-white dark:bg-slate-900 rounded-xl shadow-md border border-slate-200 dark:border-slate-800 overflow-hidden relative">
-          
-          <div className="absolute top-0 left-0 bg-[#2a3449] text-white px-4 py-1.5 rounded-br-lg text-sm font-bold shadow-md z-10">
-            MÉDIA MENSAL
+        <div className="xl:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col">
+          <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex items-center">
+            <List className="w-5 h-5 mr-2 text-emerald-400" />
+            <h3 className="font-bold text-sm tracking-wider uppercase">MÉDIA MENSAL</h3>
           </div>
 
-          <div className="overflow-x-auto pt-10 px-2 pb-2">
+          <div className="overflow-x-auto p-4 bg-slate-50 dark:bg-slate-950/50">
             <table className="w-full text-center text-sm font-medium">
               <thead className="bg-[#6b7280] text-white">
                 <tr>
