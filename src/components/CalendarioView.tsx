@@ -98,11 +98,12 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({ reunioes }) => {
                       {events.map(event => (
                         <div 
                           key={event.id}
-                          className="px-2 py-1 text-[11px] font-medium text-white rounded shadow-sm truncate"
+                          className="px-2 py-1 text-[11px] font-medium text-white rounded shadow-sm flex flex-col leading-tight"
                           style={{ backgroundColor: event.tipos_evento?.cor || '#3b82f6' }}
                           title={`${event.tipos_evento?.nome} - ${event.comum_congregacao?.nome || 'Regional/Geral'}`}
                         >
-                          {event.tipos_evento?.nome} - {event.comum_congregacao?.nome || 'Regional/Geral'}
+                          <span className="font-bold truncate">{event.tipos_evento?.nome}</span>
+                          <span className="text-[10px] opacity-90 truncate">{event.comum_congregacao?.nome || 'Regional/Geral'}</span>
                         </div>
                       ))}
                     </div>
