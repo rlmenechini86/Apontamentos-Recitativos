@@ -3,7 +3,7 @@ import {
   Users, UserCheck, HeartHandshake, ArrowUpDown, BarChart as BarChartIcon
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList, Cell
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList, Cell, ComposedChart, Line
 } from 'recharts';
 import { ComumCongregacao, Usuario, ContagemMocidade, AuxiliarJovens } from '../types';
 import { apiGet } from '../utils/api';
@@ -194,10 +194,12 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
     
     if (!total || total === 0) return null;
 
+    const cx = width ? Number(x) + Number(width) / 2 : Number(x);
+
     return (
       <g>
         <rect 
-          x={Number(x) + Number(width) / 2 - 12} 
+          x={cx - 12} 
           y={Number(y) - 25} 
           width="24" 
           height="16" 
@@ -205,7 +207,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
           rx="4"
         />
         <text 
-          x={Number(x) + Number(width) / 2} 
+          x={cx} 
           y={Number(y) - 14} 
           fill="#1e293b" 
           fontSize="11" 
@@ -303,7 +305,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
         <div className="p-4 bg-slate-50 dark:bg-slate-950/50 overflow-x-auto w-full h-[600px]">
           <div style={{ minWidth: `${Math.max(1000, chartData.length * 45)}px`, height: '100%' }}>
             <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 80, right: 10, left: 10, bottom: 150 }}>
+            <ComposedChart data={chartData} margin={{ top: 80, right: 10, left: 10, bottom: 150 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
               <XAxis 
                 dataKey="shortName" 
@@ -327,9 +329,13 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
             </Bar>
             <Bar dataKey="irmas" name="Moças (Rosa)" stackId="a" fill="#f472b6" barSize={20}>
               <LabelList dataKey="irmas" content={renderInsideLabel} />
-              <LabelList content={renderTotalLabel} />
             </Bar>
-          </BarChart>
+
+            {/* Linha invisível para forçar a renderização do total mesmo se Moças (irmas) for 0 */}
+            <Line dataKey="total" type="monotone" stroke="none" dot={false} activeDot={false} isAnimationActive={false}>
+              <LabelList dataKey="total" content={renderTotalLabel} />
+            </Line>
+          </ComposedChart>
         </ResponsiveContainer>
           </div>
         </div>
