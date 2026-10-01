@@ -336,9 +336,10 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
       </div>
 
       {/* Tabela Detalhada */}
-      <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-200">
-          <h3 className="font-bold text-slate-800">Detalhamento dos Auxiliares de Jovens</h3>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col">
+        <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex items-center">
+          <Users className="w-5 h-5 mr-2 text-sky-400" />
+          <h3 className="font-bold text-sm tracking-wider uppercase">DETALHAMENTO DOS AUXILIARES DE JOVENS</h3>
         </div>
         <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
           <table className="w-full text-left text-sm text-slate-700">
