@@ -77,6 +77,13 @@ export const PerfisAcessoView: React.FC<PerfisAcessoViewProps> = ({
       cjm: true,
       apontamento: false,
     },
+    {
+      id: 'visualizar_calendario',
+      funcionalidade: 'Visualizar Calendário de Eventos',
+      admin: true,
+      cjm: true,
+      apontamento: true,
+    },
   ];
 
   const [matrizPermissoes, setMatrizPermissoes] = React.useState(() => {

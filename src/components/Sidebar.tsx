@@ -170,19 +170,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
 
           {/* 1.5 Calendário */}
-          <button
-            onClick={() => handleNavClick('calendario')}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-              currentRoute === 'calendario'
-                ? 'bg-emerald-600 text-white shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              <Clock className={`w-4 h-4 ${currentRoute === 'calendario' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
-              <span>Calendário</span>
-            </div>
-          </button>
+          {hasPermission(user, 'visualizar_calendario') && (
+            <button
+              onClick={() => handleNavClick('calendario')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+                currentRoute === 'calendario'
+                  ? 'bg-emerald-600 text-white shadow-sm font-semibold'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <Clock className={`w-4 h-4 ${currentRoute === 'calendario' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                <span>Calendário</span>
+              </div>
+            </button>
+          )}
 
           {/* 2. Apontamentos (com Submódulos) */}
           <div className="space-y-1">
