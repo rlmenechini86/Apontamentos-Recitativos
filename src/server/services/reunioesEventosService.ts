@@ -4,7 +4,7 @@ export class ReunioesEventosService {
   async list() {
     const { data, error } = await supabase
       .from('reunioes_eventos')
-      .select('*, tipos_evento(*)')
+      .select('*, tipos_evento(*), comum_congregacao(*)')
       .order('data');
     if (error) throw new Error(error.message);
     return data;
@@ -17,6 +17,7 @@ export class ReunioesEventosService {
     const { data, error } = await supabase.from('reunioes_eventos').insert([{ 
       data: payload.data,
       tipo_evento_id: payload.tipo_evento_id || null,
+      comum_id: payload.comum_id || null,
       nome: payload.nome,
       status: payload.status ?? true 
     }]).select().single();
@@ -28,6 +29,7 @@ export class ReunioesEventosService {
     const { data, error } = await supabase.from('reunioes_eventos').update({
       data: payload.data,
       tipo_evento_id: payload.tipo_evento_id,
+      comum_id: payload.comum_id,
       nome: payload.nome,
       status: payload.status
     }).eq('id', id).select().single();

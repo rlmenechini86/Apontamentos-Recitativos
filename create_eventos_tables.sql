@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS reunioes_eventos (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   data DATE NOT NULL,
   tipo_evento_id UUID REFERENCES tipos_evento(id) ON DELETE RESTRICT,
+  comum_id UUID REFERENCES comum_congregacao(id) ON DELETE RESTRICT,
   nome TEXT,
   status BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

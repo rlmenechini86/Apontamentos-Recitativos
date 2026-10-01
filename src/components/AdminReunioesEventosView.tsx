@@ -1,20 +1,22 @@
 import React, { useState } from 'react';
-import { ReuniaoEvento, TipoEvento } from '../types';
+import { ReuniaoEvento, TipoEvento, ComumCongregacao } from '../types';
 import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 
 interface AdminReunioesEventosViewProps {
   reunioes: ReuniaoEvento[];
   tiposEvento: TipoEvento[];
+  comuns: ComumCongregacao[];
   onUpdate: () => void;
 }
 
-export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> = ({ reunioes, tiposEvento, onUpdate }) => {
+export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> = ({ reunioes, tiposEvento, comuns, onUpdate }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ReuniaoEvento | null>(null);
   
   const [formData, setFormData] = useState({
     data: new Date().toISOString().split('T')[0],
     tipo_evento_id: '',
+    comum_id: '',
     nome: '',
     status: true
   });
@@ -25,6 +27,7 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
       setFormData({
         data: item.data,
         tipo_evento_id: item.tipo_evento_id || '',
+        comum_id: item.comum_id || '',
         nome: item.nome || '',
         status: item.status
       });
@@ -33,6 +36,7 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
       setFormData({ 
         data: new Date().toISOString().split('T')[0], 
         tipo_evento_id: tiposEvento[0]?.id || '', 
+        comum_id: '',
         nome: '', 
         status: true 
       });
@@ -98,6 +102,7 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
             <tr>
               <th className="px-6 py-4 font-semibold">Data</th>
               <th className="px-6 py-4 font-semibold">Tipo</th>
+              <th className="px-6 py-4 font-semibold">Comum Congregação</th>
               <th className="px-6 py-4 font-semibold">Descrição Extra</th>
               <th className="px-6 py-4 font-semibold text-center">Status</th>
               <th className="px-6 py-4 font-semibold text-right">Ações</th>
@@ -116,6 +121,7 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
                     <span>{item.tipos_evento?.nome || 'N/A'}</span>
                   </div>
                 </td>
+                <td className="px-6 py-4">{item.comum_congregacao?.nome || 'Geral/Regional'}</td>
                 <td className="px-6 py-4">{item.nome || '-'}</td>
                 <td className="px-6 py-4 text-center">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.status ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'}`}>
@@ -178,6 +184,20 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
                   <option value="">Selecione...</option>
                   {tiposEvento.map(t => (
                     <option key={t.id} value={t.id}>{t.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Comum Congregação (Opcional)</label>
+                <select
+                  value={formData.comum_id}
+                  onChange={e => setFormData({ ...formData, comum_id: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">Nenhuma / Geral / Regional</option>
+                  {comuns.map(c => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
                   ))}
                 </select>
               </div>

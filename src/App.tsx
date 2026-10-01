@@ -835,6 +835,7 @@ export default function App() {
             <AdminReunioesEventosView 
               reunioes={reunioesEventos} 
               tiposEvento={tiposEvento}
+              comuns={comuns}
               onUpdate={fetchReunioesEventos} 
             />
           )}

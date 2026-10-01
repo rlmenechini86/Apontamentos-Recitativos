@@ -121,9 +121,11 @@ export interface ReuniaoEvento {
   id: string;
   data: string;
   tipo_evento_id: string;
+  comum_id?: string;
   nome?: string;
   status: boolean;
   created_at?: string;
   updated_at?: string;
   tipos_evento?: TipoEvento;
+  comum_congregacao?: ComumCongregacao;
 }
