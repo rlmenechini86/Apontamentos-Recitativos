@@ -9,6 +9,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { Perfil, Usuario } from '../types';
+import { getPermissoes } from '../utils/permissions';
 
 interface PerfisAcessoViewProps {
   perfis: Perfil[];
@@ -20,79 +21,8 @@ export const PerfisAcessoView: React.FC<PerfisAcessoViewProps> = ({
   perfis,
   usuarios,
 }) => {
-  const defaultMatriz = [
-    {
-      id: 'dashboard',
-      funcionalidade: 'Visualizar Dashboard Geral',
-      admin: true,
-      cjm: true,
-      apontamento: true,
-    },
-    {
-      id: 'lancar_apontamento',
-      funcionalidade: 'Lançar Apontamento da Comum',
-      admin: true,
-      cjm: true,
-      apontamento: true,
-    },
-    {
-      id: 'editar_apontamento',
-      funcionalidade: 'Editar Apontamentos do Setor',
-      admin: true,
-      cjm: true,
-      apontamento: false,
-    },
-    {
-      id: 'gerenciar_comuns',
-      funcionalidade: 'Gerenciar Comuns Congregações (CRUD)',
-      admin: true,
-      cjm: false,
-      apontamento: false,
-    },
-    {
-      id: 'gerenciar_usuarios',
-      funcionalidade: 'Gerenciar Usuários e Atribuir Perfis',
-      admin: true,
-      cjm: false,
-      apontamento: false,
-    },
-    {
-      id: 'gerenciar_auxiliares',
-      funcionalidade: 'Gerenciar Cadastro de Auxiliares e CJM',
-      admin: true,
-      cjm: true,
-      apontamento: false,
-    },
-    {
-      id: 'visualizar_setores',
-      funcionalidade: 'Visualizar Dados de Outros Setores',
-      admin: true,
-      cjm: false,
-      apontamento: false,
-    },
-    {
-      id: 'exportar_relatorios',
-      funcionalidade: 'Consolidação e Exportação de Relatórios',
-      admin: true,
-      cjm: true,
-      apontamento: false,
-    },
-    {
-      id: 'visualizar_calendario',
-      funcionalidade: 'Visualizar Calendário de Eventos',
-      admin: true,
-      cjm: true,
-      apontamento: true,
-    },
-  ];
-
   const [matrizPermissoes, setMatrizPermissoes] = React.useState(() => {
-    try {
-      const saved = localStorage.getItem('ccb_permissoes');
-      return saved ? JSON.parse(saved) : defaultMatriz;
-    } catch {
-      return defaultMatriz;
-    }
+    return getPermissoes();
   });
 
   const togglePermission = (rowIndex: number, role: 'admin' | 'cjm' | 'apontamento') => {

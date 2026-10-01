@@ -346,7 +346,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           {/* 3. Administração (com Submódulos) */}
-          {(hasPermission(user, 'gerenciar_comuns') || hasPermission(user, 'gerenciar_usuarios') || hasPermission(user, 'gerenciar_auxiliares')) && (
+          {(hasPermission(user, 'gerenciar_comuns') || hasPermission(user, 'gerenciar_usuarios') || hasPermission(user, 'gerenciar_auxiliares') || hasPermission(user, 'gerenciar_tipos_evento') || hasPermission(user, 'gerenciar_reunioes')) && (
           <div className="space-y-1">
             <button
               onClick={() => setIsAdminExpanded(!isAdminExpanded)}
@@ -468,7 +468,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
                 
                 {/* 3.5 Cadastro de Tipo de Evento */}
-                {hasPermission(user, 'gerenciar_comuns') && (
+                {hasPermission(user, 'gerenciar_tipos_evento') && (
                 <button
                   onClick={() => handleNavClick('admin-tipos-evento')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -485,7 +485,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
                 
                 {/* 3.6 Cadastro de Reuniões / Eventos */}
-                {hasPermission(user, 'gerenciar_comuns') && (
+                {hasPermission(user, 'gerenciar_reunioes') && (
                 <button
                   onClick={() => handleNavClick('admin-reunioes-eventos')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
