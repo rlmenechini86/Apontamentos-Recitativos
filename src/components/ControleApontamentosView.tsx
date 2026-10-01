@@ -4,12 +4,14 @@ import {
 } from 'lucide-react';
 import { ComumCongregacao, Recitativo, ContagemMocidade, Usuario } from '../types';
 import { apiGet } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 interface ControleApontamentosViewProps {
   usuarios?: Usuario[];
 }
 
 export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> = ({ usuarios = [] }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
@@ -92,6 +94,10 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
   }, [selectedYear, selectedMonth]);
 
   const filteredComuns = comuns.filter(c => {
+    if (user?.perfis?.nome === 'CJM' && user.comum_congregacao_id) {
+      if (c.id !== user.comum_congregacao_id) return false;
+    }
+
     const matchesSearch = !searchTerm || c.nome.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSecretario = !selectedSecretarioId || c.secretario_id === selectedSecretarioId;
     return matchesSearch && matchesSecretario;
