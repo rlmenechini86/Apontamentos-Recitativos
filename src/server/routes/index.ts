@@ -7,6 +7,7 @@ import contagensRoutes from './contagensRoutes.js';
 import anciaoRoutes from './anciaoRoutes.js';
 import tiposEventoRoutes from './tiposEventoRoutes.js';
 import reunioesEventosRoutes from './reunioesEventosRoutes.js';
+import mocidadeRoutes from './mocidadeRoutes.js';
 import { authRouter } from './authRoutes.js';
 
 const apiRouter = Router();
@@ -20,6 +21,7 @@ apiRouter.use('/contagens', contagensRoutes);
 apiRouter.use('/anciaos', anciaoRoutes);
 apiRouter.use('/tipos-evento', tiposEventoRoutes);
 apiRouter.use('/reunioes-eventos', reunioesEventosRoutes);
+apiRouter.use('/mocidade', mocidadeRoutes);
 
 apiRouter.get('/health', (_req, res) => {
   res.json({

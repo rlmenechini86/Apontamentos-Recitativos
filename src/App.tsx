@@ -39,6 +39,7 @@ import { UsuarioListView } from './components/UsuarioListView';
 import { AdminAnciaosView } from './components/AdminAnciaosView';
 import { AdminTiposEventoView } from './components/AdminTiposEventoView';
 import { AdminReunioesEventosView } from './components/AdminReunioesEventosView';
+import { MocidadeView } from './components/MocidadeView';
 import { CalendarioView } from './components/CalendarioView';
 import { Pagination } from './components/Pagination';
 import { ComumCongregacao, Setor, Perfil, Usuario, DbStatus, TipoEvento, ReuniaoEvento, Anciao } from './types';
@@ -838,6 +839,10 @@ export default function App() {
               comuns={comuns}
               onUpdate={fetchReunioesEventos} 
             />
+          )}
+
+          {currentRoute === 'admin-mocidade' && (
+            <MocidadeView comuns={comuns} />
           )}
 
           {currentRoute === 'calendario' && (

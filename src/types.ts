@@ -129,3 +129,17 @@ export interface ReuniaoEvento {
   tipos_evento?: TipoEvento;
   comum_congregacao?: ComumCongregacao;
 }
+
+export interface Mocidade {
+  id: string;
+  nome_completo: string;
+  data_nascimento: string;
+  sexo: 'Feminino' | 'Masculino';
+  responsavel?: string;
+  telefone_contato?: string;
+  comum_id?: string;
+  ativo: boolean;
+  created_at?: string;
+  updated_at?: string;
+  comum_congregacao?: Partial<ComumCongregacao>;
+}

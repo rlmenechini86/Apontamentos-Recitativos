@@ -41,6 +41,7 @@ export type NavRoute =
   | 'admin-auxiliares'
   | 'admin-tipos-evento'
   | 'admin-reunioes-eventos'
+  | 'admin-mocidade'
   | 'calendario'
   | 'relatorio-ministerio';
 
@@ -84,6 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     'admin-auxiliares',
     'admin-tipos-evento',
     'admin-reunioes-eventos',
+    'admin-mocidade',
   ].includes(currentRoute);
 
   const isApontamentosRouteActive = [
@@ -346,7 +348,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           {/* 3. Administração (com Submódulos) */}
-          {(hasPermission(user, 'gerenciar_comuns') || hasPermission(user, 'gerenciar_usuarios') || hasPermission(user, 'gerenciar_auxiliares') || hasPermission(user, 'gerenciar_tipos_evento') || hasPermission(user, 'gerenciar_reunioes')) && (
+          {(hasPermission(user, 'gerenciar_comuns') || hasPermission(user, 'gerenciar_usuarios') || hasPermission(user, 'gerenciar_auxiliares') || hasPermission(user, 'gerenciar_tipos_evento') || hasPermission(user, 'gerenciar_reunioes') || hasPermission(user, 'gerenciar_mocidade')) && (
           <div className="space-y-1">
             <button
               onClick={() => setIsAdminExpanded(!isAdminExpanded)}
@@ -464,6 +466,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-medium">
                     Ativo
                   </span>
+                </button>
+                )}
+
+                {/* 3.4.1 Cadastro de Mocidade */}
+                {hasPermission(user, 'gerenciar_mocidade') && (
+                <button
+                  onClick={() => handleNavClick('admin-mocidade')}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    currentRoute === 'admin-mocidade'
+                      ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-500/30'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Users className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Cadastro da Mocidade</span>
+                  </div>
                 </button>
                 )}
                 
