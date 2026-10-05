@@ -138,6 +138,8 @@ export interface Mocidade {
   responsavel?: string;
   telefone_contato?: string;
   comum_id?: string;
+  musico: boolean;
+  instrumento?: string;
   ativo: boolean;
   created_at?: string;
   updated_at?: string;

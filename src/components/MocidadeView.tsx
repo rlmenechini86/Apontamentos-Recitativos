@@ -15,6 +15,7 @@ export const MocidadeView: React.FC<MocidadeViewProps> = ({ comuns }) => {
   const [editingItem, setEditingItem] = useState<Mocidade | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isCustomInstrumento, setIsCustomInstrumento] = useState(false);
   
   const [formData, setFormData] = useState({
     nome_completo: '',
@@ -23,8 +24,26 @@ export const MocidadeView: React.FC<MocidadeViewProps> = ({ comuns }) => {
     responsavel: '',
     telefone_contato: '',
     comum_id: '',
+    musico: false,
+    instrumento: '',
     ativo: true
   });
+
+  const INSTRUMENTOS_PADRAO = [
+    'Celo',
+    'Clarineta',
+    'Eufônio',
+    'Flauta',
+    'Sax Alto',
+    'Sax Barítono',
+    'Sax Soprano',
+    'Sax Tenor',
+    'Trombone',
+    'Trompete',
+    'Tuba',
+    'Viola',
+    'Violino'
+  ];
 
   const loadData = async () => {
     setLoading(true);
@@ -55,10 +74,14 @@ export const MocidadeView: React.FC<MocidadeViewProps> = ({ comuns }) => {
         responsavel: item.responsavel || '',
         telefone_contato: item.telefone_contato || '',
         comum_id: item.comum_id || '',
+        musico: item.musico || false,
+        instrumento: item.instrumento || '',
         ativo: item.ativo
       });
+      setIsCustomInstrumento(!!item.instrumento && !INSTRUMENTOS_PADRAO.includes(item.instrumento));
     } else {
       setEditingItem(null);
+      setIsCustomInstrumento(false);
       setFormData({ 
         nome_completo: '',
         data_nascimento: '',
@@ -66,6 +89,8 @@ export const MocidadeView: React.FC<MocidadeViewProps> = ({ comuns }) => {
         responsavel: '',
         telefone_contato: '',
         comum_id: user?.comum_congregacao_id || comuns[0]?.id || '',
+        musico: false,
+        instrumento: '',
         ativo: true 
       });
     }
@@ -186,7 +211,14 @@ export const MocidadeView: React.FC<MocidadeViewProps> = ({ comuns }) => {
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
                 {filteredMocidade.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                    <td className="px-6 py-4 font-medium">{item.nome_completo}</td>
+                    <td className="px-6 py-4 font-medium">
+                      {item.nome_completo}
+                      {item.musico && (
+                        <span className="block text-xs font-normal text-emerald-600 dark:text-emerald-400 mt-0.5">
+                          Músico: {item.instrumento}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">{formatDate(item.data_nascimento)}</td>
                     <td className="px-6 py-4">{item.sexo}</td>
                     <td className="px-6 py-4">{item.comum_congregacao?.nome || '-'}</td>
@@ -314,6 +346,61 @@ export const MocidadeView: React.FC<MocidadeViewProps> = ({ comuns }) => {
                   ))}
                 </select>
               </div>
+
+              <div className="flex items-center space-x-3 pt-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newMusico = !formData.musico;
+                    setFormData({ ...formData, musico: newMusico, instrumento: newMusico ? formData.instrumento : '' });
+                  }}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formData.musico ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.musico ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">É Músico?</span>
+              </div>
+
+              {formData.musico && (
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg space-y-3">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Tipo de Instrumento</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomInstrumento(!isCustomInstrumento);
+                        setFormData({ ...formData, instrumento: '' });
+                      }}
+                      className="text-xs text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex items-center"
+                    >
+                      {isCustomInstrumento ? 'Voltar para lista' : '+ Incluir novo modelo'}
+                    </button>
+                  </div>
+                  
+                  {isCustomInstrumento ? (
+                    <input
+                      type="text"
+                      required
+                      placeholder="Digite o nome do instrumento..."
+                      value={formData.instrumento}
+                      onChange={e => setFormData({ ...formData, instrumento: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                    />
+                  ) : (
+                    <select
+                      required
+                      value={formData.instrumento}
+                      onChange={e => setFormData({ ...formData, instrumento: e.target.value })}
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="">Selecione o instrumento...</option>
+                      {INSTRUMENTOS_PADRAO.map(inst => (
+                        <option key={inst} value={inst}>{inst}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
 
               <div className="flex items-center space-x-3 pt-2">
                 <button

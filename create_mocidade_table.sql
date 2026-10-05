@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS public.mocidade (
     responsavel VARCHAR(255),
     telefone_contato VARCHAR(50),
     comum_id UUID REFERENCES public.comuns_congregacoes(id),
+    musico BOOLEAN DEFAULT false,
+    instrumento VARCHAR(100),
     ativo BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
