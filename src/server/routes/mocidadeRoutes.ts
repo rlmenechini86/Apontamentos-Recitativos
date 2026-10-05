@@ -24,9 +24,14 @@ const getMocidade: RequestHandler = async (req: Request, res: Response): Promise
 // POST new mocidade
 const createMocidade: RequestHandler = async (req: Request, res: Response): Promise<void> => {
   try {
+    const body = { ...req.body };
+    if (body.comum_id === '') {
+      body.comum_id = null;
+    }
+
     const { data, error } = await supabase
       .from('mocidade')
-      .insert([req.body])
+      .insert([body])
       .select();
 
     if (error) {
@@ -43,9 +48,14 @@ const createMocidade: RequestHandler = async (req: Request, res: Response): Prom
 const updateMocidade: RequestHandler = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const body = { ...req.body };
+    if (body.comum_id === '') {
+      body.comum_id = null;
+    }
+
     const { data, error } = await supabase
       .from('mocidade')
-      .update(req.body)
+      .update(body)
       .eq('id', id)
       .select();
 
