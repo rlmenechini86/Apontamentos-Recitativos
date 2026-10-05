@@ -8,18 +8,31 @@ import {
 import { ComumCongregacao, AuxiliarJovens } from '../types';
 import { apiGet } from '../utils/api';
 import { obterFamiliaInstrumento } from './AuxiliaresCJMView';
+import { useAuth } from '../context/AuthContext';
 
 interface Props {
   comuns: ComumCongregacao[];
 }
 
 export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [auxiliares, setAuxiliares] = useState<AuxiliarJovens[]>([]);
-  const [selectedComumId, setSelectedComumId] = useState('');
+  
+  const isCJM = user?.perfis?.nome?.includes('CJM') || false;
+  const userIsGlobal = !isCJM && (user?.perfis?.nivel_acesso === 'global' || user?.perfis?.nivel_acesso === 'setor');
+  const [selectedComumId, setSelectedComumId] = useState(user?.comum_congregacao_id || '');
+  
   const [selectedFamilia, setSelectedFamilia] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   const [familySortConfig, setFamilySortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  // Força o valor inicial para a comum do usuário logado (corrige problemas de estado mantido ou load assíncrono)
+  useEffect(() => {
+    if (user?.comum_congregacao_id) {
+      setSelectedComumId(user.comum_congregacao_id);
+    }
+  }, [user?.comum_congregacao_id]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,12 +51,14 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns }) =>
     fetchData();
   }, []);
 
-  const comuns = propComuns;
+  const comuns = userIsGlobal ? propComuns : propComuns.filter(c => c.id === user?.comum_congregacao_id);
 
   const musicos = useMemo(() => {
     return auxiliares.filter(a => {
       const activeAndMusico = a.ativo && a.is_musico === true;
-      const matchesComum = selectedComumId ? a.comum_id === selectedComumId : true;
+      const matchesComum = userIsGlobal 
+        ? (selectedComumId ? (a.comum_id || '') === selectedComumId : true)
+        : (a.comum_id || '') === (user?.comum_congregacao_id || '');
       const matchesFamilia = selectedFamilia ? obterFamiliaInstrumento(a.instrumento || '') === selectedFamilia : true;
       return activeAndMusico && matchesComum && matchesFamilia;
     });

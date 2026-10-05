@@ -7,7 +7,7 @@ router.get('/', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('agenda_visitas')
-      .select('*')
+      .select('*, comum_congregacao(id, nome, codigo)')
       .order('data_visita', { ascending: true })
       .order('horario', { ascending: true });
 
@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { nome, endereco, horario, ponto_encontro, cor, data_visita } = req.body;
+    const { nome, endereco, horario, ponto_encontro, cor, data_visita, comum_id } = req.body;
     
     if (!nome || !data_visita) {
       return res.status(400).json({ error: 'Nome e data da visita são obrigatórios' });
@@ -34,7 +34,8 @@ router.post('/', async (req, res) => {
         horario, 
         ponto_encontro, 
         cor, 
-        data_visita 
+        data_visita,
+        comum_id: comum_id || null
       }])
       .select();
 
@@ -48,7 +49,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { nome, endereco, horario, ponto_encontro, cor, data_visita } = req.body;
+    const { nome, endereco, horario, ponto_encontro, cor, data_visita, comum_id } = req.body;
     
     const { data, error } = await supabase
       .from('agenda_visitas')
@@ -58,7 +59,8 @@ router.put('/:id', async (req, res) => {
         horario, 
         ponto_encontro, 
         cor, 
-        data_visita 
+        data_visita,
+        comum_id: comum_id || null
       })
       .eq('id', id)
       .select();

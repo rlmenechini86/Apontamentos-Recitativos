@@ -142,5 +142,6 @@ export interface AgendaVisita {
   ponto_encontro?: string;
   cor?: string;
   data_visita: string;
+  comum_id?: string;
   created_at?: string;
 }

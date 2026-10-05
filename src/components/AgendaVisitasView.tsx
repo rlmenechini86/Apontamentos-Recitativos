@@ -2,10 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { 
   Calendar as CalendarIcon, MapPin, Clock, Users, X, Plus, Edit2, Trash2, ChevronLeft, ChevronRight 
 } from 'lucide-react';
-import { AgendaVisita } from '../types';
+import { AgendaVisita, ComumCongregacao } from '../types';
 import { apiGet } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
-export const AgendaVisitasView: React.FC = () => {
+interface Props {
+  comuns: ComumCongregacao[];
+}
+
+export const AgendaVisitasView: React.FC<Props> = ({ comuns }) => {
+  const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [visitas, setVisitas] = useState<AgendaVisita[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +25,8 @@ export const AgendaVisitasView: React.FC = () => {
     horario: '',
     ponto_encontro: '',
     cor: '#10b981',
-    data_visita: ''
+    data_visita: '',
+    comum_id: user?.comum_congregacao_id || ''
   });
 
   const fetchVisitas = async () => {
@@ -27,7 +34,14 @@ export const AgendaVisitasView: React.FC = () => {
     try {
       const res = await apiGet('/api/visitas');
       const json = await res.json();
-      setVisitas(json.data || []);
+      
+      const isCJM = user?.perfis?.nome?.includes('CJM') || false;
+      const isGlobal = !isCJM && (user?.perfis?.nivel_acesso === 'global' || user?.perfis?.nivel_acesso === 'setor');
+      
+      const filtered = (json.data || []).filter((v: AgendaVisita) => 
+        isGlobal ? true : (v.comum_id || '') === (user?.comum_congregacao_id || '')
+      );
+      setVisitas(filtered);
     } catch (error) {
       console.error('Erro ao buscar visitas:', error);
     } finally {
@@ -64,7 +78,8 @@ export const AgendaVisitasView: React.FC = () => {
       horario: '',
       ponto_encontro: '',
       cor: '#10b981',
-      data_visita: formattedDate
+      data_visita: formattedDate,
+      comum_id: user?.comum_congregacao_id || ''
     });
     setEditingId(null);
     setIsModalOpen(true);
@@ -78,7 +93,8 @@ export const AgendaVisitasView: React.FC = () => {
       horario: v.horario || '',
       ponto_encontro: v.ponto_encontro || '',
       cor: v.cor || '#10b981',
-      data_visita: v.data_visita
+      data_visita: v.data_visita,
+      comum_id: v.comum_id || user?.comum_congregacao_id || ''
     });
     setEditingId(v.id);
     setIsModalOpen(true);
@@ -229,6 +245,13 @@ export const AgendaVisitasView: React.FC = () => {
                           <span className="truncate">{visita.ponto_encontro}</span>
                         </div>
                       )}
+                      {visita.comum_congregacao && (
+                        <div className="flex items-center space-x-1 mt-0.5">
+                          <span className="px-1.5 py-0.5 rounded-sm bg-black/10 dark:bg-white/10 text-[9px] font-semibold">
+                            {visita.comum_congregacao.nome}
+                          </span>
+                        </div>
+                      )}
                       
                       <div className="absolute top-1 right-1 opacity-0 group-hover/event:opacity-100 flex items-center space-x-1 bg-white/80 dark:bg-slate-900/80 rounded px-1">
                         <button onClick={(e) => handleDelete(visita.id, e)} className="text-red-500 hover:text-red-700">
@@ -283,6 +306,24 @@ export const AgendaVisitasView: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {(!user?.perfis?.nome?.includes('CJM') && (user?.perfis?.nivel_acesso === 'global' || user?.perfis?.nivel_acesso === 'setor')) && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Comum Congregação
+                  </label>
+                  <select
+                    value={formData.comum_id}
+                    onChange={e => setFormData({...formData, comum_id: e.target.value})}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                  >
+                    <option value="">Selecione uma Comum (Opcional)</option>
+                    {comuns.map(c => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

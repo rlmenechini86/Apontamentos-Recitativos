@@ -597,7 +597,7 @@ export default function App() {
 
           {/* ROTA 1.5: AGENDA DE VISITAS */}
           {currentRoute === 'agenda-visitas' && (
-            <AgendaVisitasView />
+            <AgendaVisitasView comuns={comuns} />
           )}
 
           {/* ROTA 1.6: CALENDARIO DE EVENTOS E REUNIÕES */}
