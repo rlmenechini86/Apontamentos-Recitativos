@@ -55,30 +55,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Inactivity timeout logic
   useEffect(() => {
     let timeoutId: number;
+    const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
     const logoutDueToInactivity = () => {
       setUser(null);
       setToken(null);
       localStorage.removeItem('ccb_user');
       localStorage.removeItem('ccb_token');
+      localStorage.removeItem('ccb_last_activity');
       // Optional: alert('Sessão expirada por inatividade. Faça login novamente.');
     };
 
     const resetTimer = () => {
+      const now = Date.now();
+      const lastActivity = parseInt(localStorage.getItem('ccb_last_activity') || '0', 10);
+      
+      // Se o usuário voltar e já tiver passado o tempo (ex: navegador suspendeu)
+      if (lastActivity && now - lastActivity > TIMEOUT_MS) {
+        logoutDueToInactivity();
+        return;
+      }
+      
+      // Atualiza o localStorage no máximo a cada 5 segundos para não travar no mobile (ex: scroll contínuo)
+      if (!lastActivity || now - lastActivity > 5000) {
+        localStorage.setItem('ccb_last_activity', now.toString());
+      }
+      
       window.clearTimeout(timeoutId);
       if (user && token) {
-        timeoutId = window.setTimeout(logoutDueToInactivity, 10 * 60 * 1000); // 10 minutes
+        timeoutId = window.setTimeout(logoutDueToInactivity, TIMEOUT_MS);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        resetTimer();
       }
     };
 
     if (user && token) {
-      const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+      const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
       
-      events.forEach(event => window.addEventListener(event, resetTimer));
-      resetTimer();
+      localStorage.setItem('ccb_last_activity', Date.now().toString());
+      timeoutId = window.setTimeout(logoutDueToInactivity, TIMEOUT_MS);
+      
+      events.forEach(event => window.addEventListener(event, resetTimer, { passive: true }));
+      document.addEventListener('visibilitychange', handleVisibilityChange);
 
       return () => {
         events.forEach(event => window.removeEventListener(event, resetTimer));
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
         window.clearTimeout(timeoutId);
       };
     }

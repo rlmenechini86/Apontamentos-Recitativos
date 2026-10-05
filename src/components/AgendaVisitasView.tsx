@@ -171,9 +171,10 @@ export const AgendaVisitasView: React.FC<Props> = ({ comuns }) => {
       </div>
 
       {/* Calendar Grid */}
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xs border border-slate-200 dark:border-slate-800 overflow-hidden">
-        {/* Days of week */}
-        <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xs border border-slate-200 dark:border-slate-800 overflow-x-auto">
+        <div className="min-w-[800px]">
+          {/* Days of week */}
+          <div className="grid grid-cols-7 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
           {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
             <div key={day} className="py-3 text-center text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               {day}
@@ -264,6 +265,7 @@ export const AgendaVisitasView: React.FC<Props> = ({ comuns }) => {
               </div>
             );
           })}
+          </div>
         </div>
       </div>
 
