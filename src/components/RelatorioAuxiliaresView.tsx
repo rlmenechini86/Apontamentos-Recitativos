@@ -65,7 +65,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
 
   const totalAuxiliares = useMemo(() => {
     return auxiliares.filter(a => 
-      a.ativo &&
+      a.ativo && a.is_auxiliar === true &&
       (selectedComumId ? a.comum_id === selectedComumId : true)
     ).length;
   }, [auxiliares, selectedComumId]);
@@ -90,7 +90,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
 
   const chartData = useMemo(() => {
     const data = filteredComuns.map(comum => {
-      const auxComum = auxiliares.filter(a => a.comum_id === comum.id && a.ativo);
+      const auxComum = auxiliares.filter(a => a.comum_id === comum.id && a.ativo && a.is_auxiliar === true);
       const irmaos = auxComum.filter(a => a.sexo === 'Masculino').length;
       const irmas = auxComum.filter(a => a.sexo === 'Feminino').length;
       const total = irmaos + irmas;
@@ -116,7 +116,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
   }, [filteredComuns, auxiliares]);
 
   const tableData = useMemo(() => {
-    let data = auxiliares.filter(a => a.ativo);
+    let data = auxiliares.filter(a => a.ativo && a.is_auxiliar === true);
     if (selectedComumId) {
       data = data.filter(a => a.comum_id === selectedComumId);
     }
@@ -300,7 +300,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col">
         <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex items-center">
           <BarChartIcon className="w-5 h-5 mr-2 text-emerald-400" />
-          <h3 className="font-bold text-sm tracking-wider uppercase">RELATÓRIO DE AUXILIARES, CJM E MOCIDADE</h3>
+          <h3 className="font-bold text-sm tracking-wider uppercase">RELATÓRIO DE AUXILIARES DE JOVENS E MOCIDADE</h3>
         </div>
         <div className="p-4 bg-slate-50 dark:bg-slate-950/50 overflow-x-auto w-full h-[600px]">
           <div style={{ minWidth: `${Math.max(1000, chartData.length * 45)}px`, height: '100%' }}>

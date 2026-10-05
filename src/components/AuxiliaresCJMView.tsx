@@ -17,6 +17,32 @@ import { ComumCongregacao, Setor } from '../types';
 import { Pagination } from './Pagination';
 import { useAuth } from '../context/AuthContext';
 
+const INSTRUMENTOS_PADRAO = [
+  'Violino', 'Viola', 'Celo', 'Flauta', 'Clarineta', 
+  'Clarone', 'Trompete', 'Sax Alto', 'Sax Tenor', 
+  'Sax Baritono', 'Euphonio', 'Trombone', 'Tuba'
+];
+
+export const obterFamiliaInstrumento = (instrumento: string): string => {
+  if (!instrumento) return '';
+  const inst = instrumento.toLowerCase();
+  
+  if (inst.includes('violino') || inst.includes('viola') || inst.includes('celo') || inst.includes('violoncelo')) {
+    return 'Cordas Friccionadas';
+  }
+  if (inst.includes('flauta') || inst.includes('clarineta') || inst.includes('clarone') || inst.includes('sax') || inst.includes('oboé') || inst.includes('fagote') || inst.includes('corne')) {
+    return 'Madeiras';
+  }
+  if (inst.includes('trompete') || inst.includes('trombone') || inst.includes('euphonio') || inst.includes('bombardino') || inst.includes('tuba') || inst.includes('trompa') || inst.includes('cornet')) {
+    return 'Metais';
+  }
+  if (inst.includes('acordeon') || inst.includes('órgão') || inst.includes('orgão') || inst.includes('orgao') || inst.includes('órgao') || inst.includes('teclado') || inst.includes('piano')) {
+    return 'Teclas';
+  }
+  
+  return 'Outros / Não Classificado';
+};
+
 export interface AuxiliarJovens {
   id: string;
   nome: string;
@@ -28,6 +54,9 @@ export interface AuxiliarJovens {
   comum_nome?: string;
   comum_congregacao?: { id: string, nome: string, codigo: string };
   ativo: boolean;
+  is_auxiliar?: boolean;
+  is_musico?: boolean;
+  instrumento?: string;
 }
 
 interface AuxiliaresCJMViewProps {
@@ -48,6 +77,12 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
 
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
+  const instrumentosDinamicos = React.useMemo(() => {
+    const fromDb = auxiliares.map(a => a.instrumento).filter(Boolean) as string[];
+    const unique = Array.from(new Set([...INSTRUMENTOS_PADRAO, ...fromDb]));
+    return unique.sort();
+  }, [auxiliares]);
+
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -64,6 +99,10 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
     data_nascimento: '',
     comum_id: comuns[0]?.id || '',
     ativo: true,
+    is_auxiliar: true,
+    is_musico: false,
+    instrumento: '',
+    nome_responsavel: '',
   });
 
   const fetchAuxiliares = async () => {
@@ -143,6 +182,10 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
       data_nascimento: '',
       comum_id: comuns[0]?.id || '',
       ativo: true,
+      is_auxiliar: true,
+      is_musico: false,
+      instrumento: '',
+      nome_responsavel: '',
     });
     setIsModalOpen(true);
   };
@@ -157,6 +200,10 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
       data_nascimento: aux.data_nascimento || '',
       comum_id: aux.comum_id || '',
       ativo: aux.ativo,
+      is_auxiliar: aux.is_auxiliar ?? true,
+      is_musico: aux.is_musico ?? false,
+      instrumento: aux.instrumento || '',
+      nome_responsavel: aux.nome_responsavel || '',
     });
     setIsModalOpen(true);
   };
@@ -181,8 +228,9 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
     try {
       const payload = {
         ...formData,
+        instrumento: formData.is_musico ? formData.instrumento : null,
+        data_apresentacao: formData.is_auxiliar ? (formData.data_apresentacao || null) : null,
         comum_id: formData.comum_id || null,
-        data_apresentacao: formData.data_apresentacao || null,
         data_nascimento: formData.data_nascimento || null,
       };
 
@@ -218,10 +266,10 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center space-x-2">
             <UserCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            <span>Auxiliares de Jovens</span>
+            <span>Cadastro de Mocidade</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Registro dos Auxiliares de Jovens das congregações.
+            Registro de Jovens e Auxiliares das congregações.
           </p>
         </div>
 
@@ -230,7 +278,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
           className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center space-x-2 shadow-xs transition cursor-pointer self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
-          <span>Novo Auxiliar de Jovens</span>
+          <span>Novo Cadastro</span>
         </button>
       </div>
 
@@ -275,11 +323,23 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                 <th className="px-5 py-3.5 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('nome')}>
                   <div className="flex items-center space-x-1"><span>Nome Completo / Contato</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
+                <th className="px-5 py-3.5 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('nome_responsavel')}>
+                  <div className="flex items-center space-x-1"><span>Responsável</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
                 <th className="px-5 py-3.5 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('sexo')}>
                   <div className="flex items-center space-x-1"><span>Detalhes</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
                 <th className="px-5 py-3.5 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('comum_nome')}>
                   <div className="flex items-center space-x-1"><span>Comum Congregação</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-5 py-3.5 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('is_auxiliar')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Auxiliar</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-5 py-3.5 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('is_musico')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Músico</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-5 py-3.5 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('instrumento')}>
+                  <div className="flex items-center space-x-1"><span>Instrumento</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
                 <th className="px-5 py-3.5 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('ativo')}>
                   <div className="flex items-center justify-center space-x-1"><span>Status</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
@@ -290,7 +350,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
             <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60 text-xs">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-10 text-slate-500">
+                  <td colSpan={9} className="text-center py-10 text-slate-500">
                     <div className="flex items-center justify-center space-x-2">
                       <RefreshCw className="w-5 h-5 animate-spin text-emerald-600 dark:text-emerald-400" />
                       <span>Carregando auxiliares...</span>
@@ -299,8 +359,8 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-10 text-slate-500">
-                    Nenhum auxiliar de jovens encontrado.
+                  <td colSpan={9} className="text-center py-10 text-slate-500">
+                    Nenhum cadastro encontrado.
                   </td>
                 </tr>
               ) : (
@@ -325,6 +385,15 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
+                      {aux.nome_responsavel ? (
+                        <span className="text-slate-700 dark:text-slate-300 font-medium">
+                          {aux.nome_responsavel}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 dark:text-slate-500 italic text-[11px]">-</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5">
                       <div className="text-slate-600 dark:text-slate-400">
                         <div>Sexo: <span className="font-medium text-slate-800 dark:text-slate-200">{aux.sexo}</span></div>
                         <div className="flex items-center space-x-1 mt-0.5">
@@ -343,6 +412,25 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                         <span className="text-slate-400 dark:text-slate-500 italic text-[11px]">
                           Não informada
                         </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-center">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${aux.is_auxiliar ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
+                        {aux.is_auxiliar ? 'Sim' : 'Não'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-center">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold ${aux.is_musico ? 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-500/20' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'}`}>
+                        {aux.is_musico ? 'Sim' : 'Não'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {aux.is_musico && aux.instrumento ? (
+                        <span className="text-slate-700 dark:text-slate-300 font-medium">
+                          {aux.instrumento}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 dark:text-slate-500 italic text-[11px]">-</span>
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-center">
@@ -389,7 +477,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-4">
               <h3 className="font-semibold text-base flex items-center space-x-2">
                 <UserCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>{editingId ? 'Editar Auxiliar de Jovens' : 'Novo Auxiliar de Jovens'}</span>
+                <span>{editingId ? 'Editar Cadastro' : 'Novo Cadastro'}</span>
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
                 <X className="w-4 h-4" />
@@ -409,16 +497,18 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                 />
               </div>
 
+              <div className="space-y-1">
+                <label className="font-semibold uppercase text-slate-600 dark:text-slate-300">Nome do Responsável</label>
+                <input
+                  type="text"
+                  placeholder="Responsável (se menor de idade)"
+                  value={formData.nome_responsavel}
+                  onChange={(e) => setFormData({ ...formData, nome_responsavel: e.target.value })}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="font-semibold uppercase text-slate-600 dark:text-slate-300">Data de Apresentação</label>
-                  <input
-                    type="date"
-                    value={formData.data_apresentacao}
-                    onChange={(e) => setFormData({ ...formData, data_apresentacao: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-emerald-500"
-                  />
-                </div>
                 
                 <div className="space-y-1">
                   <label className="font-semibold uppercase text-slate-600 dark:text-slate-300">Data de Nascimento</label>
@@ -474,18 +564,122 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                 </select>
               </div>
 
-              <div className="flex items-center space-x-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="aux_ativo"
-                  checked={formData.ativo}
-                  onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-                  className="rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500"
-                />
-                <label htmlFor="aux_ativo" className="text-slate-700 dark:text-slate-300 cursor-pointer">
-                  Auxiliar ativo (Status: Ativo)
-                </label>
+              <div className="flex flex-col space-y-3 pt-2">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="aux_ativo"
+                    checked={formData.ativo}
+                    onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
+                    className="rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="aux_ativo" className="text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
+                    Cadastro ativo
+                  </label>
+                </div>
+                
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="is_auxiliar"
+                      checked={formData.is_auxiliar}
+                      onChange={(e) => setFormData({ ...formData, is_auxiliar: e.target.checked })}
+                      className="rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <label htmlFor="is_auxiliar" className="text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
+                      Auxiliar de Jovens
+                    </label>
+                  </div>
+                  {formData.is_auxiliar && (
+                    <div className="mt-2 ml-6 space-y-1">
+                      <label className="font-semibold uppercase text-slate-600 dark:text-slate-300 text-[10px]">Data de Apresentação</label>
+                      <input
+                        type="date"
+                        value={formData.data_apresentacao}
+                        onChange={(e) => setFormData({ ...formData, data_apresentacao: e.target.value })}
+                        className="w-full sm:w-48 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-emerald-500"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="is_musico"
+                    checked={formData.is_musico}
+                    onChange={(e) => setFormData({ ...formData, is_musico: e.target.checked })}
+                    className="rounded border-slate-300 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="is_musico" className="text-slate-700 dark:text-slate-300 font-medium cursor-pointer">
+                    Músico
+                  </label>
+                </div>
               </div>
+
+              {formData.is_musico && (
+                <div className="space-y-4 mt-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="font-semibold uppercase text-slate-600 dark:text-slate-300 mb-2 block">Instrumento</label>
+                      <select
+                        value={formData.instrumento}
+                        onChange={(e) => setFormData({ ...formData, instrumento: e.target.value })}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 cursor-pointer focus:ring-1 focus:ring-emerald-500"
+                      >
+                    <option value="">-- Selecione o Instrumento --</option>
+                    {instrumentosDinamicos.map(inst => (
+                      <option key={inst} value={inst}>{inst}</option>
+                    ))}
+                      {formData.instrumento && !instrumentosDinamicos.includes(formData.instrumento) && (
+                        <option value={formData.instrumento}>{formData.instrumento} (Adicionado)</option>
+                      )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-semibold uppercase text-slate-600 dark:text-slate-300 mb-2 block">Família do Instrumento</label>
+                      <div className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-500 dark:text-slate-400 font-medium">
+                        {formData.instrumento ? obterFamiliaInstrumento(formData.instrumento) : '-'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                    <input 
+                      type="text" 
+                      id="novo_instrumento"
+                      placeholder="Outro instrumento (digite e adicione)..." 
+                      className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-emerald-500"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = e.currentTarget.value.trim();
+                          if (val) {
+                            setFormData({ ...formData, instrumento: val });
+                          }
+                          e.currentTarget.value = '';
+                        }
+                      }}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const input = document.getElementById('novo_instrumento') as HTMLInputElement;
+                        const val = input.value.trim();
+                        if (val) {
+                          setFormData({ ...formData, instrumento: val });
+                        }
+                        input.value = '';
+                      }}
+                      className="px-3 py-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded text-xs font-semibold hover:bg-emerald-200 transition-colors"
+                    >
+                      Adicionar / Usar
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end space-x-2">
                 <button

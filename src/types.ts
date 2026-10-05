@@ -91,6 +91,10 @@ export interface AuxiliarJovens {
   data_nascimento?: string;
   comum_id: string;
   ativo: boolean;
+  is_auxiliar?: boolean;
+  is_musico?: boolean;
+  instrumento?: string;
+  nome_responsavel?: string;
   comum?: Partial<ComumCongregacao>;
 }
 
@@ -130,18 +134,13 @@ export interface ReuniaoEvento {
   comum_congregacao?: ComumCongregacao;
 }
 
-export interface Mocidade {
+export interface AgendaVisita {
   id: string;
-  nome_completo: string;
-  data_nascimento: string;
-  sexo: 'Feminino' | 'Masculino';
-  responsavel?: string;
-  telefone_contato?: string;
-  comum_id?: string;
-  musico: boolean;
-  instrumento?: string;
-  ativo: boolean;
+  nome: string;
+  endereco?: string;
+  horario?: string;
+  ponto_encontro?: string;
+  cor?: string;
+  data_visita: string;
   created_at?: string;
-  updated_at?: string;
-  comum_congregacao?: Partial<ComumCongregacao>;
 }

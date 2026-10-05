@@ -93,7 +93,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const totalCJM = usuarios.filter(u => u.cargo_ministerio?.toLowerCase().includes('cjm') && u.ativo).length;
   const totalAnciaos = anciaos.filter(a => a.ativo).length;
-  const totalAuxiliares = auxiliares.filter(a => a.ativo).length;
+  const totalAuxiliares = auxiliares.filter(a => a.ativo && a.is_auxiliar).length;
 
   return (
     <div className="space-y-6">

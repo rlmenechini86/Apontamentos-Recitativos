@@ -18,6 +18,7 @@ export class AuxiliarJovensController {
 
   async create(req: Request, res: Response) {
     try {
+      console.log('[CREATE Auxiliar] Payload recebido:', req.body);
       const data = await auxiliarJovensService.create(req.body);
       res.status(201).json({ success: true, data });
     } catch (error: any) {
@@ -27,6 +28,7 @@ export class AuxiliarJovensController {
 
   async update(req: Request, res: Response) {
     try {
+      console.log('[UPDATE Auxiliar] ID:', req.params.id, 'Payload:', req.body);
       const data = await auxiliarJovensService.update(req.params.id, req.body);
       res.json({ success: true, data });
     } catch (error: any) {

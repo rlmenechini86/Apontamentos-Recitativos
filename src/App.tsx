@@ -19,14 +19,17 @@ import {
   Moon,
   LogOut,
   ArrowUpDown,
+  Clock,
 } from 'lucide-react';
 import { Sidebar, NavRoute } from './components/Sidebar';
 import { DashboardView } from './components/DashboardView';
 import { ApontamentosView } from './components/ApontamentosView';
 import { AcompanhamentoSetorView } from './components/AcompanhamentoSetorView';
 import { AcompanhamentoAnciaosView } from './components/AcompanhamentoAnciaosView';
+import { AgendaVisitasView } from './components/AgendaVisitasView';
 import { ControleApontamentosView } from './components/ControleApontamentosView';
 import { RelatorioAuxiliaresView } from './components/RelatorioAuxiliaresView';
+import { RelatorioMusicosView } from './components/RelatorioMusicosView';
 import { RelatorioTempoMinisterioView } from './components/RelatorioTempoMinisterioView';
 import { RecitativosView } from './components/RecitativosView';
 import { ContagensMocidadeView } from './components/ContagensMocidadeView';
@@ -39,7 +42,6 @@ import { UsuarioListView } from './components/UsuarioListView';
 import { AdminAnciaosView } from './components/AdminAnciaosView';
 import { AdminTiposEventoView } from './components/AdminTiposEventoView';
 import { AdminReunioesEventosView } from './components/AdminReunioesEventosView';
-import { MocidadeView } from './components/MocidadeView';
 import { CalendarioView } from './components/CalendarioView';
 import { Pagination } from './components/Pagination';
 import { ComumCongregacao, Setor, Perfil, Usuario, DbStatus, TipoEvento, ReuniaoEvento, Anciao } from './types';
@@ -398,11 +400,35 @@ export default function App() {
           category: 'Administração',
           icon: <KeyRound className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
         };
+      case 'calendario':
+        return {
+          title: 'Calendário de Reuniões e Eventos',
+          category: 'Visão Consolidada',
+          icon: <Clock className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
+        };
+      case 'agenda-visitas':
+        return {
+          title: 'Agenda de Visitas',
+          category: 'Gestão de Setor',
+          icon: <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
+        };
       case 'admin-auxiliares':
         return {
-          title: 'Auxiliares de Jovens',
+          title: '',
           category: 'Administração',
           icon: <UserCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
+        };
+      case 'relatorio-auxiliares':
+        return {
+          title: 'Relatório Auxiliares de Jovens',
+          category: 'Gestão e Controle',
+          icon: <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
+        };
+      case 'relatorio-musicos':
+        return {
+          title: 'Relatório de Músicos',
+          category: 'Gestão e Controle',
+          icon: <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
         };
       default:
         return {
@@ -459,9 +485,11 @@ export default function App() {
                   <span className="text-slate-400 dark:text-slate-600 text-xs hidden sm:inline">•</span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 hidden sm:inline">Guarulhos / SP</span>
                 </div>
-                <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight leading-none">
-                  {routeInfo.title}
-                </h1>
+                {routeInfo.title && (
+                  <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight leading-none">
+                    {routeInfo.title}
+                  </h1>
+                )}
               </div>
             </div>
           </div>
@@ -567,6 +595,16 @@ export default function App() {
             />
           )}
 
+          {/* ROTA 1.5: AGENDA DE VISITAS */}
+          {currentRoute === 'agenda-visitas' && (
+            <AgendaVisitasView />
+          )}
+
+          {/* ROTA 1.6: CALENDARIO DE EVENTOS E REUNIÕES */}
+          {currentRoute === 'calendario' && (
+            <CalendarioView reunioes={reunioesEventos} />
+          )}
+
           {/* ROTA 2.1: ACOMPANHAMENTO SETOR */}
           {currentRoute === 'acompanhamento-setor' && (
             <AcompanhamentoSetorView comuns={comuns} usuarios={usuarios} />
@@ -585,6 +623,10 @@ export default function App() {
           {/* ROTA 2.4: RELATORIO DE AUXILIARES */}
           {currentRoute === 'relatorio-auxiliares' && (
             <RelatorioAuxiliaresView comuns={comuns} usuarios={usuarios} />
+          )}
+
+          {currentRoute === 'relatorio-musicos' && (
+            <RelatorioMusicosView comuns={comuns} />
           )}
 
           {currentRoute === 'relatorio-ministerio' && (
@@ -839,10 +881,6 @@ export default function App() {
               comuns={comuns}
               onUpdate={fetchReunioesEventos} 
             />
-          )}
-
-          {currentRoute === 'admin-mocidade' && (
-            <MocidadeView comuns={comuns} />
           )}
 
           {currentRoute === 'calendario' && (

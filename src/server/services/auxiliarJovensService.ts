@@ -8,12 +8,16 @@ export interface AuxiliarJovemDTO {
   data_nascimento?: string;
   comum_id: string;
   ativo?: boolean;
+  is_auxiliar?: boolean;
+  is_musico?: boolean;
+  instrumento?: string;
+  nome_responsavel?: string;
 }
 
 export class AuxiliarJovensService {
   async list() {
     const { data, error } = await supabase
-      .from('auxiliares_jovens')
+      .from('mocidade')
       .select(`
         *,
         comum_congregacao:comum_id (
@@ -29,6 +33,10 @@ export class AuxiliarJovensService {
       throw error;
     }
 
+    if (data && data.length > 0) {
+      console.log('[LIST Auxiliares] Exemplo de registro retornado pelo Supabase:', data[0]);
+    }
+
     return data || [];
   }
 
@@ -37,7 +45,11 @@ export class AuxiliarJovensService {
       nome: dto.nome.trim(),
       sexo: dto.sexo,
       comum_id: dto.comum_id,
-      ativo: dto.ativo ?? true
+      ativo: dto.ativo ?? true,
+      is_auxiliar: dto.is_auxiliar ?? true,
+      is_musico: dto.is_musico ?? false,
+      instrumento: dto.instrumento || null,
+      nome_responsavel: dto.nome_responsavel || null
     };
 
     if (dto.data_apresentacao) payload.data_apresentacao = dto.data_apresentacao;
@@ -45,7 +57,7 @@ export class AuxiliarJovensService {
     if (dto.celular) payload.celular = dto.celular.trim();
 
     const { data, error } = await supabase
-      .from('auxiliares_jovens')
+      .from('mocidade')
       .insert(payload)
       .select(`
         *,
@@ -67,6 +79,10 @@ export class AuxiliarJovensService {
     if (dto.sexo !== undefined) payload.sexo = dto.sexo;
     if (dto.comum_id !== undefined) payload.comum_id = dto.comum_id;
     if (dto.ativo !== undefined) payload.ativo = dto.ativo;
+    if (dto.is_auxiliar !== undefined) payload.is_auxiliar = dto.is_auxiliar;
+    if (dto.is_musico !== undefined) payload.is_musico = dto.is_musico;
+    if (dto.instrumento !== undefined) payload.instrumento = dto.instrumento;
+    if (dto.nome_responsavel !== undefined) payload.nome_responsavel = dto.nome_responsavel || null;
     
     // allow nulls for dates/celular
     if (dto.data_apresentacao !== undefined) payload.data_apresentacao = dto.data_apresentacao || null;
@@ -74,7 +90,7 @@ export class AuxiliarJovensService {
     if (dto.celular !== undefined) payload.celular = dto.celular.trim() || null;
 
     const { data, error } = await supabase
-      .from('auxiliares_jovens')
+      .from('mocidade')
       .update(payload)
       .eq('id', id)
       .select(`
@@ -93,7 +109,7 @@ export class AuxiliarJovensService {
 
   async delete(id: string) {
     const { error } = await supabase
-      .from('auxiliares_jovens')
+      .from('mocidade')
       .delete()
       .eq('id', id);
 

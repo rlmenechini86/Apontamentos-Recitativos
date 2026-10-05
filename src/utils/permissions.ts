@@ -12,7 +12,6 @@ export const defaultMatriz = [
   { id: 'visualizar_calendario', funcionalidade: 'Visualizar Calendário de Eventos', admin: true, cjm: true, apontamento: true },
   { id: 'gerenciar_tipos_evento', funcionalidade: 'Gerenciar Tipos de Eventos (CRUD)', admin: true, cjm: false, apontamento: false },
   { id: 'gerenciar_reunioes', funcionalidade: 'Gerenciar Reuniões e Eventos (CRUD)', admin: true, cjm: true, apontamento: false },
-  { id: 'gerenciar_mocidade', funcionalidade: 'Cadastros da Mocidade', admin: true, cjm: true, apontamento: true },
 ];
 
 export const getPermissoes = () => {
