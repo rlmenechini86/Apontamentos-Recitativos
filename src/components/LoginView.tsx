@@ -105,7 +105,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ perfis, comuns }) => {
       if (err.message === 'REQUIRE_PASSWORD_CHANGE') {
         setMode('set_password');
         setSenha(''); // Clear the default password
-        setErrorMsg('Este é o seu primeiro acesso. Por favor, cadastre uma nova senha segura para continuar.');
+        setErrorMsg('Sua senha atual requer alteração (senha padrão ou resetada pelo administrador). Por favor, cadastre sua nova senha segura para continuar.');
       } else {
         setErrorMsg(err.message || 'Erro ao efetuar login.');
       }
@@ -254,21 +254,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ perfis, comuns }) => {
               </div>
 
               <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Senha de Acesso
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode('set_password');
-                      setErrorMsg(null);
-                    }}
-                    className="text-[11px] text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
-                  >
-                    Cadastrar nova senha?
-                  </button>
-                </div>
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Senha de Acesso
+                </label>
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                   <input

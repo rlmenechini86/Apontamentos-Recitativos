@@ -5,7 +5,7 @@ import {
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList
 } from 'recharts';
-import { ComumCongregacao, Recitativo, ContagemMocidade, Anciao } from '../types';
+import { ComumCongregacao, Recitativo, ContagemMocidade, Anciao, Setor } from '../types';
 import { apiGet } from '../utils/api';
 
 import { useAuth } from '../context/AuthContext';
@@ -13,11 +13,14 @@ import { useAuth } from '../context/AuthContext';
 interface Props {
   comuns: ComumCongregacao[];
   anciaos: Anciao[];
+  setores?: Setor[];
 }
 
-export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns, anciaos: propAnciaos }) => {
+export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns, anciaos: propAnciaos, setores: propSetores }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
+  const [selectedSetorId, setSelectedSetorId] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useState<string>(''); // Vazio = Ano Inteiro
   const [selectedAnciaoId, setSelectedAnciaoId] = useState<string>('');
@@ -25,6 +28,17 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
   // Data states
   const [recitativos, setRecitativos] = useState<Recitativo[]>([]);
   const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
+
+  useEffect(() => {
+    if (propSetores && propSetores.length > 0) {
+      setSetores(propSetores);
+    } else {
+      fetch('/api/comuns/meta/setores')
+        .then(res => res.json())
+        .then(json => setSetores(json.data || []))
+        .catch(err => console.error('Erro ao buscar setores:', err));
+    }
+  }, [propSetores]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,6 +70,27 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
   const comuns = propComuns.filter((c: any) => isRestrictedProfile ? c.id === user?.comum_congregacao_id : true);
   const anciaos = propAnciaos.filter((a: any) => !a.nome.includes('/'));
 
+  // Comuns filtradas pelo setor selecionado
+  const comunsFiltradas = useMemo(() => {
+    if (!selectedSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === selectedSetorId);
+    return comuns.filter(c => 
+      c.setor_id === selectedSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, selectedSetorId, setores]);
+
+  // Anciãos pertencentes ao setor selecionado ou que atendem comuns daquele setor
+  const anciaosDoSetor = useMemo(() => {
+    if (!selectedSetorId) return anciaos;
+    const selectedSetor = setores.find(s => s.id === selectedSetorId);
+    return anciaos.filter(a => 
+      a.setor_id === selectedSetorId || 
+      (selectedSetor && a.setor_pertencente === selectedSetor.nome) ||
+      comuns.some(c => c.anciao_id === a.id && (c.setor_id === selectedSetorId || (selectedSetor && c.setor_pertencente === selectedSetor.nome)))
+    );
+  }, [anciaos, selectedSetorId, setores, comuns]);
+
   // Filter available years
   const availableYears = useMemo(() => {
     const years = new Set<string>();
@@ -74,16 +109,20 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
     { value: '11', label: 'Novembro' }, { value: '12', label: 'Dezembro' }
   ];
 
-  // Select first anciao by default when loaded if none selected
+  // Ajusta ancião selecionado quando troca o setor ou carrega
   useEffect(() => {
-    if (!selectedAnciaoId && anciaos.length > 0) {
-      setSelectedAnciaoId(anciaos[0].id);
+    if (anciaosDoSetor.length > 0) {
+      if (!selectedAnciaoId || !anciaosDoSetor.some(a => a.id === selectedAnciaoId)) {
+        setSelectedAnciaoId(anciaosDoSetor[0].id);
+      }
+    } else {
+      setSelectedAnciaoId('');
     }
-  }, [anciaos, selectedAnciaoId]);
+  }, [anciaosDoSetor]);
 
   const selectedAnciao = anciaos.find(a => a.id === selectedAnciaoId);
   
-  const comunsDoAnciao = comuns.filter(c => {
+  const comunsDoAnciao = comunsFiltradas.filter(c => {
     // 1. Igreja que o ancião é o responsável principal
     if (c.anciao_id === selectedAnciaoId) return true;
     
@@ -182,16 +221,30 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
       </div>
 
       {/* Filters and Controls */}
-      <div className="flex flex-col sm:flex-row justify-end items-center gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row justify-end items-center flex-wrap gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center space-x-2 w-full sm:w-auto">
+          <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Setor:</span>
+          <select
+            value={selectedSetorId}
+            onChange={(e) => setSelectedSetorId(e.target.value)}
+            className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium cursor-pointer"
+          >
+            <option value="">Todos os Setores</option>
+            {setores.map(s => (
+              <option key={s.id} value={s.id}>{s.nome}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Ancião:</span>
           <select
             value={selectedAnciaoId}
             onChange={(e) => setSelectedAnciaoId(e.target.value)}
-            className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium"
+            className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium cursor-pointer"
           >
             <option value="">Selecione...</option>
-            {anciaos.map(a => (
+            {anciaosDoSetor.map(a => (
               <option key={a.id} value={a.id}>{a.nome}</option>
             ))}
           </select>
@@ -203,7 +256,7 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
             <select 
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium"
+              className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium cursor-pointer"
             >
               {months.map(m => (
                 <option key={m.value} value={m.value}>{m.label}</option>
@@ -215,13 +268,25 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
             <select 
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium"
+              className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium cursor-pointer"
             >
               {availableYears.map(y => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
           </div>
+
+          {(selectedSetorId || selectedMonth) && (
+            <button
+              onClick={() => {
+                setSelectedSetorId('');
+                setSelectedMonth('');
+              }}
+              className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition whitespace-nowrap"
+            >
+              Limpar filtros
+            </button>
+          )}
         </div>
       </div>
 

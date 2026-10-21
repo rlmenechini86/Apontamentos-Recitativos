@@ -5,18 +5,21 @@ import {
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList, Cell
 } from 'recharts';
-import { ComumCongregacao, AuxiliarJovens } from '../types';
+import { ComumCongregacao, AuxiliarJovens, Setor } from '../types';
 import { apiGet } from '../utils/api';
 import { obterFamiliaInstrumento } from './AuxiliaresCJMView';
 import { useAuth } from '../context/AuthContext';
 
 interface Props {
   comuns: ComumCongregacao[];
+  setores?: Setor[];
 }
 
-export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns }) => {
+export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, setores: propSetores }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
+  const [selectedSetorId, setSelectedSetorId] = useState('');
   const [auxiliares, setAuxiliares] = useState<AuxiliarJovens[]>([]);
   
   const isCJM = user?.perfis?.nome?.includes('CJM') || false;
@@ -26,6 +29,17 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns }) =>
   const [selectedFamilia, setSelectedFamilia] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   const [familySortConfig, setFamilySortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  useEffect(() => {
+    if (propSetores && propSetores.length > 0) {
+      setSetores(propSetores);
+    } else {
+      fetch('/api/comuns/meta/setores')
+        .then(res => res.json())
+        .then(json => setSetores(json.data || []))
+        .catch(err => console.error('Erro ao buscar setores:', err));
+    }
+  }, [propSetores]);
 
   // Força o valor inicial para a comum do usuário logado (corrige problemas de estado mantido ou load assíncrono)
   useEffect(() => {
@@ -53,6 +67,15 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns }) =>
 
   const comuns = userIsGlobal ? propComuns : propComuns.filter(c => c.id === user?.comum_congregacao_id);
 
+  const comunsDoSetor = useMemo(() => {
+    if (!selectedSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === selectedSetorId);
+    return comuns.filter(c => 
+      c.setor_id === selectedSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, selectedSetorId]);
+
   const musicos = useMemo(() => {
     return auxiliares.filter(a => {
       const activeAndMusico = a.ativo && a.is_musico === true;
@@ -60,9 +83,16 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns }) =>
         ? (selectedComumId ? (a.comum_id || '') === selectedComumId : true)
         : (a.comum_id || '') === (user?.comum_congregacao_id || '');
       const matchesFamilia = selectedFamilia ? obterFamiliaInstrumento(a.instrumento || '') === selectedFamilia : true;
-      return activeAndMusico && matchesComum && matchesFamilia;
+
+      const matchesSetor = !selectedSetorId || (() => {
+        const c = propComuns.find(item => item.id === a.comum_id);
+        const s = setores.find(st => st.id === selectedSetorId);
+        return c?.setor_id === selectedSetorId || (s && c?.setor_pertencente === s.nome);
+      })();
+
+      return activeAndMusico && matchesComum && matchesFamilia && matchesSetor;
     });
-  }, [auxiliares, selectedComumId, selectedFamilia]);
+  }, [auxiliares, selectedComumId, selectedFamilia, selectedSetorId, propComuns, setores, userIsGlobal, user?.comum_congregacao_id]);
 
   const instrumentData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -228,36 +258,71 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns }) =>
     <div className="flex-1 flex flex-col space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* Filtros */}
-      <div className="flex flex-col md:flex-row gap-3 items-center pb-4 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            Comum Congregação:
-          </label>
-          <select
-            value={selectedComumId}
-            onChange={(e) => setSelectedComumId(e.target.value)}
-            className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">Todas as Congregações</option>
-            {comuns.map((c) => (
-              <option key={c.id} value={c.id}>{c.nome}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            Família:
-          </label>
-          <select
-            value={selectedFamilia}
-            onChange={(e) => setSelectedFamilia(e.target.value)}
-            className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">Todas as Famílias</option>
-            {allFamilies.map((fam) => (
-              <option key={fam} value={fam}>{fam}</option>
-            ))}
-          </select>
+      <div className="flex flex-col md:flex-row gap-3 items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex flex-wrap items-center gap-3 w-full">
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Setor:
+            </label>
+            <select
+              value={selectedSetorId}
+              onChange={(e) => {
+                setSelectedSetorId(e.target.value);
+                setSelectedComumId('');
+              }}
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              <option value="">Todos os Setores</option>
+              {setores.map((s) => (
+                <option key={s.id} value={s.id}>{s.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Comum:
+            </label>
+            <select
+              value={selectedComumId}
+              onChange={(e) => setSelectedComumId(e.target.value)}
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              <option value="">{selectedSetorId ? 'Todas as Congregações do Setor' : 'Todas as Congregações'}</option>
+              {comunsDoSetor.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Família:
+            </label>
+            <select
+              value={selectedFamilia}
+              onChange={(e) => setSelectedFamilia(e.target.value)}
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              <option value="">Todas as Famílias</option>
+              {allFamilies.map((fam) => (
+                <option key={fam} value={fam}>{fam}</option>
+              ))}
+            </select>
+          </div>
+
+          {(selectedSetorId || selectedComumId || selectedFamilia) && (
+            <button
+              onClick={() => {
+                setSelectedSetorId('');
+                setSelectedComumId('');
+                setSelectedFamilia('');
+              }}
+              className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition whitespace-nowrap"
+            >
+              Limpar filtros
+            </button>
+          )}
         </div>
       </div>
 

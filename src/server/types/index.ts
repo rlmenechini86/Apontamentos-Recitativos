@@ -193,3 +193,15 @@ export interface UpdateContagemMocidadeDTO {
   comum_id?: string;
   tipo?: 'Santa Ceia' | 'Mocidade';
 }
+
+export interface Anciao {
+  id: string;
+  nome: string;
+  setor_pertencente?: string;
+  setor_id?: string;
+  data_cadastro?: string;
+  ativo: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+

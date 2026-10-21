@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ClipboardCheck,
   Plus,
@@ -6,8 +6,10 @@ import {
   CheckCircle2,
   X,
   Check,
+  Lock,
 } from 'lucide-react';
 import { ComumCongregacao, Setor } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 export interface Apontamento {
   id: string;
@@ -68,6 +70,13 @@ interface ApontamentosViewProps {
 }
 
 export const ApontamentosView: React.FC<ApontamentosViewProps> = ({ comuns, setores }) => {
+  const { user } = useAuth();
+
+  const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
+  const isApontamento = roleName.includes('apontamento') || user?.perfis?.nivel_acesso === 'comum';
+  const isRestrictedUser = isApontamento || (roleName !== 'administrador' && user?.perfis?.nivel_acesso !== 'global' && !!user?.comum_congregacao_id);
+  const userComumId = user?.comum_congregacao_id || user?.comum_congregacao?.id;
+
   const [apontamentos, setApontamentos] = useState<Apontamento[]>(mockApontamentosIniciais);
   const [selectedSetorId, setSelectedSetorId] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
@@ -75,7 +84,7 @@ export const ApontamentosView: React.FC<ApontamentosViewProps> = ({ comuns, seto
 
   // Form State para Novo Apontamento
   const [novoApt, setNovoApt] = useState({
-    comum_id: comuns[0]?.id || '',
+    comum_id: (isRestrictedUser && userComumId) ? userComumId : (comuns[0]?.id || ''),
     data_reuniao: new Date().toISOString().split('T')[0],
     horario: 'Domingo 10hs',
     qtd_jovens: 50,
@@ -84,10 +93,25 @@ export const ApontamentosView: React.FC<ApontamentosViewProps> = ({ comuns, seto
     qtd_biblias: 80,
     qtd_hinarios: 75,
     coleta_valor: 650.0,
-    responsavel_nome: 'Operador Local',
+    responsavel_nome: user?.nome_completo || 'Operador Local',
   });
 
+  useEffect(() => {
+    if (isRestrictedUser && userComumId) {
+      setSelectedComumId(userComumId);
+      setNovoApt(prev => ({ ...prev, comum_id: userComumId }));
+      const userComum = comuns.find(c => c.id === userComumId);
+      if (userComum) {
+        const userSetor = setores.find(s => s.id === userComum.setor_id || (userComum.setor_pertencente && s.nome === userComum.setor_pertencente));
+        if (userSetor) setSelectedSetorId(userSetor.id);
+      }
+    }
+  }, [isRestrictedUser, userComumId, comuns, setores]);
+
   const filteredApontamentos = apontamentos.filter((item) => {
+    if (isRestrictedUser && userComumId && item.comum_id !== userComumId) {
+      return false;
+    }
     if (selectedSetorId) {
       const matchComum = comuns.find((c) => c.nome === item.comum_nome && c.setor_id === selectedSetorId);
       if (!matchComum && item.setor_nome !== setores.find((s) => s.id === selectedSetorId)?.nome) return false;
@@ -318,9 +342,12 @@ export const ApontamentosView: React.FC<ApontamentosViewProps> = ({ comuns, seto
                   Comum Congregação *
                 </label>
                 <select
+                  disabled={isRestrictedUser && !!userComumId}
                   value={novoApt.comum_id}
                   onChange={(e) => setNovoApt({ ...novoApt, comum_id: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-emerald-500"
+                  className={`w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-emerald-500 ${
+                    isRestrictedUser && !!userComumId ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : ''
+                  }`}
                   required
                 >
                   {comuns.map((c) => (
@@ -330,6 +357,12 @@ export const ApontamentosView: React.FC<ApontamentosViewProps> = ({ comuns, seto
                     </option>
                   ))}
                 </select>
+                {isRestrictedUser && (
+                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center space-x-1 mt-1">
+                    <Lock className="w-3 h-3" />
+                    <span>Perfil restrito: registro permitido exclusivamente para sua comum congregação vinculada.</span>
+                  </p>
+                )}
               </div>
 
               {/* Data e Horário */}

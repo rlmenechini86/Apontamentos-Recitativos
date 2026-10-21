@@ -170,6 +170,29 @@ export class UsuarioController {
       });
     }
   }
+
+  /**
+   * POST /api/usuarios/:id/reset-password
+   * Redefine a senha do usuário para 'ccb123' e marca trocar_senha_proximo_login = true
+   */
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const updated = await usuarioService.resetPassword(id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Senha resetada com sucesso para "ccb123"! No próximo acesso, o usuário será obrigado a cadastrar uma nova senha.',
+        data: updated,
+      });
+    } catch (error: any) {
+      console.error('[UsuarioController.resetPassword] Erro:', error);
+      res.status(400).json({
+        success: false,
+        message: error.message || 'Falha ao resetar senha.',
+      });
+    }
+  }
 }
 
 export const usuarioController = new UsuarioController();

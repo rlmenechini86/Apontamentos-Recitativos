@@ -7,25 +7,39 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
   LineChart, Line, ReferenceLine
 } from 'recharts';
-import { ComumCongregacao, Recitativo, ContagemMocidade, Usuario } from '../types';
+import { ComumCongregacao, Recitativo, ContagemMocidade, Usuario, Setor } from '../types';
 import { apiGet } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
 interface Props {
   comuns: ComumCongregacao[];
   usuarios: Usuario[];
+  setores?: Setor[];
 }
 
-export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, usuarios: propUsuarios }) => {
+export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, usuarios: propUsuarios, setores: propSetores }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
+  const [selectedSetorId, setSelectedSetorId] = useState<string>('');
   const [selectedComumId, setSelectedComumId] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
 
   // Data states
   const [recitativos, setRecitativos] = useState<Recitativo[]>([]);
   const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
   const [auxiliares, setAuxiliares] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (propSetores && propSetores.length > 0) {
+      setSetores(propSetores);
+    } else {
+      fetch('/api/comuns/meta/setores')
+        .then(res => res.json())
+        .then(json => setSetores(json.data || []))
+        .catch(err => console.error('Erro ao buscar setores:', err));
+    }
+  }, [propSetores]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,16 +74,49 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
   const comuns = propComuns.filter(c => isRestrictedProfile ? c.id === user?.comum_congregacao_id : true);
   const usuarios = propUsuarios;
 
+  // Comuns disponíveis conforme o setor selecionado
+  const comunsDoSetor = useMemo(() => {
+    if (!selectedSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === selectedSetorId);
+    return comuns.filter(c => 
+      c.setor_id === selectedSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, selectedSetorId]);
+
   // Apply Filters
-  const filteredComuns = selectedComumId ? comuns.filter(c => c.id === selectedComumId) : comuns;
-  const filteredRecitativos = selectedComumId ? recitativos.filter(r => r.comum_id === selectedComumId) : recitativos;
-  const filteredContagens = selectedComumId ? contagens.filter(c => c.comum_id === selectedComumId) : contagens;
-  const filteredUsuarios = selectedComumId ? usuarios.filter(u => u.comum_congregacao_id === selectedComumId) : usuarios;
+  const filteredComuns = useMemo(() => {
+    return comuns.filter(c => {
+      if (selectedSetorId) {
+        const selectedSetor = setores.find(s => s.id === selectedSetorId);
+        const matchesSetor = c.setor_id === selectedSetorId || (selectedSetor && c.setor_pertencente === selectedSetor.nome);
+        if (!matchesSetor) return false;
+      }
+      if (selectedComumId) {
+        if (c.id !== selectedComumId) return false;
+      }
+      return true;
+    });
+  }, [comuns, setores, selectedSetorId, selectedComumId]);
+
+  const filteredComumIds = useMemo(() => new Set(filteredComuns.map(c => c.id)), [filteredComuns]);
+  const filteredRecitativos = useMemo(() => recitativos.filter(r => filteredComumIds.has(r.comum_id)), [recitativos, filteredComumIds]);
+  const filteredContagens = useMemo(() => contagens.filter(c => filteredComumIds.has(c.comum_id)), [contagens, filteredComumIds]);
+  const filteredUsuarios = useMemo(() => usuarios.filter(u => u.comum_congregacao_id && filteredComumIds.has(u.comum_congregacao_id)), [usuarios, filteredComumIds]);
+  const filteredAuxiliares = useMemo(() => auxiliares.filter(a => a.comum_id && filteredComumIds.has(a.comum_id)), [auxiliares, filteredComumIds]);
+
+  // Helper para verificar Cargo para Ministério (CJM ou Secretário / CJM)
+  const isCjmOrSecretarioCjm = (cargo?: string | null) => {
+    if (!cargo) return false;
+    const c = cargo.trim().toLowerCase();
+    return c === 'cjm' || c === 'secretário / cjm' || c === 'secretario / cjm';
+  };
 
   // Compute Top Cards Data
   const totalLocalidades = filteredComuns.length;
-  const totalCJM = filteredUsuarios.filter(u => u.cargo_ministerio?.trim().toUpperCase() === 'CJM').length;
-  const totalAuxiliares = auxiliares.length; // Auxiliares may not have comum_congregacao_id in this scope, keeping total
+  const totalCJM = filteredUsuarios.filter(u => u.ativo && isCjmOrSecretarioCjm(u.cargo_ministerio)).length;
+
+  const totalAuxiliares = filteredAuxiliares.length;
   
   const contagensAno = filteredContagens.filter(c => c.data.startsWith(selectedYear));
   
@@ -248,29 +295,57 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
             Métricas, acompanhamento anual e mensal de expectativas.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+          <select
+            value={selectedSetorId}
+            onChange={(e) => {
+              setSelectedSetorId(e.target.value);
+              setSelectedComumId('');
+            }}
+            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold print:hidden cursor-pointer"
+          >
+            <option value="">Todos os Setores</option>
+            {setores.map(s => (
+              <option key={s.id} value={s.id}>{s.nome}</option>
+            ))}
+          </select>
+
           <select
             value={selectedComumId}
             onChange={(e) => setSelectedComumId(e.target.value)}
-            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold print:hidden"
+            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold print:hidden cursor-pointer"
           >
-            <option value="">Todas as Congregações (Setor)</option>
-            {comuns.map(c => (
+            <option value="">{selectedSetorId ? 'Todas as Congregações do Setor' : 'Todas as Congregações'}</option>
+            {comunsDoSetor.map(c => (
               <option key={c.id} value={c.id}>{c.nome}</option>
             ))}
           </select>
+
           <select 
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
-            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold print:hidden"
+            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold print:hidden cursor-pointer"
           >
             {availableYears.map(y => (
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
+
+          {(selectedSetorId || selectedComumId) && (
+            <button
+              onClick={() => {
+                setSelectedSetorId('');
+                setSelectedComumId('');
+              }}
+              className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition print:hidden"
+            >
+              Limpar filtros
+            </button>
+          )}
+
           <button
             onClick={() => window.print()}
-            className="flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors print:hidden"
+            className="flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors print:hidden cursor-pointer"
           >
             <Printer className="w-5 h-5" />
             <span>Exportar PDF</span>

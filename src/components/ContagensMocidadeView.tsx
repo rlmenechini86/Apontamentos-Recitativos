@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, User, ArrowUpDown } from 'lucide-react';
-import { ContagemMocidade, ComumCongregacao, Usuario } from '../types';
+import { Users, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, User, ArrowUpDown, Lock } from 'lucide-react';
+import { ContagemMocidade, ComumCongregacao, Usuario, Setor } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from './Pagination';
 import { apiGet, clearApiCache } from '../utils/api';
@@ -8,17 +8,63 @@ import { apiGet, clearApiCache } from '../utils/api';
 interface ContagensMocidadeViewProps {
   comuns: ComumCongregacao[];
   usuarios?: Usuario[];
+  setores?: Setor[];
 }
 
-export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ comuns, usuarios = [] }) => {
+export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ comuns, usuarios = [], setores: propSetores }) => {
   const { user } = useAuth();
+
+  const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
+  const isApontamento = roleName.includes('apontamento') || user?.perfis?.nivel_acesso === 'comum';
+  const isRestrictedProfile = isApontamento || (roleName !== 'administrador' && user?.perfis?.nivel_acesso !== 'global' && !!user?.comum_congregacao_id);
+  const userComumId = user?.comum_congregacao_id || user?.comum_congregacao?.id;
+
   const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSetorId, setSelectedSetorId] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedTipo, setSelectedTipo] = useState('');
   const [selectedSecretarioId, setSelectedSecretarioId] = useState('');
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
+
+  useEffect(() => {
+    if (isRestrictedProfile && userComumId) {
+      setSelectedComumId(userComumId);
+      const userComum = comuns.find(c => c.id === userComumId);
+      if (userComum) {
+        const userSetor = setores.find(s => s.id === userComum.setor_id || (userComum.setor_pertencente && s.nome === userComum.setor_pertencente));
+        if (userSetor) setSelectedSetorId(userSetor.id);
+      }
+    }
+  }, [isRestrictedProfile, userComumId, comuns, setores]);
+
+  useEffect(() => {
+    if (propSetores && propSetores.length > 0) {
+      setSetores(propSetores);
+    } else {
+      fetch('/api/comuns/meta/setores')
+        .then(res => res.json())
+        .then(json => setSetores(json.data || []))
+        .catch(console.error);
+    }
+  }, [propSetores]);
+
+  const comunsDoSetor = React.useMemo(() => {
+    if (!selectedSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === selectedSetorId);
+    return comuns.filter(c => 
+      c.setor_id === selectedSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, selectedSetorId]);
+
+  const handleSetorFilterChange = (setorId: string) => {
+    setSelectedSetorId(setorId);
+    setSelectedComumId('');
+    setCurrentPage(1);
+  };
   
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -79,9 +125,15 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
     const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
     const matchesUserComum = isRestrictedProfile ? item.comum_id === user?.comum_congregacao_id : true;
     
-    const matchesSecretario = !selectedSecretarioId || comuns.find(c => c.id === item.comum_id)?.secretario_id === selectedSecretarioId;
+    const itemComum = comuns.find(c => c.id === item.comum_id);
+    const selectedSetorObj = setores.find(s => s.id === selectedSetorId);
+    const matchesSetor = !selectedSetorId || 
+      itemComum?.setor_id === selectedSetorId || 
+      (selectedSetorObj && (itemComum?.setor_pertencente === selectedSetorObj.nome || item.comum_congregacao?.setor_pertencente === selectedSetorObj.nome));
 
-    return matchesSearch && matchesComum && matchesYear && matchesTipo && matchesUserComum && matchesSecretario;
+    const matchesSecretario = !selectedSecretarioId || itemComum?.secretario_id === selectedSecretarioId;
+
+    return matchesSearch && matchesSetor && matchesComum && matchesYear && matchesTipo && matchesUserComum && matchesSecretario;
   });
 
   if (sortConfig) {
@@ -136,14 +188,34 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
             </div>
             
             <div>
+              <span className="text-xs font-semibold text-slate-500 uppercase mb-1 block">Setor</span>
+              <select
+                disabled={isRestrictedProfile && !!userComumId}
+                value={selectedSetorId}
+                onChange={(e) => handleSetorFilterChange(e.target.value)}
+                className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  isRestrictedProfile && !!userComumId ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'
+                }`}
+              >
+                <option value="">Todos</option>
+                {setores.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
               <span className="text-xs font-semibold text-slate-500 uppercase mb-1 block">Comum</span>
               <select
+                disabled={isRestrictedProfile && !!userComumId}
                 value={selectedComumId}
-                onChange={(e) => setSelectedComumId(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                onChange={(e) => { setSelectedComumId(e.target.value); setCurrentPage(1); }}
+                className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  isRestrictedProfile && !!userComumId ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'
+                }`}
               >
-                <option value="">Todas</option>
-                {comuns.map((c) => (
+                <option value="">{selectedSetorId ? 'Comuns do Setor' : 'Todas'}</option>
+                {comunsDoSetor.map((c) => (
                   <option key={c.id} value={c.id}>{c.nome}</option>
                 ))}
               </select>
@@ -325,6 +397,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ co
           onClose={() => setIsModalOpen(false)}
           initialData={editingItem}
           comuns={comuns}
+          setores={setores}
           onSuccess={fetchContagens}
         />
       )}
@@ -339,12 +412,20 @@ interface ContagemFormModalProps {
   initialData: ContagemMocidade | null;
   comuns: ComumCongregacao[];
   onSuccess: () => void;
+  setores?: Setor[];
 }
 
 const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
-  isOpen, onClose, initialData, comuns, onSuccess
+  isOpen, onClose, initialData, comuns, onSuccess, setores = []
 }) => {
   const { user } = useAuth();
+
+  const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
+  const isApontamento = roleName.includes('apontamento') || user?.perfis?.nivel_acesso === 'comum';
+  const isRestrictedUser = isApontamento || (roleName !== 'administrador' && user?.perfis?.nivel_acesso !== 'global' && !!user?.comum_congregacao_id);
+  const userComumId = user?.comum_congregacao_id || user?.comum_congregacao?.id;
+
+  const [modalSetorId, setModalSetorId] = useState('');
   const [formData, setFormData] = useState({
     data: '',
     quantidade: 0,
@@ -355,6 +436,9 @@ const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
 
   useEffect(() => {
     if (initialData) {
+      const c = comuns.find(x => x.id === initialData.comum_id);
+      const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
+      setModalSetorId(s?.id || c?.setor_id || '');
       setFormData({
         data: initialData.data,
         quantidade: initialData.quantidade,
@@ -362,22 +446,45 @@ const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
         tipo: initialData.tipo,
       });
     } else {
+      const boundComum = (isRestrictedUser && userComumId)
+        ? comuns.find(c => c.id === userComumId) || (user?.comum_congregacao?.nome ? comuns.find(c => c.nome.toLowerCase() === user.comum_congregacao?.nome?.toLowerCase()) : null)
+        : null;
+      const boundSetor = boundComum
+        ? setores.find(s => s.id === boundComum.setor_id || (boundComum.setor_pertencente && s.nome === boundComum.setor_pertencente))
+        : null;
+
+      setModalSetorId(boundSetor?.id || boundComum?.setor_id || '');
       setFormData({
         data: new Date().toISOString().split('T')[0],
         quantidade: 0,
-        comum_id: '',
+        comum_id: boundComum ? boundComum.id : (isRestrictedUser && userComumId ? userComumId : ''),
         tipo: 'Mocidade',
       });
     }
-  }, [initialData]);
+  }, [initialData, comuns, setores, isRestrictedUser, userComumId, user?.comum_congregacao?.nome]);
+
+  const modalComunsFiltradas = React.useMemo(() => {
+    if (isRestrictedUser && userComumId) {
+      return comuns.filter(c => c.id === userComumId);
+    }
+    if (!modalSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === modalSetorId);
+    return comuns.filter(c => 
+      c.setor_id === modalSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, modalSetorId, isRestrictedUser, userComumId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setLoading(true);
 
+      const enforcedComumId = (isRestrictedUser && userComumId) ? userComumId : formData.comum_id;
+
       const payload = {
         ...formData,
+        comum_id: enforcedComumId,
         cadastrado_por: user?.id || null
       };
 
@@ -435,18 +542,60 @@ const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
           </div>
 
           <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Setor Pertencente</label>
+            <select
+              disabled={isRestrictedUser && !!userComumId}
+              value={modalSetorId}
+              onChange={(e) => {
+                const newSetor = e.target.value;
+                setModalSetorId(newSetor);
+                if (newSetor) {
+                  const selSetor = setores.find(s => s.id === newSetor);
+                  const isComumIn = comuns.some(c => c.id === formData.comum_id && (c.setor_id === newSetor || (selSetor && c.setor_pertencente === selSetor.nome)));
+                  if (!isComumIn) setFormData(prev => ({ ...prev, comum_id: '' }));
+                }
+              }}
+              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
+                isRestrictedUser && !!userComumId ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'
+              }`}
+            >
+              <option value="">-- Todos os Setores --</option>
+              {setores.map((s) => (
+                <option key={s.id} value={s.id}>{s.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
             <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Comum Congregação *</label>
             <select
               required
+              disabled={isRestrictedUser && !!userComumId}
               value={formData.comum_id}
-              onChange={(e) => setFormData({ ...formData, comum_id: e.target.value })}
-              className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500"
+              onChange={(e) => {
+                const chosenId = e.target.value;
+                setFormData({ ...formData, comum_id: chosenId });
+                if (chosenId && !modalSetorId) {
+                  const c = comuns.find(item => item.id === chosenId);
+                  const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
+                  if (s) setModalSetorId(s.id);
+                }
+              }}
+              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
+                isRestrictedUser && !!userComumId ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'
+              }`}
             >
               <option value="">Selecione...</option>
-              {comuns.map((c) => (
+              {modalComunsFiltradas.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
               ))}
             </select>
+            {isRestrictedUser && (
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center space-x-1 mt-1">
+                <Lock className="w-3 h-3" />
+                <span>Perfil restrito: registro permitido exclusivamente para sua comum congregação vinculada.</span>
+              </p>
+            )}
           </div>
 
           <div className="space-y-1">

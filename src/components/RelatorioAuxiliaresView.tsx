@@ -5,22 +5,35 @@ import {
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList, Cell, ComposedChart, Line
 } from 'recharts';
-import { ComumCongregacao, Usuario, ContagemMocidade, AuxiliarJovens } from '../types';
+import { ComumCongregacao, Usuario, ContagemMocidade, AuxiliarJovens, Setor } from '../types';
 import { apiGet } from '../utils/api';
 
 interface Props {
   comuns: ComumCongregacao[];
   usuarios: Usuario[];
+  setores?: Setor[];
 }
 
-export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, usuarios: propUsuarios }) => {
+export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, usuarios: propUsuarios, setores: propSetores }) => {
   const [loading, setLoading] = useState(true);
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
+  const [selectedSetorId, setSelectedSetorId] = useState('');
+  const [selectedComumId, setSelectedComumId] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
   const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
   const [auxiliares, setAuxiliares] = useState<AuxiliarJovens[]>([]);
-  
-  const [selectedComumId, setSelectedComumId] = useState('');
-  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  useEffect(() => {
+    if (propSetores && propSetores.length > 0) {
+      setSetores(propSetores);
+    } else {
+      fetch('/api/comuns/meta/setores')
+        .then(res => res.json())
+        .then(json => setSetores(json.data || []))
+        .catch(err => console.error('Erro ao buscar setores:', err));
+    }
+  }, [propSetores]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,24 +64,52 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
   const comuns = propComuns;
   const usuarios = propUsuarios;
 
+  // Comuns disponíveis conforme o setor selecionado
+  const comunsDoSetor = useMemo(() => {
+    if (!selectedSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === selectedSetorId);
+    return comuns.filter(c => 
+      c.setor_id === selectedSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, selectedSetorId]);
+
   const filteredComuns = useMemo(() => {
-    return selectedComumId ? comuns.filter(c => c.id === selectedComumId) : comuns;
-  }, [comuns, selectedComumId]);
+    return comuns.filter(c => {
+      if (selectedSetorId) {
+        const selectedSetor = setores.find(s => s.id === selectedSetorId);
+        const matchesSetor = c.setor_id === selectedSetorId || (selectedSetor && c.setor_pertencente === selectedSetor.nome);
+        if (!matchesSetor) return false;
+      }
+      if (selectedComumId) {
+        if (c.id !== selectedComumId) return false;
+      }
+      return true;
+    });
+  }, [comuns, setores, selectedSetorId, selectedComumId]);
+
+  const filteredComumIds = useMemo(() => new Set(filteredComuns.map(c => c.id)), [filteredComuns]);
+
+  const isCjmOrSecretarioCjm = (cargo?: string | null) => {
+    if (!cargo) return false;
+    const c = cargo.trim().toLowerCase();
+    return c === 'cjm' || c === 'secretário / cjm' || c === 'secretario / cjm';
+  };
 
   const totalCjms = useMemo(() => {
     return usuarios.filter(u => 
-      u.cargo_ministerio?.toLowerCase().includes('cjm') && 
       u.ativo &&
-      (selectedComumId ? u.comum_congregacao_id === selectedComumId : true)
+      isCjmOrSecretarioCjm(u.cargo_ministerio) &&
+      (u.comum_congregacao_id && filteredComumIds.has(u.comum_congregacao_id))
     ).length;
-  }, [usuarios, selectedComumId]);
+  }, [usuarios, filteredComumIds]);
 
   const totalAuxiliares = useMemo(() => {
     return auxiliares.filter(a => 
       a.ativo && a.is_auxiliar === true &&
-      (selectedComumId ? a.comum_id === selectedComumId : true)
+      (a.comum_id && filteredComumIds.has(a.comum_id))
     ).length;
-  }, [auxiliares, selectedComumId]);
+  }, [auxiliares, filteredComumIds]);
 
   const totalMocidade = useMemo(() => {
     // Pega a maior contagem de mocidade de cada congregação no ano atual
@@ -77,7 +118,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
     
     contagens.forEach(c => {
       if (c.tipo === 'Mocidade' && c.data.startsWith(currentYear)) {
-        if (selectedComumId && c.comum_id !== selectedComumId) return;
+        if (!filteredComumIds.has(c.comum_id)) return;
         
         if (!maxPorComum[c.comum_id] || c.quantidade > maxPorComum[c.comum_id]) {
           maxPorComum[c.comum_id] = c.quantidade;
@@ -86,7 +127,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
     });
     
     return Object.values(maxPorComum).reduce((a, b) => a + b, 0);
-  }, [contagens, selectedComumId]);
+  }, [contagens, filteredComumIds]);
 
   const chartData = useMemo(() => {
     const data = filteredComuns.map(comum => {
@@ -124,7 +165,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
     const processed = data.map(aux => {
       const comumNome = comuns.find(c => c.id === aux.comum_id)?.nome || 'Desconhecida';
       const cjmNames = usuarios
-        .filter(u => u.comum_congregacao_id === aux.comum_id && u.cargo_ministerio?.toLowerCase().includes('cjm') && u.ativo)
+        .filter(u => u.comum_congregacao_id === aux.comum_id && isCjmOrSecretarioCjm(u.cargo_ministerio) && u.ativo)
         .map(u => u.nome_completo)
         .join(', ') || '-';
       
@@ -242,22 +283,55 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
   return (
     <div className="flex-1 flex flex-col space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      {/* Filtro de Comum Congregação */}
+      {/* Filtros: Setor e Comum Congregação */}
       <div className="flex flex-col md:flex-row gap-3 items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
-          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-            Comum Congregação:
-          </label>
-          <select
-            value={selectedComumId}
-            onChange={(e) => setSelectedComumId(e.target.value)}
-            className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">Todas as Congregações</option>
-            {comuns.map((c) => (
-              <option key={c.id} value={c.id}>{c.nome}</option>
-            ))}
-          </select>
+        <div className="flex flex-wrap items-center gap-3 w-full">
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Setor:
+            </label>
+            <select
+              value={selectedSetorId}
+              onChange={(e) => {
+                setSelectedSetorId(e.target.value);
+                setSelectedComumId('');
+              }}
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              <option value="">Todos os Setores</option>
+              {setores.map((s) => (
+                <option key={s.id} value={s.id}>{s.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              Comum:
+            </label>
+            <select
+              value={selectedComumId}
+              onChange={(e) => setSelectedComumId(e.target.value)}
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              <option value="">{selectedSetorId ? 'Todas as Congregações do Setor' : 'Todas as Congregações'}</option>
+              {comunsDoSetor.map((c) => (
+                <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          {(selectedSetorId || selectedComumId) && (
+            <button
+              onClick={() => {
+                setSelectedSetorId('');
+                setSelectedComumId('');
+              }}
+              className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition whitespace-nowrap"
+            >
+              Limpar filtros
+            </button>
+          )}
         </div>
       </div>
 

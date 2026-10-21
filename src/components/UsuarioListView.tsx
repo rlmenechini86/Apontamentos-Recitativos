@@ -11,19 +11,22 @@ import {
   Trash2,
   RefreshCw,
   UserCheck,
+  KeyRound,
 } from 'lucide-react';
-import { Usuario, Perfil, ComumCongregacao } from '../types';
+import { Usuario, Perfil, ComumCongregacao, Setor } from '../types';
 import { Pagination } from './Pagination';
 
 interface UsuarioListViewProps {
   usuarios: Usuario[];
   perfis: Perfil[];
   comuns: ComumCongregacao[];
+  setores?: Setor[];
   loading: boolean;
   onRefresh: () => void;
   onOpenCreate: () => void;
   onOpenEdit: (usuario: Usuario) => void;
   onDelete: (id: string, nome: string) => void;
+  onResetPassword?: (id: string, nome: string) => Promise<void>;
   dataSource: 'supabase' | 'in-memory';
 }
 
@@ -31,19 +34,48 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
   usuarios,
   perfis,
   comuns,
+  setores: propSetores,
   loading,
   onRefresh,
   onOpenCreate,
   onOpenEdit,
   onDelete,
+  onResetPassword,
   dataSource,
 }) => {
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSetorId, setSelectedSetorId] = useState('');
   const [selectedPerfilId, setSelectedPerfilId] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
   
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 10;
+
+  React.useEffect(() => {
+    if (propSetores && propSetores.length > 0) {
+      setSetores(propSetores);
+    } else {
+      fetch('/api/comuns/meta/setores')
+        .then(res => res.json())
+        .then(json => setSetores(json.data || []))
+        .catch(err => console.error('Erro ao buscar setores:', err));
+    }
+  }, [propSetores]);
+
+  const comunsDoSetor = React.useMemo(() => {
+    if (!selectedSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === selectedSetorId);
+    return comuns.filter(c => 
+      c.setor_id === selectedSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, selectedSetorId]);
+
+  const handleSetorChange = (setorId: string) => {
+    setSelectedSetorId(setorId);
+    setSelectedComumId('');
+  };
 
   const filteredUsuarios = usuarios.filter((user) => {
     const matchesSearch =
@@ -55,12 +87,18 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
     const matchesPerfil = !selectedPerfilId || user.perfil_id === selectedPerfilId;
     const matchesComum = !selectedComumId || user.comum_congregacao_id === selectedComumId;
 
-    return matchesSearch && matchesPerfil && matchesComum;
+    const matchesSetor = !selectedSetorId || (() => {
+      const userComum = comuns.find(c => c.id === user.comum_congregacao_id) || user.comum_congregacao;
+      const s = setores.find(st => st.id === selectedSetorId);
+      return userComum?.setor_id === selectedSetorId || (s && (userComum?.setor_pertencente === s.nome || (userComum as any)?.setores?.nome === s.nome));
+    })();
+
+    return matchesSearch && matchesPerfil && matchesComum && matchesSetor;
   });
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedPerfilId, selectedComumId]);
+  }, [searchTerm, selectedSetorId, selectedPerfilId, selectedComumId]);
 
   const totalPages = Math.ceil(filteredUsuarios.length / itemsPerPage);
   const paginatedUsuarios = filteredUsuarios.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -173,8 +211,42 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
             />
           </div>
 
+          {/* Filtro por Setor Pertencente */}
+          <div className="w-full sm:w-48">
+            <select
+              value={selectedSetorId}
+              onChange={(e) => handleSetorChange(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              <option value="">Todos os Setores</option>
+              {setores.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtro por Comum Congregação (filtrada pelo setor) */}
+          <div className="w-full sm:w-56">
+            <select
+              value={selectedComumId}
+              onChange={(e) => setSelectedComumId(e.target.value)}
+              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              <option value="">
+                {selectedSetorId ? 'Todas as Comuns do Setor' : 'Todas as Comuns'}
+              </option>
+              {comunsDoSetor.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Filtro por Perfil */}
-          <div className="w-full sm:w-52">
+          <div className="w-full sm:w-48">
             <select
               value={selectedPerfilId}
               onChange={(e) => setSelectedPerfilId(e.target.value)}
@@ -189,21 +261,19 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
             </select>
           </div>
 
-          {/* Filtro por Comum Congregação */}
-          <div className="w-full sm:w-60">
-            <select
-              value={selectedComumId}
-              onChange={(e) => setSelectedComumId(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          {(selectedSetorId || selectedComumId || selectedPerfilId || searchTerm) && (
+            <button
+              onClick={() => {
+                setSelectedSetorId('');
+                setSelectedComumId('');
+                setSelectedPerfilId('');
+                setSearchTerm('');
+              }}
+              className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition whitespace-nowrap self-center"
             >
-              <option value="">Todas as Comuns</option>
-              {comuns.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+              Limpar filtros
+            </button>
+          )}
         </div>
 
         {/* Botão Novo Usuário */}
@@ -343,6 +413,15 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
+                        {onResetPassword && (
+                          <button
+                            onClick={() => onResetPassword(user.id, user.nome_completo)}
+                            title="Resetar Senha para 'ccb123'"
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer"
+                          >
+                            <KeyRound className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => onDelete(user.id, user.nome_completo)}
                           title="Excluir Usuário"

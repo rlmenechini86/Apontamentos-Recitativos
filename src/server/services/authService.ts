@@ -50,17 +50,21 @@ export class AuthService {
     let userHash = user.senha_hash;
 
     // Se o usuário ainda não possui senha cadastrada (conta legado),
-    // verifica se digitou a senha padrão institucional Admin@2026!
+    // verifica se digitou a senha padrão institucional ccb123 ou legadas
     if (!userHash) {
-      if (senha === 'Admin@2026!' || senha === 'Ccb@2026!') {
-        userHash = await this.hashPassword(senha);
+      if (senha === 'ccb123' || senha === 'Admin@2026!' || senha === 'Ccb@2026!') {
+        userHash = await this.hashPassword('ccb123');
         try {
-          await usuarioService.update(user.id, { senha_hash: userHash } as any);
+          await usuarioService.update(user.id, { 
+            senha_hash: userHash,
+            trocar_senha_proximo_login: true
+          } as any);
+          user.trocar_senha_proximo_login = true;
         } catch (err: any) {
           throw new Error('Erro ao salvar nova senha no banco de dados.');
         }
       } else {
-        throw new Error('Senha não cadastrada para este usuário. Utilize a opção "Cadastrar Nova Senha".');
+        throw new Error('Senha não cadastrada para este usuário. Contate a administração para obter a senha padrão inicial.');
       }
     }
 

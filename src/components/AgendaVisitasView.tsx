@@ -1,20 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Calendar as CalendarIcon, MapPin, Clock, Users, X, Plus, Edit2, Trash2, ChevronLeft, ChevronRight 
+  Calendar as CalendarIcon, MapPin, Clock, Users, X, Plus, Edit2, Trash2, ChevronLeft, ChevronRight, Search, Layers
 } from 'lucide-react';
-import { AgendaVisita, ComumCongregacao } from '../types';
-import { apiGet } from '../utils/api';
+import { AgendaVisita, ComumCongregacao, Setor } from '../types';
+import { apiGet, clearApiCache } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
 interface Props {
   comuns: ComumCongregacao[];
+  setores?: Setor[];
 }
 
-export const AgendaVisitasView: React.FC<Props> = ({ comuns }) => {
+export const AgendaVisitasView: React.FC<Props> = ({ comuns, setores: propSetores }) => {
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [visitas, setVisitas] = useState<AgendaVisita[]>([]);
   const [loading, setLoading] = useState(true);
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
+
+  const [selectedSetorId, setSelectedSetorId] = useState('');
+  const [selectedComumId, setSelectedComumId] = useState('');
+  const [modalSetorId, setModalSetorId] = useState('');
+  const [searchComum, setSearchComum] = useState('');
+
+  useEffect(() => {
+    if (propSetores && propSetores.length > 0) {
+      setSetores(propSetores);
+    } else {
+      fetch('/api/comuns/meta/setores')
+        .then(res => res.json())
+        .then(json => setSetores(json.data || []))
+        .catch(console.error);
+    }
+  }, [propSetores]);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -67,11 +85,70 @@ export const AgendaVisitasView: React.FC<Props> = ({ comuns }) => {
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
 
+  const comunsDoSetor = useMemo(() => {
+    if (!selectedSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === selectedSetorId);
+    return comuns.filter(c => 
+      c.setor_id === selectedSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, selectedSetorId]);
+
+  const handleSetorFilterChange = (setorId: string) => {
+    setSelectedSetorId(setorId);
+    setSelectedComumId('');
+  };
+
+  const filteredVisitas = useMemo(() => {
+    return visitas.filter((v) => {
+      if (selectedSetorId) {
+        const c = comuns.find(item => item.id === v.comum_id);
+        const s = setores.find(st => st.id === selectedSetorId);
+        const matchesSetor = c?.setor_id === selectedSetorId || (s && c?.setor_pertencente === s.nome);
+        if (!matchesSetor) return false;
+      }
+      if (selectedComumId) {
+        if (v.comum_id !== selectedComumId) return false;
+      }
+      return true;
+    });
+  }, [visitas, comuns, setores, selectedSetorId, selectedComumId]);
+
+  const modalFilteredComuns = useMemo(() => {
+    return comuns.filter((c) => {
+      if (modalSetorId) {
+        const selectedSetor = setores.find(s => s.id === modalSetorId);
+        const matchesSetor = c.setor_id === modalSetorId || (selectedSetor && c.setor_pertencente === selectedSetor.nome);
+        if (!matchesSetor) return false;
+      }
+      if (searchComum.trim()) {
+        const query = searchComum.toLowerCase().trim();
+        const matchesNome = c.nome.toLowerCase().includes(query);
+        const matchesCodigo = c.codigo?.toLowerCase().includes(query);
+        const matchesSetorNome = c.setores?.nome?.toLowerCase().includes(query) || c.setor_pertencente?.toLowerCase().includes(query);
+        if (!matchesNome && !matchesCodigo && !matchesSetorNome) return false;
+      }
+      return true;
+    });
+  }, [comuns, setores, modalSetorId, searchComum]);
+
+  const displayComuns = useMemo(() => {
+    if (formData.comum_id && !modalFilteredComuns.some(c => c.id === formData.comum_id)) {
+      const selectedComum = comuns.find(c => c.id === formData.comum_id);
+      if (selectedComum) {
+        return [selectedComum, ...modalFilteredComuns];
+      }
+    }
+    return modalFilteredComuns;
+  }, [modalFilteredComuns, formData.comum_id, comuns]);
+
   const handleDayClick = (day: number) => {
     const year = currentDate.getFullYear();
     const month = String(currentDate.getMonth() + 1).padStart(2, '0');
     const dayStr = String(day).padStart(2, '0');
     const formattedDate = `${year}-${month}-${dayStr}`;
+    setModalSetorId(selectedSetorId || '');
+    setSearchComum('');
     setFormData({
       nome: '',
       endereco: '',
@@ -87,6 +164,10 @@ export const AgendaVisitasView: React.FC<Props> = ({ comuns }) => {
 
   const handleEdit = (v: AgendaVisita, e: React.MouseEvent) => {
     e.stopPropagation();
+    setSearchComum('');
+    const c = comuns.find(x => x.id === v.comum_id);
+    const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
+    setModalSetorId(s?.id || c?.setor_id || '');
     setFormData({
       nome: v.nome,
       endereco: v.endereco || '',
@@ -106,6 +187,8 @@ export const AgendaVisitasView: React.FC<Props> = ({ comuns }) => {
       try {
         const res = await fetch(`/api/visitas/${id}`, { method: 'DELETE' });
         if (res.ok) {
+          clearApiCache('/api/visitas');
+          window.dispatchEvent(new CustomEvent('visitas-updated'));
           fetchVisitas();
         }
       } catch (err) {
@@ -126,6 +209,8 @@ export const AgendaVisitasView: React.FC<Props> = ({ comuns }) => {
         body: JSON.stringify(formData)
       });
       if (res.ok) {
+        clearApiCache('/api/visitas');
+        window.dispatchEvent(new CustomEvent('visitas-updated'));
         fetchVisitas();
         setIsModalOpen(false);
       } else {
@@ -170,6 +255,54 @@ export const AgendaVisitasView: React.FC<Props> = ({ comuns }) => {
         </div>
       </div>
 
+      {/* Barra de Filtros: Setor Pertencente e Comum Congregação */}
+      <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center space-x-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400">
+          <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span>Filtrar Agenda:</span>
+        </div>
+
+        {/* 1º Filtro: Setor Pertencente */}
+        <div className="w-full sm:w-56">
+          <select
+            value={selectedSetorId}
+            onChange={(e) => handleSetorFilterChange(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            <option value="">Todos os Setores</option>
+            {setores.map(s => (
+              <option key={s.id} value={s.id}>{s.nome}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* 2º Filtro: Comum Congregação (filtrada pelo setor) */}
+        <div className="w-full sm:w-56">
+          <select
+            value={selectedComumId}
+            onChange={(e) => setSelectedComumId(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            <option value="">
+              {selectedSetorId ? 'Todas as Comuns do Setor' : 'Todas as Comuns'}
+            </option>
+            {comunsDoSetor.map(c => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+        </div>
+
+        {(selectedSetorId || selectedComumId) && (
+          <button
+            type="button"
+            onClick={() => { setSelectedSetorId(''); setSelectedComumId(''); }}
+            className="text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:underline cursor-pointer ml-auto"
+          >
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
       {/* Calendar Grid */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xs border border-slate-200 dark:border-slate-800 overflow-x-auto">
         <div className="min-w-[800px]">
@@ -198,7 +331,7 @@ export const AgendaVisitasView: React.FC<Props> = ({ comuns }) => {
             const todayDate = new Date();
             const todayStr = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`;
             
-            const dayVisitas = visitas.filter(v => {
+            const dayVisitas = filteredVisitas.filter(v => {
               if (!v.data_visita) return false;
               // Ignore any time part returned by Supabase
               return v.data_visita.split('T')[0] === currentDayDate;
@@ -309,23 +442,97 @@ export const AgendaVisitasView: React.FC<Props> = ({ comuns }) => {
                 </div>
               </div>
 
-              {(!user?.perfis?.nome?.includes('CJM') && (user?.perfis?.nivel_acesso === 'global' || user?.perfis?.nivel_acesso === 'setor')) && (
+              {/* Campo de Vínculo: Setor Pertencente e Pesquisa de Comum */}
+              <div className="space-y-3 pt-1">
+                <div className="bg-slate-50 dark:bg-slate-850/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1">
+                    <Layers className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Localizar Comum Congregação</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Filtro Setor Pertencente */}
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400">
+                        Setor Pertencente
+                      </label>
+                      <select
+                        value={modalSetorId}
+                        onChange={(e) => setModalSetorId(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                      >
+                        <option value="">-- Todos os Setores --</option>
+                        {setores.map(s => (
+                          <option key={s.id} value={s.id}>{s.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Pesquisar Comum */}
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400">
+                        Pesquisar Congregação
+                      </label>
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Nome ou código..."
+                          value={searchComum}
+                          onChange={(e) => setSearchComum(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500"
+                        />
+                        {searchComum && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchComum('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            title="Limpar pesquisa"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Comum Congregação
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      Comum Congregação
+                    </label>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {displayComuns.length} congregação(ões) disponível(is)
+                    </span>
+                  </div>
                   <select
                     value={formData.comum_id}
-                    onChange={e => setFormData({...formData, comum_id: e.target.value})}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                    onChange={e => {
+                      const chosenId = e.target.value;
+                      setFormData({...formData, comum_id: chosenId});
+                      if (chosenId && !modalSetorId) {
+                        const c = comuns.find(item => item.id === chosenId);
+                        const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
+                        if (s) setModalSetorId(s.id);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white cursor-pointer"
                   >
                     <option value="">Selecione uma Comum (Opcional)</option>
-                    {comuns.map(c => (
-                      <option key={c.id} value={c.id}>{c.nome}</option>
-                    ))}
+                    {displayComuns.map(c => {
+                      const setorNome = c.setores?.nome || c.setor_pertencente || setores.find(s => s.id === c.setor_id)?.nome;
+                      return (
+                        <option key={c.id} value={c.id}>
+                          {c.codigo ? `${c.codigo} - ` : ''}
+                          {c.nome}
+                          {setorNome ? ` (${setorNome})` : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
-              )}
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

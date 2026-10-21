@@ -8,6 +8,7 @@ import anciaoRoutes from './anciaoRoutes.js';
 import tiposEventoRoutes from './tiposEventoRoutes.js';
 import reunioesEventosRoutes from './reunioesEventosRoutes.js';
 import agendaVisitasRoutes from './agendaVisitasRoutes.js';
+import perfilRoutes from './perfilRoutes.js';
 import { authRouter } from './authRoutes.js';
 
 const apiRouter = Router();
@@ -15,6 +16,7 @@ const apiRouter = Router();
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/comuns', comumCongregacaoRoutes);
 apiRouter.use('/usuarios', usuarioRoutes);
+apiRouter.use('/perfis', perfilRoutes);
 apiRouter.use('/auxiliares', auxiliarJovensRoutes);
 apiRouter.use('/recitativos', recitativosRoutes);
 apiRouter.use('/contagens', contagensRoutes);

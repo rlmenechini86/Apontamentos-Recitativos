@@ -57,25 +57,86 @@ export interface AuxiliarJovens {
   is_auxiliar?: boolean;
   is_musico?: boolean;
   instrumento?: string;
+  nome_responsavel?: string;
 }
 
 interface AuxiliaresCJMViewProps {
   comuns: ComumCongregacao[];
-  setores: Setor[];
+  setores?: Setor[];
 }
 
-export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, setores }) => {
+export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, setores: propSetores }) => {
   const { user } = useAuth();
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
   const [auxiliares, setAuxiliares] = useState<AuxiliarJovens[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Filtros em cascata da barra superior: Setor Pertencente -> Congregações
+  const [selectedSetorId, setSelectedSetorId] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
+
+  // Filtro de setor dentro do modal de cadastro/edição
+  const [formSetorId, setFormSetorId] = useState('');
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  useEffect(() => {
+    if (propSetores && propSetores.length > 0) {
+      setSetores(propSetores);
+    } else {
+      fetch('/api/comuns/meta/setores')
+        .then(res => res.json())
+        .then(json => setSetores(json.data || []))
+        .catch(err => console.error('Erro ao buscar setores:', err));
+    }
+  }, [propSetores]);
+
+  // Congregações filtradas pelo Setor selecionado na barra de filtros
+  const comunsDoSetor = React.useMemo(() => {
+    if (!selectedSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === selectedSetorId);
+    return comuns.filter(c => 
+      c.setor_id === selectedSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, selectedSetorId]);
+
+  // Congregações filtradas pelo Setor selecionado dentro do modal
+  const modalComunsFiltradas = React.useMemo(() => {
+    if (!formSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === formSetorId);
+    return comuns.filter(c => 
+      c.setor_id === formSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, formSetorId]);
+
+  const handleSetorFilterChange = (setorId: string) => {
+    setSelectedSetorId(setorId);
+    setSelectedComumId(''); // Limpa a congregação ao trocar o setor
+    setCurrentPage(1);
+  };
+
+  const handleFormSetorChange = (setorId: string) => {
+    setFormSetorId(setorId);
+    // Se a comum atualmente selecionada não pertencer ao novo setor, reseta
+    if (setorId) {
+      const selectedSetor = setores.find(s => s.id === setorId);
+      const isComumInSetor = comuns.some(c => 
+        c.id === formData.comum_id && 
+        (c.setor_id === setorId || (selectedSetor && c.setor_pertencente === selectedSetor.nome))
+      );
+      if (!isComumInSetor) {
+        setFormData(prev => ({ ...prev, comum_id: '' }));
+      }
+    }
+  };
 
   const instrumentosDinamicos = React.useMemo(() => {
     const fromDb = auxiliares.map(a => a.instrumento).filter(Boolean) as string[];
@@ -132,9 +193,24 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
 
     const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
     const matchesUserComum = isRestrictedProfile ? item.comum_id === user?.comum_congregacao_id : true;
+
+    // Filtro por Setor
+    let matchesFilterSetor = true;
+    if (selectedSetorId) {
+      const itemComum = comuns.find(c => c.id === item.comum_id);
+      const selectedSetor = setores.find(s => s.id === selectedSetorId);
+      matchesFilterSetor = Boolean(
+        itemComum && (
+          itemComum.setor_id === selectedSetorId || 
+          (selectedSetor && itemComum.setor_pertencente === selectedSetor.nome)
+        )
+      );
+    }
+
+    // Filtro por Congregação específica
     const matchesFilterComum = selectedComumId ? item.comum_id === selectedComumId : true;
 
-    return matchesSearch && matchesUserComum && matchesFilterComum;
+    return matchesSearch && matchesUserComum && matchesFilterSetor && matchesFilterComum;
   });
 
   if (sortConfig) {
@@ -174,13 +250,20 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
 
   const handleOpenNew = () => {
     setEditingId(null);
+    const initialSetor = selectedSetorId || '';
+    setFormSetorId(initialSetor);
+
+    const initialComumList = initialSetor
+      ? comuns.filter(c => c.setor_id === initialSetor || (setores.find(s => s.id === initialSetor) && c.setor_pertencente === setores.find(s => s.id === initialSetor)?.nome))
+      : comuns;
+
     setFormData({
       nome: '',
       data_apresentacao: '',
       sexo: 'Masculino',
       celular: '',
       data_nascimento: '',
-      comum_id: comuns[0]?.id || '',
+      comum_id: selectedComumId || initialComumList[0]?.id || comuns[0]?.id || '',
       ativo: true,
       is_auxiliar: true,
       is_musico: false,
@@ -192,6 +275,9 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
 
   const handleEdit = (aux: AuxiliarJovens) => {
     setEditingId(aux.id);
+    const auxComum = comuns.find(c => c.id === aux.comum_id);
+    const matchingSetor = setores.find(s => s.id === auxComum?.setor_id || (auxComum?.setor_pertencente && s.nome === auxComum.setor_pertencente));
+    setFormSetorId(matchingSetor?.id || auxComum?.setor_id || '');
     setFormData({
       nome: aux.nome,
       data_apresentacao: aux.data_apresentacao || '',
@@ -282,35 +368,68 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
         </button>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros em Cascata: Setor Pertencente -> Congregações */}
       <div className="flex flex-col md:flex-row gap-3 items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          {/* Busca */}
-          <div className="relative w-full sm:w-64">
+          {/* Busca por Nome ou Celular */}
+          <div className="relative w-full sm:w-60">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
             <input
               type="text"
               placeholder="Buscar por nome ou celular..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
             />
           </div>
 
-          <select
-            value={selectedComumId}
-            onChange={(e) => setSelectedComumId(e.target.value)}
-            className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          >
-            <option value="">Todas as Congregações</option>
-            {comuns.map((c) => (
-              <option key={c.id} value={c.id}>{c.nome}</option>
-            ))}
-          </select>
+          {/* 1º Filtro: Setor Pertencente */}
+          <div className="w-full sm:w-auto">
+            <select
+              value={selectedSetorId}
+              onChange={(e) => handleSetorFilterChange(e.target.value)}
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+            >
+              <option value="">Todos os Setores</option>
+              {setores.map((s) => (
+                <option key={s.id} value={s.id}>{s.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 2º Filtro: Congregações (filtradas pelo setor) */}
+          <div className="w-full sm:w-auto">
+            <select
+              value={selectedComumId}
+              onChange={(e) => { setSelectedComumId(e.target.value); setCurrentPage(1); }}
+              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-emerald-500 cursor-pointer shadow-xs"
+            >
+              <option value="">{selectedSetorId ? 'Todas as Congregações deste Setor' : 'Todas as Congregações'}</option>
+              {comunsDoSetor.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.codigo ? `${c.codigo} - ` : ''}{c.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {(selectedSetorId || selectedComumId || searchTerm) && (
+            <button
+              onClick={() => {
+                setSelectedSetorId('');
+                setSelectedComumId('');
+                setSearchTerm('');
+                setCurrentPage(1);
+              }}
+              className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition whitespace-nowrap"
+            >
+              Limpar filtros
+            </button>
+          )}
         </div>
 
-        <span className="text-xs text-slate-500 dark:text-slate-400">
-          {filtered.length} auxiliar(es) cadastrado(s)
+        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+          {filtered.length} jovem(ns) cadastrado(s)
         </span>
       </div>
 
@@ -404,9 +523,20 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                     </td>
                     <td className="px-5 py-3.5">
                       {aux.comum_congregacao?.nome || aux.comum_nome ? (
-                        <div className="flex items-center space-x-1 text-slate-800 dark:text-slate-200">
-                          <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                          <span>{aux.comum_congregacao?.nome || aux.comum_nome}</span>
+                        <div>
+                          <div className="flex items-center space-x-1 text-slate-800 dark:text-slate-200">
+                            <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                            <span className="font-medium">{aux.comum_congregacao?.nome || aux.comum_nome}</span>
+                          </div>
+                          {(() => {
+                            const c = comuns.find(item => item.id === aux.comum_id);
+                            const setorNome = c?.setor_pertencente || setores.find(s => s.id === c?.setor_id)?.nome;
+                            return setorNome ? (
+                              <div className="text-[10px] text-slate-500 dark:text-slate-400 pl-4 mt-0.5">
+                                Setor: {setorNome}
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
                       ) : (
                         <span className="text-slate-400 dark:text-slate-500 italic text-[11px]">
@@ -546,22 +676,50 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="font-semibold uppercase text-slate-600 dark:text-slate-300">Comum Congregação *</label>
-                <select
-                  value={formData.comum_id}
-                  onChange={(e) => setFormData({ ...formData, comum_id: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 cursor-pointer"
-                  required
-                >
-                  <option value="">-- Selecione a Comum Congregação --</option>
-                  {comuns.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.codigo ? `${c.codigo} - ` : ''}
-                      {c.nome}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="font-semibold uppercase text-slate-600 dark:text-slate-300">Setor Pertencente</label>
+                  <select
+                    value={formSetorId}
+                    onChange={(e) => handleFormSetorChange(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 cursor-pointer"
+                  >
+                    <option value="">-- Todos os Setores --</option>
+                    {setores.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-semibold uppercase text-slate-600 dark:text-slate-300">Comum Congregação *</label>
+                  <select
+                    value={formData.comum_id}
+                    onChange={(e) => {
+                      const chosenComumId = e.target.value;
+                      setFormData({ ...formData, comum_id: chosenComumId });
+                      if (chosenComumId && !formSetorId) {
+                        const foundComum = comuns.find(c => c.id === chosenComumId);
+                        const foundSetor = setores.find(s => s.id === foundComum?.setor_id || (foundComum?.setor_pertencente && s.nome === foundComum.setor_pertencente));
+                        if (foundSetor) {
+                          setFormSetorId(foundSetor.id);
+                        }
+                      }
+                    }}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 cursor-pointer"
+                    required
+                  >
+                    <option value="">-- Selecione a Comum Congregação --</option>
+                    {modalComunsFiltradas.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.codigo ? `${c.codigo} - ` : ''}
+                        {c.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="flex flex-col space-y-3 pt-2">

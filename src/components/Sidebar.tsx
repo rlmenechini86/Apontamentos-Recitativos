@@ -55,6 +55,9 @@ interface SidebarProps {
   usuariosCount: number;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
+  reunioesHojeCount?: number;
+  visitasHojeCount?: number;
+  perfisCount?: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -65,6 +68,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   usuariosCount,
   isOpenMobile,
   onCloseMobile,
+  reunioesHojeCount = 0,
+  visitasHojeCount = 0,
+  perfisCount = 3,
 }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
@@ -91,15 +97,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const isApontamentosRouteActive = [
     'apontamentos',
-    'apontamentos-recitativos',
+    'controle-apontamentos',
     'apontamentos-contagens',
   ].includes(currentRoute);
 
   const isRelatoriosRouteActive = [
     'acompanhamento-setor',
     'acompanhamento-anciaos',
-    'controle-apontamentos',
     'relatorio-auxiliares',
+    'relatorio-musicos',
+    'relatorio-ministerio',
   ].includes(currentRoute);
 
   const handleNavClick = (route: NavRoute) => {
@@ -184,25 +191,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <div className="flex items-center space-x-3">
                 <Clock className={`w-4 h-4 ${currentRoute === 'calendario' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
-                <span>Calendário de Reuniões e Eventos</span>
+                <span>Calendário de Reuniões</span>
               </div>
+              {reunioesHojeCount > 0 && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs ${
+                  currentRoute === 'calendario' 
+                    ? 'bg-white text-emerald-700' 
+                    : 'bg-amber-500 text-white animate-pulse'
+                }`}>
+                  Hoje ({reunioesHojeCount})
+                </span>
+              )}
             </button>
           )}
 
           {/* 1.6 Agenda de Visitas */}
-          <button
-            onClick={() => handleNavClick('agenda-visitas')}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
-              currentRoute === 'agenda-visitas'
-                ? 'bg-emerald-600 text-white shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              <Calendar className={`w-4 h-4 ${currentRoute === 'agenda-visitas' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
-              <span>Agenda de Visitas</span>
-            </div>
-          </button>
+          {hasPermission(user, 'agenda_visitas') && (
+            <button
+              onClick={() => handleNavClick('agenda-visitas')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+                currentRoute === 'agenda-visitas'
+                  ? 'bg-emerald-600 text-white shadow-sm font-semibold'
+                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <div className="flex items-center space-x-3">
+                <Calendar className={`w-4 h-4 ${currentRoute === 'agenda-visitas' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                <span>Agenda de Visitas</span>
+              </div>
+              {visitasHojeCount > 0 && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs ${
+                  currentRoute === 'agenda-visitas' 
+                    ? 'bg-white text-emerald-700' 
+                    : 'bg-teal-500 text-white animate-pulse'
+                }`}>
+                  Hoje ({visitasHojeCount})
+                </span>
+              )}
+            </button>
+          )}
 
           {/* 2. Apontamentos (com Submódulos) */}
           <div className="space-y-1">
@@ -229,18 +256,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="pl-4 pr-1 py-1 space-y-1 border-l-2 border-slate-200 dark:border-slate-800 ml-4 my-1 animate-in fade-in slide-in-from-top-1 duration-150">
 
 
-                {/* 2.2 Recitativos */}
+                {/* 2.1 Controle de Apontamentos */}
                 <button
-                  onClick={() => handleNavClick('apontamentos-recitativos')}
+                  onClick={() => handleNavClick('controle-apontamentos')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                    currentRoute === 'apontamentos-recitativos'
+                    currentRoute === 'controle-apontamentos'
                       ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-500/30'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
                   }`}
                 >
                   <div className="flex items-center space-x-2.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Recitativos</span>
+                    <ClipboardCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Controle de Apontamentos</span>
                   </div>
                 </button>
 
@@ -319,19 +346,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span>Acompanhamento Anciãos</span>
                   </div>
                 </button>
-                <button
-                  onClick={() => handleNavClick('controle-apontamentos')}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                    currentRoute === 'controle-apontamentos'
-                      ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-500/30'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2.5">
-                    <ClipboardCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Controle de Apontamentos</span>
-                  </div>
-                </button>
+
                 <button
                   onClick={() => handleNavClick('relatorio-auxiliares')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -377,7 +392,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           {/* 3. Administração (com Submódulos) */}
-          {(hasPermission(user, 'gerenciar_comuns') || hasPermission(user, 'gerenciar_usuarios') || hasPermission(user, 'gerenciar_auxiliares') || hasPermission(user, 'gerenciar_tipos_evento') || hasPermission(user, 'gerenciar_reunioes')) && (
+          {(hasPermission(user, 'gerenciar_comuns') || hasPermission(user, 'gerenciar_usuarios') || hasPermission(user, 'gerenciar_auxiliares') || hasPermission(user, 'gerenciar_tipos_evento') || hasPermission(user, 'gerenciar_reunioes') || hasPermission(user, 'gerenciar_perfis')) && (
           <div className="space-y-1">
             <button
               onClick={() => setIsAdminExpanded(!isAdminExpanded)}
@@ -459,7 +474,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
 
                 {/* 3.4 Perfis de Acesso */}
-                {user?.perfis?.nome !== 'CJM' && (
+                {hasPermission(user, 'gerenciar_perfis') && (
                 <button
                   onClick={() => handleNavClick('admin-perfis')}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
@@ -473,7 +488,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span>Perfis de Acesso</span>
                   </div>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 font-mono">
-                    3
+                    {perfisCount}
                   </span>
                 </button>
                 )}

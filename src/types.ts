@@ -76,10 +76,13 @@ export interface Recitativo {
 export interface Anciao {
   id: string;
   nome: string;
+  setor_pertencente?: string;
+  setor_id?: string;
   data_cadastro?: string;
   ativo: boolean;
   created_at?: string;
   updated_at?: string;
+  setor?: Partial<Setor>;
 }
 
 export interface AuxiliarJovens {
@@ -144,4 +147,5 @@ export interface AgendaVisita {
   data_visita: string;
   comum_id?: string;
   created_at?: string;
+  comum_congregacao?: { id: string; nome: string; codigo: string };
 }

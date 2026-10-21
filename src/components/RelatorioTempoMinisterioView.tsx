@@ -1,26 +1,41 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
-  Users, BarChart as BarChartIcon, Clock, ArrowUpDown, Filter
+  Users, BarChart as BarChartIcon, Clock, ArrowUpDown, Filter, X
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, LabelList
 } from 'recharts';
-import { ComumCongregacao, Usuario } from '../types';
+import { ComumCongregacao, Usuario, Setor } from '../types';
 
 interface RelatorioTempoMinisterioViewProps {
   comuns: ComumCongregacao[];
   usuarios: Usuario[];
+  setores?: Setor[];
 }
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioViewProps> = ({ 
   comuns, 
-  usuarios 
+  usuarios,
+  setores: propSetores
 }) => {
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
+  const [selectedSetorId, setSelectedSetorId] = useState<string>('');
   const [selectedComumId, setSelectedComumId] = useState<string>('');
   const [selectedCargo, setSelectedCargo] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  useEffect(() => {
+    if (propSetores && propSetores.length > 0) {
+      setSetores(propSetores);
+    } else {
+      fetch('/api/comuns/meta/setores')
+        .then(res => res.json())
+        .then(json => setSetores(json.data || []))
+        .catch(err => console.error('Erro ao buscar setores:', err));
+    }
+  }, [propSetores]);
 
   // Filtra apenas usuários ativos que possuem data de apresentação
   const usuariosValidos = useMemo(() => {
@@ -33,8 +48,25 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
     return Array.from(unique).sort();
   }, [usuariosValidos]);
 
+  // Comuns disponíveis conforme o setor selecionado
+  const comunsDoSetor = useMemo(() => {
+    if (!selectedSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === selectedSetorId);
+    return comuns.filter(c => 
+      c.setor_id === selectedSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, selectedSetorId]);
+
   const filteredUsuarios = useMemo(() => {
     let data = usuariosValidos;
+    if (selectedSetorId) {
+      const selectedSetor = setores.find(s => s.id === selectedSetorId);
+      data = data.filter(u => {
+        const c = comuns.find(item => item.id === u.comum_congregacao_id);
+        return c?.setor_id === selectedSetorId || (selectedSetor && c?.setor_pertencente === selectedSetor.nome);
+      });
+    }
     if (selectedComumId) {
       data = data.filter(u => u.comum_congregacao_id === selectedComumId);
     }
@@ -42,7 +74,7 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
       data = data.filter(u => u.cargo_ministerio === selectedCargo);
     }
     return data;
-  }, [usuariosValidos, selectedComumId, selectedCargo]);
+  }, [usuariosValidos, selectedSetorId, selectedComumId, selectedCargo, comuns, setores]);
 
   // Processa dados para a tabela
   const tableData = useMemo(() => {
@@ -162,12 +194,26 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
           </div>
           
           <select
+            value={selectedSetorId}
+            onChange={(e) => {
+              setSelectedSetorId(e.target.value);
+              setSelectedComumId('');
+            }}
+            className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            <option value="">Todos os Setores</option>
+            {setores.map((s) => (
+              <option key={s.id} value={s.id}>{s.nome}</option>
+            ))}
+          </select>
+
+          <select
             value={selectedComumId}
             onChange={(e) => setSelectedComumId(e.target.value)}
-            className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
           >
-            <option value="">Todas as Congregações</option>
-            {comuns.sort((a, b) => a.nome.localeCompare(b.nome)).map((c) => (
+            <option value="">{selectedSetorId ? 'Todas as Congregações do Setor' : 'Todas as Congregações'}</option>
+            {comunsDoSetor.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map((c) => (
               <option key={c.id} value={c.id}>{c.nome}</option>
             ))}
           </select>
@@ -175,13 +221,27 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
           <select
             value={selectedCargo}
             onChange={(e) => setSelectedCargo(e.target.value)}
-            className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
           >
             <option value="">Todos os Cargos</option>
             {cargos.map((cargo) => (
               <option key={cargo} value={cargo}>{cargo}</option>
             ))}
           </select>
+
+          {(selectedSetorId || selectedComumId || selectedCargo) && (
+            <button
+              onClick={() => {
+                setSelectedSetorId('');
+                setSelectedComumId('');
+                setSelectedCargo('');
+              }}
+              className="flex items-center text-xs text-rose-600 hover:text-rose-700 font-medium px-2 py-1 bg-rose-50 dark:bg-rose-900/30 rounded border border-rose-200 dark:border-rose-800 transition-colors ml-auto sm:ml-0"
+            >
+              <X className="w-3.5 h-3.5 mr-1" />
+              Limpar filtros
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,17 +1,38 @@
-import React, { useState } from 'react';
-import { ReuniaoEvento, TipoEvento, ComumCongregacao } from '../types';
-import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ReuniaoEvento, TipoEvento, ComumCongregacao, Setor } from '../types';
+import { Plus, Pencil, Trash2, X, Check, Search, Layers } from 'lucide-react';
 
 interface AdminReunioesEventosViewProps {
   reunioes: ReuniaoEvento[];
   tiposEvento: TipoEvento[];
   comuns: ComumCongregacao[];
   onUpdate: () => void;
+  setores?: Setor[];
 }
 
-export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> = ({ reunioes, tiposEvento, comuns, onUpdate }) => {
+export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> = ({ reunioes, tiposEvento, comuns, onUpdate, setores: propSetores }) => {
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ReuniaoEvento | null>(null);
+  
+  useEffect(() => {
+    if (propSetores && propSetores.length > 0) {
+      setSetores(propSetores);
+    } else {
+      fetch('/api/comuns/meta/setores')
+        .then(res => res.json())
+        .then(json => setSetores(json.data || []))
+        .catch(err => console.error('Erro ao buscar setores:', err));
+    }
+  }, [propSetores]);
+  
+  // Filtros da listagem principal
+  const [selectedSetorId, setSelectedSetorId] = useState('');
+  const [selectedComumId, setSelectedComumId] = useState('');
+
+  // Filtros do modal de cadastro/edição
+  const [filtroSetorId, setFiltroSetorId] = useState('');
+  const [searchComum, setSearchComum] = useState('');
   
   const [formData, setFormData] = useState({
     data: new Date().toISOString().split('T')[0],
@@ -21,9 +42,44 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
     status: true
   });
 
+  // Comuns disponíveis para o filtro principal da lista
+  const listComunsDoSetor = useMemo(() => {
+    if (!selectedSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === selectedSetorId);
+    return comuns.filter(c => 
+      c.setor_id === selectedSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, selectedSetorId]);
+
+  const handleSetorFilterChange = (setorId: string) => {
+    setSelectedSetorId(setorId);
+    setSelectedComumId('');
+  };
+
+  // Reuniões filtradas para a tabela
+  const filteredReunioes = useMemo(() => {
+    return reunioes.filter((r) => {
+      if (selectedSetorId) {
+        const c = comuns.find(item => item.id === r.comum_id);
+        const s = setores.find(st => st.id === selectedSetorId);
+        const matchesSetor = c?.setor_id === selectedSetorId || (s && (c?.setor_pertencente === s.nome || r.comum_congregacao?.setor_pertencente === s.nome));
+        if (!matchesSetor) return false;
+      }
+      if (selectedComumId) {
+        if (r.comum_id !== selectedComumId) return false;
+      }
+      return true;
+    });
+  }, [reunioes, comuns, setores, selectedSetorId, selectedComumId]);
+
   const handleOpenModal = (item?: ReuniaoEvento) => {
+    setSearchComum('');
     if (item) {
       setEditingItem(item);
+      const c = comuns.find(x => x.id === item.comum_id);
+      const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
+      setFiltroSetorId(s?.id || c?.setor_id || '');
       setFormData({
         data: item.data,
         tipo_evento_id: item.tipo_evento_id || '',
@@ -33,16 +89,45 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
       });
     } else {
       setEditingItem(null);
+      setFiltroSetorId(selectedSetorId || '');
       setFormData({ 
         data: new Date().toISOString().split('T')[0], 
         tipo_evento_id: tiposEvento[0]?.id || '', 
-        comum_id: '',
+        comum_id: selectedComumId || '',
         nome: '', 
         status: true 
       });
     }
     setIsModalOpen(true);
   };
+
+  const filteredComuns = useMemo(() => {
+    return comuns.filter((c) => {
+      if (filtroSetorId) {
+        const selectedSetor = setores.find(s => s.id === filtroSetorId);
+        const matchesSetor = c.setor_id === filtroSetorId || (selectedSetor && c.setor_pertencente === selectedSetor.nome);
+        if (!matchesSetor) return false;
+      }
+      if (searchComum.trim()) {
+        const query = searchComum.toLowerCase().trim();
+        const matchesNome = c.nome.toLowerCase().includes(query);
+        const matchesCodigo = c.codigo?.toLowerCase().includes(query);
+        const matchesSetorNome = c.setores?.nome?.toLowerCase().includes(query) || c.setor_pertencente?.toLowerCase().includes(query);
+        if (!matchesNome && !matchesCodigo && !matchesSetorNome) return false;
+      }
+      return true;
+    });
+  }, [comuns, setores, filtroSetorId, searchComum]);
+
+  const displayComuns = useMemo(() => {
+    if (formData.comum_id && !filteredComuns.some(c => c.id === formData.comum_id)) {
+      const selectedComum = comuns.find(c => c.id === formData.comum_id);
+      if (selectedComum) {
+        return [selectedComum, ...filteredComuns];
+      }
+    }
+    return filteredComuns;
+  }, [filteredComuns, formData.comum_id, comuns]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +188,56 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
         </button>
       </div>
 
+      {/* Barra de Filtros: Setor Pertencente e Comum Congregação */}
+      <div className="flex flex-wrap items-center gap-3 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center space-x-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400">
+          <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <span>Filtrar:</span>
+        </div>
+
+        {/* 1º Filtro: Setor Pertencente */}
+        <div className="w-full sm:w-56">
+          <select
+            value={selectedSetorId}
+            onChange={(e) => handleSetorFilterChange(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            <option value="">Todos os Setores</option>
+            {setores.map(s => (
+              <option key={s.id} value={s.id}>{s.nome}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* 2º Filtro: Comum Congregação (filtrada pelo setor) */}
+        <div className="w-full sm:w-56">
+          <select
+            value={selectedComumId}
+            onChange={(e) => setSelectedComumId(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            <option value="">
+              {selectedSetorId ? 'Todas as Comuns do Setor' : 'Todas as Comuns'}
+            </option>
+            {listComunsDoSetor.map(c => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+        </div>
+
+        {(selectedSetorId || selectedComumId) && (
+          <button
+            onClick={() => {
+              setSelectedSetorId('');
+              setSelectedComumId('');
+            }}
+            className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+          >
+            Limpar filtros
+          </button>
+        )}
+      </div>
+
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
         <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
           <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 uppercase text-xs">
@@ -116,7 +251,7 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-            {reunioes.map((item) => (
+            {filteredReunioes.map((item) => (
               <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                 <td className="px-6 py-4 font-medium">{formatDate(item.data)}</td>
                 <td className="px-6 py-4 font-medium">
@@ -145,10 +280,12 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
                 </td>
               </tr>
             ))}
-            {reunioes.length === 0 && (
+            {filteredReunioes.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                  Nenhuma reunião ou evento cadastrado.
+                <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                  {selectedSetorId || selectedComumId 
+                    ? 'Nenhuma reunião ou evento encontrado para os filtros selecionados.' 
+                    : 'Nenhuma reunião ou evento cadastrado.'}
                 </td>
               </tr>
             )}
@@ -195,17 +332,93 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
                 </select>
               </div>
 
+              {/* Painel de Facilitação: Setor Pertencente e Pesquisa de Comum */}
+              <div className="bg-slate-50 dark:bg-slate-950/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1">
+                  <Layers className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Localizar Comum Congregação</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Filtro Setor Pertencente */}
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400">
+                      Setor Pertencente
+                    </label>
+                    <select
+                      value={filtroSetorId}
+                      onChange={(e) => setFiltroSetorId(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                    >
+                      <option value="">-- Todos os Setores --</option>
+                      {setores.map(s => (
+                        <option key={s.id} value={s.id}>{s.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Pesquisar Comum */}
+                  <div className="space-y-1">
+                    <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400">
+                      Pesquisar Congregação
+                    </label>
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Nome ou código..."
+                        value={searchComum}
+                        onChange={(e) => setSearchComum(e.target.value)}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500"
+                      />
+                      {searchComum && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchComum('')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          title="Limpar pesquisa"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Comum Congregação (Opcional)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Comum Congregação (Opcional)
+                  </label>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {displayComuns.length} congregação(ões) disponível(is)
+                  </span>
+                </div>
                 <select
                   value={formData.comum_id}
-                  onChange={e => setFormData({ ...formData, comum_id: e.target.value })}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                  onChange={e => {
+                    const chosenId = e.target.value;
+                    setFormData({ ...formData, comum_id: chosenId });
+                    if (chosenId && !filtroSetorId) {
+                      const c = comuns.find(item => item.id === chosenId);
+                      const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
+                      if (s) setFiltroSetorId(s.id);
+                    }
+                  }}
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2.5 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                 >
                   <option value="">Nenhuma / Geral / Regional</option>
-                  {comuns.map(c => (
-                    <option key={c.id} value={c.id}>{c.nome}</option>
-                  ))}
+                  {displayComuns.map(c => {
+                    const setorNome = c.setores?.nome || c.setor_pertencente || setores.find(s => s.id === c.setor_id)?.nome;
+                    return (
+                      <option key={c.id} value={c.id}>
+                        {c.codigo ? `${c.codigo} - ` : ''}
+                        {c.nome}
+                        {setorNome ? ` (${setorNome})` : ''}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

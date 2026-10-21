@@ -1,24 +1,97 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, User, AlertCircle, ArrowUpDown } from 'lucide-react';
-import { Recitativo, ComumCongregacao, Usuario } from '../types';
+import { CheckCircle2, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, User, AlertCircle, ArrowUpDown, Lock } from 'lucide-react';
+import { Recitativo, ComumCongregacao, Usuario, Setor } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from './Pagination';
 import { apiGet, clearApiCache } from '../utils/api';
 
+export interface RecitativoInitialParams {
+  date?: string;
+  comumId?: string;
+}
+
 interface RecitativosViewProps {
   comuns: ComumCongregacao[];
   usuarios?: Usuario[];
+  setores?: Setor[];
+  initialParams?: RecitativoInitialParams | null;
+  onClearInitialParams?: () => void;
 }
 
-export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuarios = [] }) => {
+export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuarios = [], setores: propSetores, initialParams, onClearInitialParams }) => {
   const { user } = useAuth();
+
+  const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
+  const isApontamento = roleName.includes('apontamento') || user?.perfis?.nivel_acesso === 'comum';
+  const isRestrictedProfile = isApontamento || (roleName !== 'administrador' && user?.perfis?.nivel_acesso !== 'global' && !!user?.comum_congregacao_id);
+  const userComumId = user?.comum_congregacao_id || user?.comum_congregacao?.id;
+
   const [recitativos, setRecitativos] = useState<Recitativo[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSetorId, setSelectedSetorId] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString().padStart(2, '0'));
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedSecretarioId, setSelectedSecretarioId] = useState('');
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
+
+  useEffect(() => {
+    if (initialParams && (initialParams.date || initialParams.comumId)) {
+      if (initialParams.date) {
+        const [year, month] = initialParams.date.split('-');
+        if (year) setSelectedYear(year);
+        if (month) setSelectedMonth(month);
+      }
+      if (initialParams.comumId && !isRestrictedProfile) {
+        setSelectedComumId(initialParams.comumId);
+        const targetComum = comuns.find(c => c.id === initialParams.comumId);
+        if (targetComum) {
+          const targetSetor = setores.find(s => s.id === targetComum.setor_id || (targetComum.setor_pertencente && s.nome === targetComum.setor_pertencente));
+          if (targetSetor) setSelectedSetorId(targetSetor.id);
+        }
+      }
+      setEditingItem(null);
+      setIsModalOpen(true);
+    }
+  }, [initialParams, isRestrictedProfile, comuns, setores]);
+
+  useEffect(() => {
+    if (isRestrictedProfile && userComumId) {
+      setSelectedComumId(userComumId);
+      const userComum = comuns.find(c => c.id === userComumId);
+      if (userComum) {
+        const userSetor = setores.find(s => s.id === userComum.setor_id || (userComum.setor_pertencente && s.nome === userComum.setor_pertencente));
+        if (userSetor) setSelectedSetorId(userSetor.id);
+      }
+    }
+  }, [isRestrictedProfile, userComumId, comuns, setores]);
+
+  useEffect(() => {
+    if (propSetores && propSetores.length > 0) {
+      setSetores(propSetores);
+    } else {
+      fetch('/api/comuns/meta/setores')
+        .then(res => res.json())
+        .then(json => setSetores(json.data || []))
+        .catch(console.error);
+    }
+  }, [propSetores]);
+
+  const comunsDoSetor = React.useMemo(() => {
+    if (!selectedSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === selectedSetorId);
+    return comuns.filter(c => 
+      c.setor_id === selectedSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, selectedSetorId]);
+
+  const handleSetorFilterChange = (setorId: string) => {
+    setSelectedSetorId(setorId);
+    setSelectedComumId('');
+    setCurrentPage(1);
+  };
   
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -82,9 +155,15 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
     const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
     const matchesUserComum = isRestrictedProfile ? item.comum_id === user?.comum_congregacao_id : true;
 
-    const matchesSecretario = !selectedSecretarioId || comuns.find(c => c.id === item.comum_id)?.secretario_id === selectedSecretarioId;
+    const itemComum = comuns.find(c => c.id === item.comum_id);
+    const selectedSetorObj = setores.find(s => s.id === selectedSetorId);
+    const matchesSetor = !selectedSetorId || 
+      itemComum?.setor_id === selectedSetorId || 
+      (selectedSetorObj && (itemComum?.setor_pertencente === selectedSetorObj.nome || item.comum_congregacao?.setor_pertencente === selectedSetorObj.nome));
 
-    return matchesSearch && matchesComum && matchesMonth && matchesYear && matchesUserComum && matchesSecretario;
+    const matchesSecretario = !selectedSecretarioId || itemComum?.secretario_id === selectedSecretarioId;
+
+    return matchesSearch && matchesSetor && matchesComum && matchesMonth && matchesYear && matchesUserComum && matchesSecretario;
   });
 
   if (sortConfig) {
@@ -169,12 +248,32 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
           </div>
           <div className="w-full sm:w-48">
             <select
-              value={selectedComumId}
-              onChange={(e) => setSelectedComumId(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+              disabled={isRestrictedProfile && !!userComumId}
+              value={selectedSetorId}
+              onChange={(e) => handleSetorFilterChange(e.target.value)}
+              className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                isRestrictedProfile && !!userComumId ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'
+              }`}
             >
-              <option value="">Todas as Comuns</option>
-              {comuns.map((c) => (
+              <option value="">Setor (Todos)</option>
+              {setores.map((s) => (
+                <option key={s.id} value={s.id}>{s.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div className="w-full sm:w-48">
+            <select
+              disabled={isRestrictedProfile && !!userComumId}
+              value={selectedComumId}
+              onChange={(e) => { setSelectedComumId(e.target.value); setCurrentPage(1); }}
+              className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                isRestrictedProfile && !!userComumId ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'
+              }`}
+            >
+              <option value="">
+                {selectedSetorId ? 'Comuns do Setor' : 'Todas as Comuns'}
+              </option>
+              {comunsDoSetor.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
               ))}
             </select>
@@ -328,10 +427,18 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
       {isModalOpen && (
         <RecitativoFormModal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => {
+            setIsModalOpen(false);
+            onClearInitialParams?.();
+          }}
           initialData={editingItem}
+          initialParams={editingItem ? null : initialParams}
           comuns={comuns}
-          onSuccess={fetchRecitativos}
+          setores={setores}
+          onSuccess={() => {
+            fetchRecitativos();
+            onClearInitialParams?.();
+          }}
         />
       )}
     </div>
@@ -339,18 +446,27 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
 };
 
 // --- FORM MODAL ---
-interface RecitativoFormModalProps {
+export interface RecitativoFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialData: Recitativo | null;
+  initialParams?: RecitativoInitialParams | null;
   comuns: ComumCongregacao[];
-  onSuccess: () => void;
+  onSuccess: (savedRecitativo?: Recitativo) => void;
+  setores?: Setor[];
 }
 
-const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
-  isOpen, onClose, initialData, comuns, onSuccess
+export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
+  isOpen, onClose, initialData, initialParams, comuns, onSuccess, setores = []
 }) => {
   const { user } = useAuth();
+
+  const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
+  const isApontamento = roleName.includes('apontamento') || user?.perfis?.nivel_acesso === 'comum';
+  const isRestrictedUser = isApontamento || (roleName !== 'administrador' && user?.perfis?.nivel_acesso !== 'global' && !!user?.comum_congregacao_id);
+  const userComumId = user?.comum_congregacao_id || user?.comum_congregacao?.id;
+
+  const [modalSetorId, setModalSetorId] = useState('');
   const [formData, setFormData] = useState({
     data: '',
     comum_id: '',
@@ -363,6 +479,9 @@ const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
 
   useEffect(() => {
     if (initialData) {
+      const c = comuns.find(x => x.id === initialData.comum_id);
+      const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
+      setModalSetorId(s?.id || c?.setor_id || '');
       setFormData({
         data: initialData.data,
         comum_id: initialData.comum_id,
@@ -372,16 +491,40 @@ const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
         meninas: initialData.meninas,
       });
     } else {
+      const targetComumId = (isRestrictedUser && userComumId)
+        ? userComumId
+        : (initialParams?.comumId || '');
+
+      const boundComum = targetComumId
+        ? comuns.find(c => c.id === targetComumId) || (user?.comum_congregacao?.nome ? comuns.find(c => c.nome.toLowerCase() === user.comum_congregacao?.nome?.toLowerCase()) : null)
+        : null;
+      const boundSetor = boundComum
+        ? setores.find(s => s.id === boundComum.setor_id || (boundComum.setor_pertencente && s.nome === boundComum.setor_pertencente))
+        : null;
+
+      setModalSetorId(boundSetor?.id || boundComum?.setor_id || '');
       setFormData({
-        data: new Date().toISOString().split('T')[0],
-        comum_id: '',
+        data: initialParams?.date || new Date().toISOString().split('T')[0],
+        comum_id: boundComum ? boundComum.id : (isRestrictedUser && userComumId ? userComumId : (initialParams?.comumId || '')),
         mocos: 0,
         mocas: 0,
         meninos: 0,
         meninas: 0,
       });
     }
-  }, [initialData]);
+  }, [initialData, initialParams, comuns, setores, isRestrictedUser, userComumId, user?.comum_congregacao?.nome]);
+
+  const modalComunsFiltradas = React.useMemo(() => {
+    if (isRestrictedUser && userComumId) {
+      return comuns.filter(c => c.id === userComumId);
+    }
+    if (!modalSetorId) return comuns;
+    const selectedSetor = setores.find(s => s.id === modalSetorId);
+    return comuns.filter(c => 
+      c.setor_id === modalSetorId || 
+      (selectedSetor && c.setor_pertencente === selectedSetor.nome)
+    );
+  }, [comuns, setores, modalSetorId, isRestrictedUser, userComumId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -401,8 +544,11 @@ const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
     try {
       setLoading(true);
 
+      const enforcedComumId = (isRestrictedUser && userComumId) ? userComumId : formData.comum_id;
+
       const payload = {
         ...formData,
+        comum_id: enforcedComumId,
         cadastrado_por: user?.id || null
       };
 
@@ -416,8 +562,22 @@ const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
       });
 
       if (res.ok) {
+        const json = await res.json().catch(() => null);
+        const savedData: Recitativo = json?.data || {
+          id: initialData?.id || `temp-${Date.now()}`,
+          data: formData.data,
+          comum_id: enforcedComumId,
+          mocos: Number(formData.mocos) || 0,
+          mocas: Number(formData.mocas) || 0,
+          meninos: Number(formData.meninos) || 0,
+          meninas: Number(formData.meninas) || 0,
+          total_geral: (Number(formData.mocos) || 0) + (Number(formData.mocas) || 0) + (Number(formData.meninos) || 0) + (Number(formData.meninas) || 0),
+          cadastrado_por: user?.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
         clearApiCache('/api/recitativos');
-        onSuccess();
+        onSuccess(savedData);
         onClose();
       } else {
         alert('Erro ao salvar apontamento.');
@@ -469,18 +629,59 @@ const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
               )}
             </div>
             <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Setor Pertencente</label>
+              <select
+                disabled={isRestrictedUser && !!userComumId}
+                value={modalSetorId}
+                onChange={(e) => {
+                  const newSetor = e.target.value;
+                  setModalSetorId(newSetor);
+                  if (newSetor) {
+                    const selSetor = setores.find(s => s.id === newSetor);
+                    const isComumIn = comuns.some(c => c.id === formData.comum_id && (c.setor_id === newSetor || (selSetor && c.setor_pertencente === selSetor.nome)));
+                    if (!isComumIn) setFormData(prev => ({ ...prev, comum_id: '' }));
+                  }
+                }}
+                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
+                  isRestrictedUser && !!userComumId ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'
+                }`}
+              >
+                <option value="">-- Todos os Setores --</option>
+                {setores.map(s => (
+                  <option key={s.id} value={s.id}>{s.nome}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1 md:col-span-2">
               <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Comum Congregação *</label>
               <select
                 required
+                disabled={isRestrictedUser && !!userComumId}
                 value={formData.comum_id}
-                onChange={(e) => setFormData({ ...formData, comum_id: e.target.value })}
-                className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500"
+                onChange={(e) => {
+                  const chosenId = e.target.value;
+                  setFormData({ ...formData, comum_id: chosenId });
+                  if (chosenId && !modalSetorId) {
+                    const c = comuns.find(item => item.id === chosenId);
+                    const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
+                    if (s) setModalSetorId(s.id);
+                  }
+                }}
+                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
+                  isRestrictedUser && !!userComumId ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'
+                }`}
               >
                 <option value="">Selecione...</option>
-                {comuns.map((c) => (
+                {modalComunsFiltradas.map((c) => (
                   <option key={c.id} value={c.id}>{c.nome}</option>
                 ))}
               </select>
+              {isRestrictedUser && (
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center space-x-1 mt-1">
+                  <Lock className="w-3 h-3" />
+                  <span>Perfil restrito: registro permitido exclusivamente para sua comum congregação vinculada.</span>
+                </p>
+              )}
             </div>
           </div>
 

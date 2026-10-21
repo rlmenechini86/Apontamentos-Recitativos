@@ -276,6 +276,54 @@ export class UsuarioService {
       throw err;
     }
   }
+
+  /**
+   * RESET PASSWORD:
+   * Reseta a senha para 'ccb123' criptografada e ativa trocar_senha_proximo_login = true
+   */
+  async resetPassword(id: string): Promise<Usuario> {
+    const existing = await this.getById(id);
+    if (!existing) {
+      throw new Error(`Usuário com ID '${id}' não encontrado.`);
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const senha_hash = await bcrypt.hash('ccb123', salt);
+
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .update({
+          senha_hash,
+          trocar_senha_proximo_login: true,
+        })
+        .eq('id', id)
+        .select(`
+          *,
+          perfis:perfil_id (
+            id,
+            nome,
+            descricao,
+            nivel_acesso
+          ),
+          comum_congregacao:comum_congregacao_id (
+            id,
+            codigo,
+            nome
+          )
+        `)
+        .single();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return data as unknown as Usuario;
+    } catch (err: any) {
+      console.error('[UsuarioService.resetPassword] Erro:', err.message);
+      throw err;
+    }
+  }
 }
 
 export const usuarioService = new UsuarioService();

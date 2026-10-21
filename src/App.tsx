@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Building2,
   Plus,
@@ -31,7 +31,7 @@ import { ControleApontamentosView } from './components/ControleApontamentosView'
 import { RelatorioAuxiliaresView } from './components/RelatorioAuxiliaresView';
 import { RelatorioMusicosView } from './components/RelatorioMusicosView';
 import { RelatorioTempoMinisterioView } from './components/RelatorioTempoMinisterioView';
-import { RecitativosView } from './components/RecitativosView';
+import { RecitativosView, RecitativoInitialParams } from './components/RecitativosView';
 import { ContagensMocidadeView } from './components/ContagensMocidadeView';
 import { PerfisAcessoView } from './components/PerfisAcessoView';
 import { AuxiliaresCJMView } from './components/AuxiliaresCJMView';
@@ -43,14 +43,18 @@ import { AdminAnciaosView } from './components/AdminAnciaosView';
 import { AdminTiposEventoView } from './components/AdminTiposEventoView';
 import { AdminReunioesEventosView } from './components/AdminReunioesEventosView';
 import { CalendarioView } from './components/CalendarioView';
+import { CompromissosHojeBanner } from './components/CompromissosHojeBanner';
+import { CompromissosNotificationMenu } from './components/CompromissosNotificationMenu';
 import { Pagination } from './components/Pagination';
-import { ComumCongregacao, Setor, Perfil, Usuario, DbStatus, TipoEvento, ReuniaoEvento, Anciao } from './types';
+import { ComumCongregacao, Setor, Perfil, Usuario, DbStatus, TipoEvento, ReuniaoEvento, AgendaVisita, Anciao, Recitativo, ContagemMocidade, AuxiliarJovens } from './types';
+import { apiGet, clearApiCache } from './utils/api';
 import { useTheme } from './context/ThemeContext';
 import { useAuth } from './context/AuthContext';
+import { filtrarCompromissosHoje } from './utils/compromissosHelper';
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout, user } = useAuth();
   const [currentRoute, setCurrentRoute] = useState<NavRoute>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -63,9 +67,21 @@ export default function App() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [perfis, setPerfis] = useState<Perfil[]>([]);
   
+  // Dados de Apontamentos e Indicadores (Carregados uma única vez na inicialização/F5)
+  const [recitativos, setRecitativos] = useState<Recitativo[]>([]);
+  const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
+  const [auxiliares, setAuxiliares] = useState<AuxiliarJovens[]>([]);
+  const [loadingDashboardData, setLoadingDashboardData] = useState(true);
+
   // Dados de Eventos
   const [tiposEvento, setTiposEvento] = useState<TipoEvento[]>([]);
   const [reunioesEventos, setReunioesEventos] = useState<ReuniaoEvento[]>([]);
+  const [visitas, setVisitas] = useState<AgendaVisita[]>([]);
+
+  // Cálculo reativo de compromissos marcados para hoje (Reuniões e Visitas)
+  const compromissosHoje = useMemo(() => {
+    return filtrarCompromissosHoje(reunioesEventos, visitas, user);
+  }, [reunioesEventos, visitas, user]);
 
   // Estados de Carregamento e Conexão
   const [status, setStatus] = useState<DbStatus | null>(null);
@@ -75,6 +91,7 @@ export default function App() {
 
   // Filtros Comuns
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSetorIdComuns, setSelectedSetorIdComuns] = useState('');
   const [selectedAnciaoId, setSelectedAnciaoId] = useState('');
   const [selectedSecretarioId, setSelectedSecretarioId] = useState('');
   const [comunsPage, setComunsPage] = useState(1);
@@ -91,7 +108,7 @@ export default function App() {
 
   useEffect(() => {
     setComunsPage(1);
-  }, [searchTerm, selectedAnciaoId, selectedSecretarioId]);
+  }, [searchTerm, selectedSetorIdComuns, selectedAnciaoId, selectedSecretarioId]);
 
   // Modais Comum
   const [isComumModalOpen, setIsComumModalOpen] = useState(false);
@@ -103,6 +120,16 @@ export default function App() {
 
   // Feedback Banner
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Pending Recitativo Params from Dashboard
+  const [pendingRecitativoParams, setPendingRecitativoParams] = useState<RecitativoInitialParams | null>(null);
+
+  // Redirecionamento da rota antiga de Recitativos para Controle de Apontamentos (tela desabilitada)
+  useEffect(() => {
+    if (currentRoute === 'apontamentos-recitativos') {
+      setCurrentRoute('controle-apontamentos');
+    }
+  }, [currentRoute]);
 
   const fetchStatus = async () => {
     try {
@@ -176,6 +203,18 @@ export default function App() {
     }
   };
 
+  const fetchVisitas = async () => {
+    try {
+      const res = await fetch('/api/visitas');
+      if (res.ok) {
+        const json = await res.json();
+        setVisitas(json.data || []);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar agenda de visitas:', err);
+    }
+  };
+
   const fetchComuns = async () => {
     try {
       setLoadingComuns(true);
@@ -211,15 +250,87 @@ export default function App() {
     }
   };
 
+  const fetchRecitativos = async () => {
+    try {
+      const res = await apiGet('/api/recitativos');
+      if (res.ok) {
+        const json = await res.json();
+        setRecitativos(json.data || []);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar recitativos:', err);
+    }
+  };
+
+  const fetchContagens = async () => {
+    try {
+      const res = await apiGet('/api/contagens');
+      if (res.ok) {
+        const json = await res.json();
+        setContagens(json.data || []);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar contagens:', err);
+    }
+  };
+
+  const fetchAuxiliares = async () => {
+    try {
+      const res = await apiGet('/api/auxiliares');
+      if (res.ok) {
+        const json = await res.json();
+        setAuxiliares(json.data || []);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar auxiliares:', err);
+    }
+  };
+
+  // Atualização em tempo real quando um recitativo é salvo no sistema
+  const handleRecitativoSaved = (saved: Recitativo) => {
+    setRecitativos(prev => {
+      const idx = prev.findIndex(r => r.id === saved.id || (r.data === saved.data && r.comum_id === saved.comum_id));
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = saved;
+        return next;
+      }
+      return [saved, ...prev];
+    });
+    clearApiCache('/api/recitativos');
+  };
+
   useEffect(() => {
-    fetchStatus();
-    fetchSetores();
-    fetchAnciaos();
-    fetchPerfis();
-    fetchComuns();
-    fetchUsuarios();
-    fetchTiposEvento();
-    fetchReunioesEventos();
+    Promise.all([
+      fetchStatus(),
+      fetchSetores(),
+      fetchAnciaos(),
+      fetchPerfis(),
+      fetchComuns(),
+      fetchUsuarios(),
+      fetchTiposEvento(),
+      fetchReunioesEventos(),
+      fetchVisitas(),
+      fetchRecitativos(),
+      fetchContagens(),
+      fetchAuxiliares(),
+    ]).finally(() => {
+      setLoadingDashboardData(false);
+    });
+
+    const handleVisitasUpdated = () => fetchVisitas();
+    const handleReunioesUpdated = () => fetchReunioesEventos();
+    const handleAnciaosUpdated = () => fetchAnciaos();
+
+    window.addEventListener('visitas-updated', handleVisitasUpdated);
+    window.addEventListener('reunioes-updated', handleReunioesUpdated);
+    window.addEventListener('anciaos-updated', handleAnciaosUpdated);
+
+    return () => {
+      window.removeEventListener('visitas-updated', handleVisitasUpdated);
+      window.removeEventListener('reunioes-updated', handleReunioesUpdated);
+      window.removeEventListener('anciaos-updated', handleAnciaosUpdated);
+    };
   }, []);
 
   // --- HANDLERS COMUM ---
@@ -324,6 +435,30 @@ export default function App() {
     }
   };
 
+  const handleResetPasswordUsuario = async (id: string, nome: string) => {
+    if (!window.confirm(`Deseja realmente resetar a senha de "${nome}" para a senha padrão "ccb123"?\n\nNo próximo login, o usuário será obrigado a cadastrar uma nova senha pessoal.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/usuarios/${id}/reset-password`, {
+        method: 'POST',
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Erro ao resetar senha.');
+
+      setFeedbackMsg({
+        type: 'success',
+        text: `Senha de "${nome}" resetada com sucesso para "ccb123"! O usuário será solicitado a cadastrar uma nova senha no próximo login.`,
+      });
+      await fetchUsuarios();
+      setTimeout(() => setFeedbackMsg(null), 5000);
+    } catch (err: any) {
+      setFeedbackMsg({ type: 'error', text: err.message || 'Falha ao resetar senha.' });
+      setTimeout(() => setFeedbackMsg(null), 5000);
+    }
+  };
+
   // Filtragem local complementar para resposta instantânea
   const filteredComuns = comuns.filter((item) => {
     const matchesSearch =
@@ -331,10 +466,15 @@ export default function App() {
       item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.codigo?.toLowerCase().includes(searchTerm.toLowerCase());
 
+    const matchesSetor = !selectedSetorIdComuns || (() => {
+      const selectedSetor = setores.find(s => s.id === selectedSetorIdComuns);
+      return item.setor_id === selectedSetorIdComuns || (selectedSetor && item.setor_pertencente === selectedSetor.nome);
+    })();
+
     const matchesAnciao = !selectedAnciaoId || item.anciao_id === selectedAnciaoId;
     const matchesSecretario = !selectedSecretarioId || item.secretario_id === selectedSecretarioId;
 
-    return matchesSearch && matchesAnciao && matchesSecretario;
+    return matchesSearch && matchesSetor && matchesAnciao && matchesSecretario;
   });
 
   if (comunsSortConfig) {
@@ -342,7 +482,11 @@ export default function App() {
       let valA: any = a[comunsSortConfig.key as keyof typeof a];
       let valB: any = b[comunsSortConfig.key as keyof typeof b];
 
-      if (comunsSortConfig.key === 'anciao') {
+      if (comunsSortConfig.key === 'setor') {
+        const getSetorName = (item: ComumCongregacao) => item.setores?.nome || item.setor_pertencente || setores.find(s => s.id === item.setor_id)?.nome || '';
+        valA = getSetorName(a);
+        valB = getSetorName(b);
+      } else if (comunsSortConfig.key === 'anciao') {
         valA = anciaos.find(an => an.id === a.anciao_id)?.nome || '';
         valB = anciaos.find(an => an.id === b.anciao_id)?.nome || '';
       } else if (comunsSortConfig.key === 'secretario') {
@@ -455,8 +599,11 @@ export default function App() {
         status={status}
         comunsCount={comuns.length}
         usuariosCount={usuarios.length}
+        perfisCount={perfis.length}
         isOpenMobile={isMobileMenuOpen}
         onCloseMobile={() => setIsMobileMenuOpen(false)}
+        reunioesHojeCount={compromissosHoje.reunioesHoje.length}
+        visitasHojeCount={compromissosHoje.visitasHoje.length}
       />
 
       {/* Área Principal de Conteúdo (Lado Direito) */}
@@ -496,6 +643,12 @@ export default function App() {
 
           {/* Ações Rápidas Topbar */}
           <div className="flex items-center space-x-2">
+            {/* Notificação de Compromissos de Hoje (Reuniões & Visitas) */}
+            <CompromissosNotificationMenu
+              compromissos={compromissosHoje}
+              onNavigate={setCurrentRoute}
+            />
+
             {/* Toggle de Tema Claro/Escuro */}
             <button
               onClick={toggleTheme}
@@ -514,6 +667,8 @@ export default function App() {
                 fetchComuns();
                 fetchUsuarios();
                 fetchStatus();
+                fetchReunioesEventos();
+                fetchVisitas();
               }}
               title="Atualizar dados"
               className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition cursor-pointer"
@@ -559,6 +714,12 @@ export default function App() {
 
         {/* Conteúdo Central da Página */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[98%] w-full mx-auto print:p-0 print:max-w-none print:block">
+          {/* Banner de Notificação de Compromissos de Hoje */}
+          <CompromissosHojeBanner
+            compromissos={compromissosHoje}
+            onNavigate={setCurrentRoute}
+          />
+
           {/* Banner de Feedback */}
           {feedbackMsg && (
             <div
@@ -583,7 +744,17 @@ export default function App() {
               comuns={comuns}
               setores={setores}
               usuarios={usuarios}
-              onNavigate={setCurrentRoute}
+              anciaos={anciaos}
+              contagens={contagens}
+              auxiliares={auxiliares}
+              recitativos={recitativos}
+              loadingData={loadingDashboardData}
+              onNavigate={(route, params) => {
+                if (params) {
+                  setPendingRecitativoParams(params);
+                }
+                setCurrentRoute(route);
+              }}
               onOpenNovaComum={() => {
                 setEditingComum(null);
                 setIsComumModalOpen(true);
@@ -597,50 +768,64 @@ export default function App() {
 
           {/* ROTA 1.5: AGENDA DE VISITAS */}
           {currentRoute === 'agenda-visitas' && (
-            <AgendaVisitasView comuns={comuns} />
+            <AgendaVisitasView comuns={comuns} setores={setores} />
           )}
 
           {/* ROTA 1.6: CALENDARIO DE EVENTOS E REUNIÕES */}
           {currentRoute === 'calendario' && (
-            <CalendarioView reunioes={reunioesEventos} />
+            <CalendarioView
+              reunioes={reunioesEventos}
+              tiposEvento={tiposEvento}
+              comuns={comuns}
+              setores={setores}
+              onUpdate={fetchReunioesEventos}
+            />
           )}
 
           {/* ROTA 2.1: ACOMPANHAMENTO SETOR */}
           {currentRoute === 'acompanhamento-setor' && (
-            <AcompanhamentoSetorView comuns={comuns} usuarios={usuarios} />
+            <AcompanhamentoSetorView comuns={comuns} usuarios={usuarios} setores={setores} />
           )}
 
           {/* ROTA 2.2: ACOMPANHAMENTO ANCIÃOS */}
           {currentRoute === 'acompanhamento-anciaos' && (
-            <AcompanhamentoAnciaosView comuns={comuns} anciaos={anciaos} />
+            <AcompanhamentoAnciaosView comuns={comuns} anciaos={anciaos} setores={setores} />
           )}
 
-          {/* ROTA 2.3: CONTROLE DE APONTAMENTOS */}
+          {/* ROTA: CONTROLE DE APONTAMENTOS */}
           {currentRoute === 'controle-apontamentos' && (
-            <ControleApontamentosView usuarios={usuarios} />
+            <ControleApontamentosView
+              usuarios={usuarios}
+              comuns={comuns}
+              setores={setores}
+              recitativos={recitativos}
+              contagens={contagens}
+              onRecitativoSaved={handleRecitativoSaved}
+              initialParams={pendingRecitativoParams}
+              onClearInitialParams={() => setPendingRecitativoParams(null)}
+              onNavigate={(route, params) => {
+                if (params) setPendingRecitativoParams(params);
+                setCurrentRoute(route);
+              }}
+            />
           )}
 
           {/* ROTA 2.4: RELATORIO DE AUXILIARES */}
           {currentRoute === 'relatorio-auxiliares' && (
-            <RelatorioAuxiliaresView comuns={comuns} usuarios={usuarios} />
+            <RelatorioAuxiliaresView comuns={comuns} usuarios={usuarios} setores={setores} />
           )}
 
           {currentRoute === 'relatorio-musicos' && (
-            <RelatorioMusicosView comuns={comuns} />
+            <RelatorioMusicosView comuns={comuns} setores={setores} />
           )}
 
           {currentRoute === 'relatorio-ministerio' && (
-            <RelatorioTempoMinisterioView comuns={comuns} usuarios={usuarios} />
-          )}
-
-          {/* ROTA 2.3: APONTAMENTOS - RECITATIVOS */}
-          {currentRoute === 'apontamentos-recitativos' && (
-            <RecitativosView comuns={comuns} usuarios={usuarios} />
+            <RelatorioTempoMinisterioView comuns={comuns} usuarios={usuarios} setores={setores} />
           )}
 
           {/* ROTA 2.3: APONTAMENTOS - CONTAGENS */}
           {currentRoute === 'apontamentos-contagens' && (
-            <ContagensMocidadeView comuns={comuns} usuarios={usuarios} />
+            <ContagensMocidadeView comuns={comuns} usuarios={usuarios} setores={setores} />
           )}
 
           {/* ROTA 3: ADMINISTRAÇÃO -> COMUM CONGREGAÇÃO */}
@@ -658,6 +843,21 @@ export default function App() {
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
+                  </div>
+
+                  <div className="w-full sm:w-48">
+                    <select
+                      value={selectedSetorIdComuns}
+                      onChange={(e) => setSelectedSetorIdComuns(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                    >
+                      <option value="">Setor (Todos)</option>
+                      {setores.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nome}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="w-full sm:w-48">
@@ -690,6 +890,20 @@ export default function App() {
                         ))}
                     </select>
                   </div>
+
+                  {(selectedSetorIdComuns || selectedAnciaoId || selectedSecretarioId || searchTerm) && (
+                    <button
+                      onClick={() => {
+                        setSelectedSetorIdComuns('');
+                        setSelectedAnciaoId('');
+                        setSelectedSecretarioId('');
+                        setSearchTerm('');
+                      }}
+                      className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition whitespace-nowrap self-center"
+                    >
+                      Limpar filtros
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex items-center space-x-2 w-full md:w-auto justify-end">
@@ -715,6 +929,9 @@ export default function App() {
                         <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleComunsSort('codigo')}>
                           <div className="flex items-center space-x-1"><span>Código (Controle Interno)</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                         </th>
+                        <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleComunsSort('setor')}>
+                          <div className="flex items-center space-x-1"><span>Setor Pertencente</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                        </th>
                         <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleComunsSort('nome')}>
                           <div className="flex items-center space-x-1"><span>Comum Congregação</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                         </th>
@@ -736,7 +953,7 @@ export default function App() {
                     <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
                       {loadingComuns ? (
                         <tr>
-                          <td colSpan={6} className="text-center py-12 text-slate-500">
+                          <td colSpan={8} className="text-center py-12 text-slate-500">
                             <div className="flex items-center justify-center space-x-2">
                               <RefreshCw className="w-5 h-5 animate-spin text-emerald-600 dark:text-emerald-400" />
                               <span>Carregando congregações...</span>
@@ -745,7 +962,7 @@ export default function App() {
                         </tr>
                       ) : filteredComuns.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="text-center py-12 text-slate-500">
+                          <td colSpan={8} className="text-center py-12 text-slate-500">
                             <Building2 className="w-10 h-10 mx-auto text-slate-400 dark:text-slate-600 mb-2" />
                             <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Nenhuma Comum Congregação encontrada.</p>
                             <p className="text-xs text-slate-500 mt-1">
@@ -758,6 +975,11 @@ export default function App() {
                           <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                             <td className="px-6 py-4 font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                               {item.codigo || '-'}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
+                                {item.setores?.nome || item.setor_pertencente || setores.find(s => s.id === item.setor_id)?.nome || '-'}
+                              </span>
                             </td>
                             <td className="px-6 py-4 font-semibold text-slate-900 dark:text-slate-100">
                               {item.nome}
@@ -833,6 +1055,7 @@ export default function App() {
               usuarios={usuarios}
               perfis={perfis}
               comuns={comuns}
+              setores={setores}
               loading={loadingUsuarios}
               onRefresh={fetchUsuarios}
               onOpenCreate={() => {
@@ -844,6 +1067,7 @@ export default function App() {
                 setIsUsuarioModalOpen(true);
               }}
               onDelete={(id: string, nome: string) => handleDeleteUsuario(id, nome)}
+              onResetPassword={handleResetPasswordUsuario}
               dataSource={dataSource}
             />
           )}
@@ -853,13 +1077,14 @@ export default function App() {
             <PerfisAcessoView
               perfis={perfis}
               usuarios={usuarios}
+              onUpdatePerfis={fetchPerfis}
               onManageUsers={() => setCurrentRoute('admin-usuarios')}
             />
           )}
 
           {/* ROTA 6: ADMINISTRAÇÃO -> ANCIÃOS */}
           {currentRoute === 'admin-anciaos' && (
-            <AdminAnciaosView />
+            <AdminAnciaosView setores={setores} />
           )}
 
           {/* ROTA 7: ADMINISTRAÇÃO -> AUXILIARES E CJM */}
@@ -879,12 +1104,9 @@ export default function App() {
               reunioes={reunioesEventos} 
               tiposEvento={tiposEvento}
               comuns={comuns}
+              setores={setores}
               onUpdate={fetchReunioesEventos} 
             />
-          )}
-
-          {currentRoute === 'calendario' && (
-            <CalendarioView reunioes={reunioesEventos} />
           )}
         </main>
       </div>
@@ -903,9 +1125,11 @@ export default function App() {
         isOpen={isUsuarioModalOpen}
         onClose={() => setIsUsuarioModalOpen(false)}
         onSubmit={handleSaveUsuario}
+        onResetPassword={handleResetPasswordUsuario}
         initialData={editingUsuario}
         perfis={perfis}
         comuns={comuns}
+        setores={setores}
       />
     </div>
   );

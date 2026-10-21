@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   User,
@@ -10,25 +10,32 @@ import {
   AlertCircle,
   Info,
   Calendar,
+  Search,
+  Layers,
+  KeyRound,
 } from 'lucide-react';
-import { Usuario, Perfil, ComumCongregacao } from '../types';
+import { Usuario, Perfil, ComumCongregacao, Setor } from '../types';
 
 interface UsuarioFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (formData: Partial<Usuario>) => Promise<void>;
+  onResetPassword?: (id: string, nome: string) => Promise<void>;
   initialData?: Usuario | null;
   perfis: Perfil[];
   comuns: ComumCongregacao[];
+  setores?: Setor[];
 }
 
 export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
+  onResetPassword,
   initialData,
   perfis,
   comuns,
+  setores = [],
 }) => {
   const [formData, setFormData] = useState({
     nome_completo: '',
@@ -43,12 +50,27 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
   });
 
   const [loading, setLoading] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [filtroSetorId, setFiltroSetorId] = useState('');
+  const [searchComum, setSearchComum] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setErrorMsg(null);
+      setResetSuccess(null);
+      setResettingPassword(false);
+      setSearchComum('');
       const defaultPerfilId = perfis[0]?.id || '';
+
+      if (initialData?.comum_congregacao_id) {
+        const userComum = comuns.find(c => c.id === initialData.comum_congregacao_id);
+        const userSetor = setores.find(s => s.id === userComum?.setor_id || (userComum?.setor_pertencente && s.nome === userComum.setor_pertencente));
+        setFiltroSetorId(userSetor?.id || userComum?.setor_id || '');
+      } else {
+        setFiltroSetorId('');
+      }
 
       if (initialData) {
         setFormData({
@@ -76,7 +98,35 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
         });
       }
     }
-  }, [isOpen, initialData, perfis]);
+  }, [isOpen, initialData, perfis, comuns, setores]);
+
+  const filteredComuns = useMemo(() => {
+    return comuns.filter((c) => {
+      if (filtroSetorId) {
+        const selectedSetor = setores.find(s => s.id === filtroSetorId);
+        const matchesSetor = c.setor_id === filtroSetorId || (selectedSetor && c.setor_pertencente === selectedSetor.nome);
+        if (!matchesSetor) return false;
+      }
+      if (searchComum.trim()) {
+        const query = searchComum.toLowerCase().trim();
+        const matchesNome = c.nome.toLowerCase().includes(query);
+        const matchesCodigo = c.codigo?.toLowerCase().includes(query);
+        const matchesSetorNome = c.setores?.nome?.toLowerCase().includes(query) || c.setor_pertencente?.toLowerCase().includes(query);
+        if (!matchesNome && !matchesCodigo && !matchesSetorNome) return false;
+      }
+      return true;
+    });
+  }, [comuns, setores, filtroSetorId, searchComum]);
+
+  const displayComuns = useMemo(() => {
+    if (formData.comum_congregacao_id && !filteredComuns.some(c => c.id === formData.comum_congregacao_id)) {
+      const selectedComum = comuns.find(c => c.id === formData.comum_congregacao_id);
+      if (selectedComum) {
+        return [selectedComum, ...filteredComuns];
+      }
+    }
+    return filteredComuns;
+  }, [filteredComuns, formData.comum_congregacao_id, comuns]);
 
   if (!isOpen) return null;
 
@@ -227,6 +277,8 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
               className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent cursor-pointer"
             >
               <option value="Nenhum">Nenhum</option>
+              <option value="Cooperador de Jovens">Cooperador de Jovens</option>
+              <option value="Cooperador de Jovens e Menores">Cooperador de Jovens e Menores</option>
               <option value="Secretário / CJM">Secretário / CJM</option>
               <option value="Auxiliar de Jovens">Auxiliar de Jovens</option>
               <option value="CJM">CJM</option>
@@ -269,7 +321,7 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
               <span>Perfil de Acesso (RBAC) *</span>
             </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {perfis.map((p) => {
                 const isSelected = formData.perfil_id === p.id;
                 return (
@@ -297,10 +349,13 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                         {p.nivel_acesso}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                      {p.nome === 'Administrador' && 'Visão global e irrestrita'}
-                      {p.nome === 'CJM' && 'Visão consolidada do Setor'}
-                      {p.nome === 'Apontamento' && 'Visão apenas da sua Comum'}
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-2">
+                      {p.descricao || (
+                        p.nome === 'Administrador' ? 'Visão global e irrestrita' :
+                        p.nome === 'CJM' ? 'Visão consolidada do Setor' :
+                        p.nome === 'Apontamento' ? 'Visão apenas da sua Comum' :
+                        'Perfil personalizado'
+                      )}
                     </p>
                   </button>
                 );
@@ -309,7 +364,7 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
           </div>
 
           {/* Vínculo com a Comum Congregação */}
-          <div className="space-y-1 pt-1">
+          <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center space-x-1">
                 <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 mr-1" />
@@ -322,33 +377,112 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
               )}
             </div>
 
-            <select
-              value={formData.comum_congregacao_id || ''}
-              onChange={(e) => setFormData({ ...formData, comum_congregacao_id: e.target.value || null })}
-              className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent cursor-pointer"
-            >
-              <option value="">
-                {selectedPerfil?.nome === 'Administrador'
-                  ? 'Sem vínculo específico (Acesso Global)'
-                  : '-- Selecione a Comum Congregação vinculada --'}
-              </option>
-              {comuns.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.codigo ? `${c.codigo} - ` : ''}
-                  {c.nome}
-                  {c.setores?.nome ? ` (${c.setores.nome})` : ''}
-                </option>
-              ))}
-            </select>
+            {/* Painel de Facilitação: Setor Pertencente e Pesquisa de Comum */}
+            <div className="bg-slate-50 dark:bg-slate-850/80 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="text-[11px] font-medium text-slate-600 dark:text-slate-400 flex items-center space-x-1">
+                <Layers className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Filtros para localizar a Comum Congregação</span>
+              </div>
 
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center space-x-1 mt-1">
-              <Info className="w-3 h-3 text-slate-400 flex-shrink-0" />
-              <span>
-                {selectedPerfil?.nome === 'Apontamento'
-                  ? 'O perfil Apontamento restringe os lançamentos estritamente à congregação selecionada.'
-                  : 'Para perfis CJM ou Administrador, a congregação serve como referência de congregação base.'}
-              </span>
-            </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* 1º Campo: Setor Pertencente */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-300">
+                    Setor Pertencente
+                  </label>
+                  <select
+                    value={filtroSetorId}
+                    onChange={(e) => setFiltroSetorId(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    <option value="">-- Todos os Setores --</option>
+                    {setores.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 2º Campo: Pesquisar Comum */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-300">
+                    Pesquisar Congregação
+                  </label>
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Nome ou código..."
+                      value={searchComum}
+                      onChange={(e) => setSearchComum(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    {searchComum && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchComum('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        title="Limpar pesquisa"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Campo de Vínculo: Seleção da Comum Congregação */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Comum Congregação *
+                </label>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                  {displayComuns.length} congregação(ões) disponível(is)
+                </span>
+              </div>
+
+              <select
+                value={formData.comum_congregacao_id || ''}
+                onChange={(e) => {
+                  const chosenId = e.target.value || null;
+                  setFormData({ ...formData, comum_congregacao_id: chosenId });
+                  if (chosenId && !filtroSetorId) {
+                    const c = comuns.find(item => item.id === chosenId);
+                    const s = setores.find(set => set.id === c?.setor_id || (c?.setor_pertencente && set.nome === c.setor_pertencente));
+                    if (s) setFiltroSetorId(s.id);
+                  }
+                }}
+                className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent cursor-pointer"
+              >
+                <option value="">
+                  {selectedPerfil?.nome === 'Administrador'
+                    ? 'Sem vínculo específico (Acesso Global)'
+                    : '-- Selecione a Comum Congregação vinculada --'}
+                </option>
+                {displayComuns.map((c) => {
+                  const setorNome = c.setores?.nome || c.setor_pertencente || setores.find(s => s.id === c.setor_id)?.nome;
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {c.codigo ? `${c.codigo} - ` : ''}
+                      {c.nome}
+                      {setorNome ? ` (${setorNome})` : ''}
+                    </option>
+                  );
+                })}
+              </select>
+
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center space-x-1 mt-1">
+                <Info className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                <span>
+                  {selectedPerfil?.nome === 'Apontamento'
+                    ? 'O perfil Apontamento restringe os lançamentos estritamente à congregação selecionada.'
+                    : 'Para perfis CJM ou Administrador, a congregação serve como referência de congregação base.'}
+                </span>
+              </p>
+            </div>
           </div>
 
           {/* Status Ativo */}
@@ -364,6 +498,64 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
               Usuário ativo com permissão de login no sistema
             </label>
           </div>
+
+          {/* Seção de Segurança: Reset de Senha */}
+          {initialData?.id && (
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center space-x-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Segurança e Acesso à Conta</span>
+                </span>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Redefinir a senha deste usuário para a senha inicial padrão <strong>ccb123</strong>.
+                </p>
+                {resetSuccess && (
+                  <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 flex items-center space-x-1">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{resetSuccess}</span>
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!initialData?.id) return;
+                  if (!confirm(`Deseja realmente resetar a senha de "${initialData.nome_completo}" para a senha padrão "ccb123"?\n\nNo próximo login, o usuário será obrigado a cadastrar uma nova senha.`)) {
+                    return;
+                  }
+
+                  setResettingPassword(true);
+                  setResetSuccess(null);
+                  setErrorMsg(null);
+
+                  try {
+                    if (onResetPassword) {
+                      await onResetPassword(initialData.id, initialData.nome_completo);
+                      setResetSuccess('Senha resetada com sucesso para "ccb123"! O usuário deverá cadastrar uma nova senha no próximo login.');
+                    } else {
+                      const res = await fetch(`/api/usuarios/${initialData.id}/reset-password`, { method: 'POST' });
+                      const json = await res.json();
+                      if (res.ok && json.success) {
+                        setResetSuccess('Senha resetada com sucesso para "ccb123"! O usuário deverá cadastrar uma nova senha no próximo login.');
+                      } else {
+                        setErrorMsg(json.message || 'Erro ao resetar senha.');
+                      }
+                    }
+                  } catch (err: any) {
+                    setErrorMsg(err.message || 'Erro ao resetar senha.');
+                  } finally {
+                    setResettingPassword(false);
+                  }
+                }}
+                disabled={resettingPassword}
+                className="px-3.5 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer flex-shrink-0 shadow-2xs"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>{resettingPassword ? 'Resetando...' : 'Resetar Senha para ccb123'}</span>
+              </button>
+            </div>
+          )}
 
           {/* Botões do Rodapé */}
           <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end space-x-3">
