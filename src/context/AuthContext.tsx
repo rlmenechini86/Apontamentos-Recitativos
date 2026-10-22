@@ -28,19 +28,48 @@ const AuthContext = createContext<AuthContextType>({
   logout: () => {},
 });
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<Usuario | null>(() => {
-    try {
-      const savedUser = localStorage.getItem('ccb_user');
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch {
-      return null;
-    }
-  });
+const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos de inatividade
 
-  const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('ccb_token') || null;
-  });
+const getInitialAuth = (): { user: Usuario | null; token: string | null } => {
+  try {
+    const savedUser = localStorage.getItem('ccb_user');
+    const savedToken = localStorage.getItem('ccb_token');
+    const lastActivityStr = localStorage.getItem('ccb_last_activity');
+
+    if (!savedUser || !savedToken) {
+      return { user: null, token: null };
+    }
+
+    const now = Date.now();
+    if (lastActivityStr) {
+      const lastActivity = parseInt(lastActivityStr, 10);
+      if (isNaN(lastActivity) || now - lastActivity > TIMEOUT_MS) {
+        // Expirou por inatividade
+        localStorage.removeItem('ccb_user');
+        localStorage.removeItem('ccb_token');
+        localStorage.removeItem('ccb_last_activity');
+        return { user: null, token: null };
+      }
+    } else {
+      // Sem carimbo de atividade anterior, requer novo login
+      localStorage.removeItem('ccb_user');
+      localStorage.removeItem('ccb_token');
+      return { user: null, token: null };
+    }
+
+    return {
+      user: JSON.parse(savedUser),
+      token: savedToken,
+    };
+  } catch {
+    return { user: null, token: null };
+  }
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const initialAuth = getInitialAuth();
+  const [user, setUser] = useState<Usuario | null>(initialAuth.user);
+  const [token, setToken] = useState<string | null>(initialAuth.token);
 
   useEffect(() => {
     if (user && token) {
@@ -49,13 +78,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       localStorage.removeItem('ccb_user');
       localStorage.removeItem('ccb_token');
+      localStorage.removeItem('ccb_last_activity');
     }
   }, [user, token]);
 
-  // Inactivity timeout logic
+  // Lógica de expiração por inatividade (compatível com mobile e desktop)
   useEffect(() => {
+    if (!user || !token) return;
+
     let timeoutId: number;
-    const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
     const logoutDueToInactivity = () => {
       setUser(null);
@@ -63,51 +94,79 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('ccb_user');
       localStorage.removeItem('ccb_token');
       localStorage.removeItem('ccb_last_activity');
-      // Optional: alert('Sessão expirada por inatividade. Faça login novamente.');
     };
 
-    const resetTimer = () => {
+    const checkExpiration = (): boolean => {
       const now = Date.now();
-      const lastActivity = parseInt(localStorage.getItem('ccb_last_activity') || '0', 10);
-      
-      // Se o usuário voltar e já tiver passado o tempo (ex: navegador suspendeu)
-      if (lastActivity && now - lastActivity > TIMEOUT_MS) {
+      const lastActivityStr = localStorage.getItem('ccb_last_activity');
+      if (lastActivityStr) {
+        const lastActivity = parseInt(lastActivityStr, 10);
+        if (isNaN(lastActivity) || now - lastActivity > TIMEOUT_MS) {
+          logoutDueToInactivity();
+          return true;
+        }
+      } else {
+        logoutDueToInactivity();
+        return true;
+      }
+      return false;
+    };
+
+    // Validação imediata: se já expirou antes do timer iniciar
+    if (checkExpiration()) {
+      return;
+    }
+
+    // Agenda o timeout para o tempo restante real da sessão
+    const lastActivity = parseInt(localStorage.getItem('ccb_last_activity') || '0', 10);
+    const initialRemaining = Math.max(1000, TIMEOUT_MS - (Date.now() - lastActivity));
+    timeoutId = window.setTimeout(logoutDueToInactivity, initialRemaining);
+
+    const handleUserActivity = () => {
+      const now = Date.now();
+      const lastActivityStr = localStorage.getItem('ccb_last_activity');
+      const currentLastActivity = lastActivityStr ? parseInt(lastActivityStr, 10) : 0;
+
+      // Se já expirou antes da interação
+      if (!currentLastActivity || now - currentLastActivity > TIMEOUT_MS) {
         logoutDueToInactivity();
         return;
       }
-      
-      // Atualiza o localStorage no máximo a cada 5 segundos para não travar no mobile (ex: scroll contínuo)
-      if (!lastActivity || now - lastActivity > 5000) {
+
+      // Atualiza o storage com moderação (máx a cada 5s)
+      if (now - currentLastActivity > 5000) {
         localStorage.setItem('ccb_last_activity', now.toString());
       }
-      
+
       window.clearTimeout(timeoutId);
-      if (user && token) {
-        timeoutId = window.setTimeout(logoutDueToInactivity, TIMEOUT_MS);
-      }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        resetTimer();
-      }
-    };
-
-    if (user && token) {
-      const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
-      
-      localStorage.setItem('ccb_last_activity', Date.now().toString());
       timeoutId = window.setTimeout(logoutDueToInactivity, TIMEOUT_MS);
-      
-      events.forEach(event => window.addEventListener(event, resetTimer, { passive: true }));
-      document.addEventListener('visibilitychange', handleVisibilityChange);
+    };
 
-      return () => {
-        events.forEach(event => window.removeEventListener(event, resetTimer));
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        window.clearTimeout(timeoutId);
-      };
-    }
+    const handleWakeOrFocus = () => {
+      // Ao voltar à visibilidade (ex: celular desbloqueado ou aba reaberta)
+      if (document.visibilityState === 'visible') {
+        if (!checkExpiration()) {
+          const currentLast = parseInt(localStorage.getItem('ccb_last_activity') || '0', 10);
+          const remaining = Math.max(1000, TIMEOUT_MS - (Date.now() - currentLast));
+          window.clearTimeout(timeoutId);
+          timeoutId = window.setTimeout(logoutDueToInactivity, remaining);
+        }
+      }
+    };
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+    events.forEach(event => window.addEventListener(event, handleUserActivity, { passive: true }));
+    document.addEventListener('visibilitychange', handleWakeOrFocus);
+    window.addEventListener('pageshow', handleWakeOrFocus);
+    window.addEventListener('focus', handleWakeOrFocus);
+
+    return () => {
+      events.forEach(event => window.removeEventListener(event, handleUserActivity));
+      document.removeEventListener('visibilitychange', handleWakeOrFocus);
+      window.removeEventListener('pageshow', handleWakeOrFocus);
+      window.removeEventListener('focus', handleWakeOrFocus);
+      window.clearTimeout(timeoutId);
+    };
   }, [user, token]);
 
   const login = async (email: string, senha: string) => {
@@ -124,6 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setUser(json.data.user);
     setToken(json.data.token);
+    localStorage.setItem('ccb_last_activity', Date.now().toString());
   };
 
   const register = async (data: {
@@ -147,6 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setUser(json.data.user);
     setToken(json.data.token);
+    localStorage.setItem('ccb_last_activity', Date.now().toString());
   };
 
   const setPassword = async (email: string, novaSenha: string) => {
@@ -167,6 +228,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     localStorage.removeItem('ccb_user');
     localStorage.removeItem('ccb_token');
+    localStorage.removeItem('ccb_last_activity');
   };
 
   return (
