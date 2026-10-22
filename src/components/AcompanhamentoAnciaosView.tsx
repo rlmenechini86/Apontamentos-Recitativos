@@ -340,15 +340,15 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
           </div>
 
           <div className="overflow-x-auto p-4 bg-slate-50 dark:bg-slate-950/50">
-            <table className="w-full text-center text-sm font-medium">
+            <table className="w-full text-center text-xs sm:text-sm font-medium">
               <thead className="bg-[#6b7280] text-white">
                 <tr>
-                  <th className="py-2 px-3 border-r border-[#4b5563] text-left">Comum</th>
-                  <th className="py-2 px-2 border-r border-[#4b5563]">Mocidade</th>
-                  <th className="py-2 px-2 border-r border-[#4b5563]">Expectativa</th>
-                  <th className="py-2 px-2 border-r border-[#4b5563]">Total de<br/>Recitativos</th>
-                  <th className="py-2 px-2 border-r border-[#4b5563]">Expectativa<br/>x Resultado</th>
-                  <th className="py-2 px-2">Resultado</th>
+                  <th className="py-2 px-2 sm:px-3 border-r border-[#4b5563] text-left">Comum</th>
+                  <th className="hidden sm:table-cell py-2 px-2 border-r border-[#4b5563]">Mocidade</th>
+                  <th className="py-2 px-1.5 sm:px-2 border-r border-[#4b5563]">Expect.</th>
+                  <th className="py-2 px-1.5 sm:px-2 border-r border-[#4b5563]">Recitativos</th>
+                  <th className="hidden sm:table-cell py-2 px-2 border-r border-[#4b5563]">Expect. x Result.</th>
+                  <th className="py-2 px-1.5 sm:px-2">Resultado</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -359,16 +359,16 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
                 ) : (
                   tableData.map(row => (
                     <tr key={row.comumNome} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200">
-                      <td className="py-2 px-3 border-r border-slate-200 dark:border-slate-700 text-left text-slate-900 dark:text-white font-semibold">
+                      <td className="py-2 px-2 sm:px-3 border-r border-slate-200 dark:border-slate-700 text-left text-slate-900 dark:text-white font-semibold">
                         {row.comumNome}
                       </td>
-                      <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-700">{row.mocidade}</td>
-                      <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-700 font-bold">{row.expectativa}</td>
-                      <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-700 font-bold">{row.totalRecitativos}</td>
-                      <td className={`py-2 px-2 border-r border-slate-200 dark:border-slate-700 font-bold ${row.diferenca < 0 ? 'text-[#e86f77]' : 'text-[#52c41a]'}`}>
+                      <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-700">{row.mocidade}</td>
+                      <td className="py-2 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-700 font-bold">{row.expectativa}</td>
+                      <td className="py-2 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-700 font-bold">{row.totalRecitativos}</td>
+                      <td className={`hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-700 font-bold ${row.diferenca < 0 ? 'text-[#e86f77]' : 'text-[#52c41a]'}`}>
                         {row.diferenca}
                       </td>
-                      <td className={`py-2 px-2 font-bold ${row.resultadoStatus === 'Abaixo' ? 'text-[#e86f77]' : 'text-[#52c41a]'}`}>
+                      <td className={`py-2 px-1.5 sm:px-2 font-bold ${row.resultadoStatus === 'Abaixo' ? 'text-[#e86f77]' : 'text-[#52c41a]'}`}>
                         {row.resultadoStatus}
                       </td>
                     </tr>

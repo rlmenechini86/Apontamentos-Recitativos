@@ -274,32 +274,37 @@ export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: pro
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-xs border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+            <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('nome')}>
+                <th className="px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('nome')}>
                   <div className="flex items-center space-x-1"><span>Nome</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('setor_pertencente')}>
-                  <div className="flex items-center space-x-1"><span>Setor Pertencente</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="hidden sm:table-cell px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('setor_pertencente')}>
+                  <div className="flex items-center space-x-1"><span>Setor</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('data_cadastro')}>
+                <th className="hidden md:table-cell px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('data_cadastro')}>
                   <div className="flex items-center space-x-1"><span>Data de Cadastro</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('ativo')}>
+                <th className="px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('ativo')}>
                   <div className="flex items-center space-x-1"><span>Status</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-6 py-4 text-right">Ações</th>
+                <th className="px-3 sm:px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {paginatedAnciaos.map(a => (
                 <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="px-6 py-4 font-semibold text-slate-900 dark:text-slate-100">
-                    {a.nome}
+                  <td className="px-3 sm:px-4 py-3 font-semibold text-slate-900 dark:text-slate-100">
+                    <div>{a.nome}</div>
+                    {a.setor_pertencente && (
+                      <div className="sm:hidden text-[11px] text-slate-500 font-normal mt-0.5">
+                        Setor: {a.setor_pertencente}
+                      </div>
+                    )}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="hidden sm:table-cell px-3 sm:px-4 py-3">
                     {a.setor_pertencente ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-500/20">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-500/20">
                         <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                         {a.setor_pertencente}
                       </span>
@@ -307,10 +312,10 @@ export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: pro
                       <span className="text-xs text-slate-400 italic">Não informado</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
+                  <td className="hidden md:table-cell px-3 sm:px-4 py-3 text-slate-600 dark:text-slate-400 text-xs">
                     {a.data_cadastro ? new Date(a.data_cadastro + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 sm:px-4 py-3">
                     {a.ativo ? (
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400">
                         Ativo
@@ -321,7 +326,7 @@ export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: pro
                       </span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-right space-x-2">
+                  <td className="px-3 sm:px-4 py-3 text-right space-x-1 sm:space-x-2">
                     <button 
                       onClick={() => handleOpenEdit(a)} 
                       title="Editar ancião"

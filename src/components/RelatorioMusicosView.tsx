@@ -444,30 +444,33 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
             <table className="w-full text-left text-sm text-slate-700">
               <thead className="bg-slate-50 text-slate-600 text-xs uppercase sticky top-0 shadow-sm z-10">
                 <tr>
-                  <th className="px-4 py-4 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleSort('familia')}>
+                  <th className="hidden sm:table-cell px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleSort('familia')}>
                     <div className="flex items-center space-x-1"><span>Família</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                   </th>
-                  <th className="px-4 py-4 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleSort('instrumento')}>
+                  <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleSort('instrumento')}>
                     <div className="flex items-center space-x-1"><span>Instrumento</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                   </th>
-                  <th className="px-4 py-4 font-semibold cursor-pointer hover:bg-slate-100 text-center" onClick={() => handleSort('quantidade')}>
-                    <div className="flex items-center justify-center space-x-1"><span>Quantidade</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                  <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 text-center" onClick={() => handleSort('quantidade')}>
+                    <div className="flex items-center justify-center space-x-1"><span>Qtd</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                   </th>
-                  <th className="px-4 py-4 font-semibold cursor-pointer hover:bg-slate-100 text-right" onClick={() => handleSort('rawPercent')}>
-                    <div className="flex items-center justify-end space-x-1"><span>Percentual</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                  <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 text-right" onClick={() => handleSort('rawPercent')}>
+                    <div className="flex items-center justify-end space-x-1"><span>%</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {instrumentData.map((item, idx) => (
                   <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-4 font-medium text-slate-600">{item.familia}</td>
-                    <td className="px-4 py-4 font-medium text-slate-900">{item.instrumento}</td>
-                    <td className="px-4 py-4 text-center font-bold text-slate-700">{item.quantidade}</td>
-                    <td className="px-4 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                    <td className="hidden sm:table-cell px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-slate-600 text-xs sm:text-sm">{item.familia}</td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-slate-900 text-xs sm:text-sm">
+                      <div>{item.instrumento}</div>
+                      <div className="sm:hidden text-[10px] text-slate-500 font-normal">{item.familia}</div>
+                    </td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center font-bold text-slate-700 text-xs sm:text-sm">{item.quantidade}</td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right">
+                      <div className="flex items-center justify-end space-x-1.5 sm:space-x-2">
                         <span className="font-semibold text-slate-600 text-xs">{item.percentual}</span>
-                        <div className="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div className="w-12 sm:w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-emerald-500 rounded-full" 
                             style={{ width: item.percentual }}
@@ -499,26 +502,26 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
             <table className="w-full text-left text-sm text-slate-700">
               <thead className="bg-slate-50 text-slate-600 text-xs uppercase sticky top-0 shadow-sm z-10">
                 <tr>
-                  <th className="px-6 py-4 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleFamilySort('familia')}>
+                  <th className="px-3 sm:px-6 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleFamilySort('familia')}>
                     <div className="flex items-center space-x-1"><span>Família</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                   </th>
-                  <th className="px-6 py-4 font-semibold cursor-pointer hover:bg-slate-100 text-center" onClick={() => handleFamilySort('quantidade')}>
-                    <div className="flex items-center justify-center space-x-1"><span>Quantidade</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                  <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 text-center" onClick={() => handleFamilySort('quantidade')}>
+                    <div className="flex items-center justify-center space-x-1"><span>Qtd</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                   </th>
-                  <th className="px-6 py-4 font-semibold cursor-pointer hover:bg-slate-100 text-right" onClick={() => handleFamilySort('rawPercent')}>
-                    <div className="flex items-center justify-end space-x-1"><span>Percentual</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                  <th className="px-3 sm:px-6 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 text-right" onClick={() => handleFamilySort('rawPercent')}>
+                    <div className="flex items-center justify-end space-x-1"><span>%</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {familyData.map((item, idx) => (
                   <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-900">{item.familia}</td>
-                    <td className="px-6 py-4 text-center font-bold text-slate-700">{item.quantidade}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-3">
-                        <span className="font-semibold text-slate-600">{item.percentual}</span>
-                        <div className="w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <td className="px-3 sm:px-6 py-2.5 sm:py-3 font-medium text-slate-900 text-xs sm:text-sm">{item.familia}</td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center font-bold text-slate-700 text-xs sm:text-sm">{item.quantidade}</td>
+                    <td className="px-3 sm:px-6 py-2.5 sm:py-3 text-right">
+                      <div className="flex items-center justify-end space-x-2 sm:space-x-3">
+                        <span className="font-semibold text-slate-600 text-xs sm:text-sm">{item.percentual}</span>
+                        <div className="w-16 sm:w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-violet-500 rounded-full" 
                             style={{ width: item.percentual }}

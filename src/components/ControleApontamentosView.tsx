@@ -666,8 +666,8 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
             <thead className="bg-slate-100/90 dark:bg-slate-950/90 backdrop-blur-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
               <tr>
                 {/* Coluna Comum Fixa */}
-                <th className="py-4 px-6 font-extrabold text-slate-900 dark:text-slate-100 min-w-[240px] sticky left-0 z-20 bg-slate-100/95 dark:bg-slate-950/95 shadow-[1px_0_0_rgba(0,0,0,0.06)] dark:shadow-[1px_0_0_rgba(255,255,255,0.06)]">
-                  Comum Congregação
+                <th className="py-2.5 sm:py-4 px-2.5 sm:px-5 font-extrabold text-slate-900 dark:text-slate-100 min-w-[130px] sm:min-w-[180px] md:min-w-[220px] sticky left-0 z-20 bg-slate-100/95 dark:bg-slate-950/95 shadow-[1px_0_0_rgba(0,0,0,0.06)] dark:shadow-[1px_0_0_rgba(255,255,255,0.06)]">
+                  Comum
                 </th>
                 
                 {/* Colunas de Domingos */}
@@ -675,17 +675,17 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                   const dObj = formatHeaderDate(sunday);
                   const isPast = sunday <= todayStr;
                   return (
-                    <th key={sunday} className="py-3 px-3 text-center min-w-[140px] border-l border-slate-200/80 dark:border-slate-800">
-                      <div className="flex flex-col items-center justify-center space-y-1">
-                        <div className={`px-2.5 py-0.5 rounded-md font-extrabold text-xs inline-flex items-center space-x-1 ${
+                    <th key={sunday} className="py-2 sm:py-3 px-1 sm:px-2.5 text-center min-w-[75px] sm:min-w-[105px] md:min-w-[125px] border-l border-slate-200/80 dark:border-slate-800">
+                      <div className="flex flex-col items-center justify-center space-y-0.5 sm:space-y-1">
+                        <div className={`px-1.5 sm:px-2.5 py-0.5 rounded-md font-extrabold text-[10px] sm:text-xs inline-flex items-center space-x-1 ${
                           isPast 
                             ? 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200' 
                             : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800'
                         }`}>
-                          <Calendar className="w-3 h-3" />
+                          <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                           <span>DOM {dObj.day}</span>
                         </div>
-                        <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 lowercase">
+                        <span className="text-[9px] sm:text-[10px] font-medium text-slate-500 dark:text-slate-400 lowercase">
                           {dObj.full}
                         </span>
                       </div>
@@ -694,8 +694,9 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                 })}
 
                 {/* Coluna Desempenho / Resumo */}
-                <th className="py-4 px-4 text-center min-w-[130px] border-l border-slate-200/80 dark:border-slate-800 font-extrabold text-slate-900 dark:text-slate-100">
-                  Conformidade
+                <th className="py-2 sm:py-4 px-1.5 sm:px-3 text-center min-w-[65px] sm:min-w-[95px] border-l border-slate-200/80 dark:border-slate-800 font-extrabold text-slate-900 dark:text-slate-100">
+                  <span className="hidden sm:inline">Conformidade</span>
+                  <span className="sm:hidden">Conf.</span>
                 </th>
               </tr>
             </thead>
@@ -743,20 +744,20 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                       className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group"
                     >
                       {/* Coluna Comum Fixa */}
-                      <td className="py-3 px-6 sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/40 shadow-[1px_0_0_rgba(0,0,0,0.06)] dark:shadow-[1px_0_0_rgba(255,255,255,0.06)] transition-colors">
-                        <div className="flex flex-col">
+                      <td className="py-2 sm:py-3 px-2 sm:px-5 sticky left-0 z-10 bg-white dark:bg-slate-900 group-hover:bg-slate-50/80 dark:group-hover:bg-slate-800/40 shadow-[1px_0_0_rgba(0,0,0,0.06)] dark:shadow-[1px_0_0_rgba(255,255,255,0.06)] transition-colors">
+                        <div className="flex flex-col max-w-[130px] sm:max-w-[190px]">
                           <div className="flex items-center space-x-1.5">
                             <Building2 className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                            <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                            <span className="font-bold text-slate-900 dark:text-slate-100 text-xs truncate" title={comum.nome}>
                               {comum.nome}
                             </span>
                           </div>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                          <div className="flex items-center space-x-1.5 mt-0.5 sm:mt-1">
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">
                               {comum.setor_pertencente || 'Sem setor'}
                             </span>
                             {comum.codigo && (
-                              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1 rounded">
+                              <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1 rounded flex-shrink-0">
                                 {comum.codigo}
                               </span>
                             )}
@@ -774,19 +775,19 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                           return (
                             <td 
                               key={sunday} 
-                              className="py-2.5 px-3 text-center border-l border-slate-200/60 dark:border-slate-800/60"
+                              className="py-1.5 sm:py-2.5 px-1 sm:px-2.5 text-center border-l border-slate-200/60 dark:border-slate-800/60"
                             >
                               <div 
-                                className="inline-flex flex-col items-center justify-center px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/70 text-emerald-800 dark:text-emerald-200 shadow-2xs hover:border-emerald-400 transition cursor-default max-w-[130px] w-full"
+                                className="inline-flex flex-col items-center justify-center px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/70 text-emerald-800 dark:text-emerald-200 shadow-2xs hover:border-emerald-400 transition cursor-default w-full"
                                 title={r ? `Apontamento Realizado!\n• Total: ${status.total}\n• Moços: ${r.mocos} | Moças: ${r.mocas}\n• Meninos: ${r.meninos} | Meninas: ${r.meninas}\n• Data: ${r.data}` : 'Apontamento Realizado'}
                               >
                                 <div className="flex items-center space-x-1">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                  <span className="font-extrabold text-xs text-emerald-700 dark:text-emerald-300">
+                                  <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                                  <span className="font-extrabold text-[11px] sm:text-xs text-emerald-700 dark:text-emerald-300">
                                     {status.total}
                                   </span>
                                 </div>
-                                <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium leading-none mt-0.5">
+                                <span className="hidden sm:inline text-[9px] sm:text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium leading-none mt-0.5">
                                   recitativos
                                 </span>
                               </div>
@@ -799,20 +800,20 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                           return (
                             <td 
                               key={sunday} 
-                              className="py-2.5 px-3 text-center border-l border-slate-200/60 dark:border-slate-800/60"
+                              className="py-1.5 sm:py-2.5 px-1 sm:px-2.5 text-center border-l border-slate-200/60 dark:border-slate-800/60"
                             >
                               <div 
-                                className="inline-flex flex-col items-center justify-center px-2.5 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/70 text-sky-800 dark:text-sky-200 shadow-2xs max-w-[130px] w-full"
+                                className="inline-flex flex-col items-center justify-center px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/70 text-sky-800 dark:text-sky-200 shadow-2xs w-full"
                                 title="Reunião Suspensa para esta congregação (Ex: Santa Ceia)"
                               >
                                 <div className="flex items-center space-x-1">
-                                  <Sparkles className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-                                  <span className="font-bold text-[11px] text-sky-700 dark:text-sky-300">
+                                  <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-sky-600 dark:text-sky-400 flex-shrink-0" />
+                                  <span className="font-bold text-[10px] sm:text-[11px] text-sky-700 dark:text-sky-300">
                                     Suspensa
                                   </span>
                                 </div>
-                                <span className="text-[9px] text-sky-600/80 dark:text-sky-400/80 font-medium leading-none mt-0.5">
-                                  reunião suspensa
+                                <span className="hidden sm:inline text-[9px] text-sky-600/80 dark:text-sky-400/80 font-medium leading-none mt-0.5">
+                                  dispensada
                                 </span>
                               </div>
                             </td>
@@ -824,19 +825,19 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                           return (
                             <td 
                               key={sunday} 
-                              className="py-2.5 px-3 text-center border-l border-slate-200/60 dark:border-slate-800/60"
+                              className="py-1.5 sm:py-2.5 px-1 sm:px-2.5 text-center border-l border-slate-200/60 dark:border-slate-800/60"
                             >
                               <div 
                                 onClick={() => {
                                   setModalParams({ date: sunday, comumId: comum.id });
                                   setIsModalOpen(true);
                                 }}
-                                className="inline-flex flex-col items-center justify-center px-2.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/70 text-rose-800 dark:text-rose-200 shadow-2xs hover:bg-rose-100 hover:border-rose-400 dark:hover:bg-rose-900/60 transition cursor-pointer group/cell max-w-[130px] w-full"
+                                className="inline-flex flex-col items-center justify-center px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/70 text-rose-800 dark:text-rose-200 shadow-2xs hover:bg-rose-100 hover:border-rose-400 dark:hover:bg-rose-900/60 transition cursor-pointer group/cell w-full"
                                 title={`Clique para lançar o apontamento de ${formatHeaderDate(sunday).full}`}
                               >
                                 <div className="flex items-center space-x-1">
-                                  <AlertCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
-                                  <span className="font-bold text-[11px] text-rose-700 dark:text-rose-300">
+                                  <AlertCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-rose-600 dark:text-rose-400 flex-shrink-0" />
+                                  <span className="font-bold text-[10px] sm:text-[11px] text-rose-700 dark:text-rose-300">
                                     Pendente
                                   </span>
                                 </div>
@@ -852,23 +853,24 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                         return (
                           <td 
                             key={sunday} 
-                            className="py-2.5 px-3 text-center border-l border-slate-200/60 dark:border-slate-800/60"
+                            className="py-1.5 sm:py-2.5 px-1 sm:px-2.5 text-center border-l border-slate-200/60 dark:border-slate-800/60"
                           >
                             <div 
-                              className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[11px] font-medium space-x-1"
+                              className="inline-flex items-center justify-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-medium space-x-1 w-full"
                               title="Data futura no calendário mensal"
                             >
-                              <Clock className="w-3 h-3 text-slate-400" />
-                              <span>Aguardando</span>
+                              <Clock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-400 flex-shrink-0" />
+                              <span className="hidden sm:inline">Aguardando</span>
+                              <span className="sm:hidden text-[9px]">-</span>
                             </div>
                           </td>
                         );
                       })}
 
                       {/* Coluna Desempenho / Resumo */}
-                      <td className="py-3 px-4 text-center border-l border-slate-200/80 dark:border-slate-800">
-                        <div className="flex flex-col items-center space-y-1">
-                          <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
+                      <td className="py-2 sm:py-3 px-2 sm:px-4 text-center border-l border-slate-200/80 dark:border-slate-800">
+                        <div className="flex flex-col items-center space-y-0.5 sm:space-y-1">
+                          <span className={`text-[11px] sm:text-xs font-black px-1.5 sm:px-2 py-0.5 rounded-full ${
                             pctComum === 100 
                               ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' 
                               : pctComum >= 70 
@@ -877,8 +879,8 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                           }`}>
                             {pctComum}%
                           </span>
-                          <span className="text-[10px] text-slate-400">
-                            {realizadosComum}/{totalEsperadosComum} domingos
+                          <span className="text-[9px] sm:text-[10px] text-slate-400">
+                            {realizadosComum}/{totalEsperadosComum} <span className="hidden sm:inline">domingos</span>
                           </span>
                         </div>
                       </td>
@@ -892,9 +894,9 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
             {filteredComuns.length > 0 && (
               <tfoot className="bg-slate-50 dark:bg-slate-950 font-bold border-t-2 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
                 <tr>
-                  <td className="py-3 px-6 sticky left-0 z-10 bg-slate-50 dark:bg-slate-950 shadow-[1px_0_0_rgba(0,0,0,0.06)] dark:shadow-[1px_0_0_rgba(255,255,255,0.06)]">
-                    <span className="text-xs uppercase tracking-wider text-slate-500">
-                      Total por Domingo
+                  <td className="py-2 sm:py-3 px-2 sm:px-5 sticky left-0 z-10 bg-slate-50 dark:bg-slate-950 shadow-[1px_0_0_rgba(0,0,0,0.06)] dark:shadow-[1px_0_0_rgba(255,255,255,0.06)]">
+                    <span className="text-[11px] sm:text-xs uppercase tracking-wider text-slate-500">
+                      Total
                     </span>
                   </td>
 
@@ -913,14 +915,14 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                     });
 
                     return (
-                      <td key={sunday} className="py-3 px-3 text-center border-l border-slate-200 dark:border-slate-800">
+                      <td key={sunday} className="py-2 sm:py-3 px-1 sm:px-3 text-center border-l border-slate-200 dark:border-slate-800">
                         <div className="flex flex-col items-center">
-                          <span className="text-xs font-black text-slate-900 dark:text-white">
+                          <span className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white">
                             {totalRealizados}/{filteredComuns.length}
                           </span>
                           {totalRecitadosNoDomingo > 0 && (
-                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                              {totalRecitadosNoDomingo} recit.
+                            <span className="text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate max-w-[70px]">
+                              {totalRecitadosNoDomingo} <span className="hidden sm:inline">recit.</span>
                             </span>
                           )}
                         </div>
@@ -928,9 +930,9 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                     );
                   })}
 
-                  <td className="py-3 px-4 text-center border-l border-slate-200 dark:border-slate-800">
-                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                      {stats.conformidadeRate}% Geral
+                  <td className="py-2 sm:py-3 px-2 sm:px-4 text-center border-l border-slate-200 dark:border-slate-800">
+                    <span className="text-[11px] sm:text-xs font-black text-emerald-600 dark:text-emerald-400">
+                      {stats.conformidadeRate}%
                     </span>
                   </td>
                 </tr>

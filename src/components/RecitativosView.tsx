@@ -320,31 +320,31 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
           <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
             <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider sticky top-0 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('data')}>
+                <th className="px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('data')}>
                   <div className="flex items-center space-x-1"><span>Data</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('comum_congregacao.nome')}>
-                  <div className="flex items-center space-x-1"><span>Comum Congregação</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('comum_congregacao.nome')}>
+                  <div className="flex items-center space-x-1"><span>Comum</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('mocos')}>
+                <th className="hidden md:table-cell px-2 sm:px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('mocos')}>
                   <div className="flex items-center justify-center space-x-1"><span>Moços</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('mocas')}>
+                <th className="hidden md:table-cell px-2 sm:px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('mocas')}>
                   <div className="flex items-center justify-center space-x-1"><span>Moças</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('meninos')}>
+                <th className="hidden md:table-cell px-2 sm:px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('meninos')}>
                   <div className="flex items-center justify-center space-x-1"><span>Meninos</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-6 py-4 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('meninas')}>
+                <th className="hidden md:table-cell px-2 sm:px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('meninas')}>
                   <div className="flex items-center justify-center space-x-1"><span>Meninas</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-6 py-4 text-center font-bold cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('total')}>
+                <th className="px-3 sm:px-4 py-3 text-center font-bold cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('total')}>
                   <div className="flex items-center justify-center space-x-1"><span>Total</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-6 py-4 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('usuario.nome_completo')}>
+                <th className="hidden lg:table-cell px-3 sm:px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('usuario.nome_completo')}>
                   <div className="flex items-center space-x-1"><span>Cadastrado por</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-6 py-4 text-right">Ações</th>
+                <th className="px-3 sm:px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
@@ -367,36 +367,42 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
               ) : (
                 paginatedItems.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3.5">
+                      <div className="flex items-center space-x-1.5 sm:space-x-2">
+                        <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                        <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs sm:text-sm">
                           {item.data ? item.data.split('T')[0].split('-').reverse().join('/') : '-'}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        <span className="font-medium text-slate-900 dark:text-slate-100">{item.comum_congregacao?.nome || '-'}</span>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3.5">
+                      <div>
+                        <div className="flex items-center space-x-1.5">
+                          <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                          <span className="font-medium text-slate-900 dark:text-slate-100 text-xs sm:text-sm">{item.comum_congregacao?.nome || '-'}</span>
+                        </div>
+                        {/* Em mobile, exibe detalhe das classes */}
+                        <div className="md:hidden text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 pl-5">
+                          M:{item.mocos} • F:{item.mocas} • Men:{item.meninos} • Min:{item.meninas}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center font-mono">{item.mocos}</td>
-                    <td className="px-6 py-4 text-center font-mono">{item.mocas}</td>
-                    <td className="px-6 py-4 text-center font-mono">{item.meninos}</td>
-                    <td className="px-6 py-4 text-center font-mono">{item.meninas}</td>
-                    <td className="px-6 py-4 text-center font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10">
+                    <td className="hidden md:table-cell px-2 sm:px-3 py-2.5 sm:py-3.5 text-center font-mono text-xs">{item.mocos}</td>
+                    <td className="hidden md:table-cell px-2 sm:px-3 py-2.5 sm:py-3.5 text-center font-mono text-xs">{item.mocas}</td>
+                    <td className="hidden md:table-cell px-2 sm:px-3 py-2.5 sm:py-3.5 text-center font-mono text-xs">{item.meninos}</td>
+                    <td className="hidden md:table-cell px-2 sm:px-3 py-2.5 sm:py-3.5 text-center font-mono text-xs">{item.meninas}</td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3.5 text-center font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-500/10 text-xs sm:text-sm">
                       {item.total}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <User className="w-4 h-4 text-slate-400" />
+                    <td className="hidden lg:table-cell px-3 sm:px-4 py-2.5 sm:py-3.5">
+                      <div className="flex items-center space-x-1.5">
+                        <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                         <span className="text-xs text-slate-600 dark:text-slate-400">{item.usuario?.nome_completo || 'Sistema'}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3.5 text-right">
                       {user?.perfis?.nome !== 'Apontamento' && (
-                      <div className="flex items-center justify-end space-x-2">
+                      <div className="flex items-center justify-end space-x-1 sm:space-x-2">
                         <button
                           onClick={() => {
                             setEditingItem(item);

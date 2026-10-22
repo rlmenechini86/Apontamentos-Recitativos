@@ -239,47 +239,55 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-          <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 uppercase text-xs">
-            <tr>
-              <th className="px-6 py-4 font-semibold">Data</th>
-              <th className="px-6 py-4 font-semibold">Tipo</th>
-              <th className="px-6 py-4 font-semibold">Comum Congregação</th>
-              <th className="px-6 py-4 font-semibold">Descrição Extra</th>
-              <th className="px-6 py-4 font-semibold text-center">Status</th>
-              <th className="px-6 py-4 font-semibold text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-            {filteredReunioes.map((item) => (
-              <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                <td className="px-6 py-4 font-medium">{formatDate(item.data)}</td>
-                <td className="px-6 py-4 font-medium">
-                  <div className="flex items-center space-x-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: item.tipos_evento?.cor || '#ccc' }}
-                    />
-                    <span>{item.tipos_evento?.nome || 'N/A'}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">{item.comum_congregacao?.nome || 'Geral/Regional'}</td>
-                <td className="px-6 py-4">{item.nome || '-'}</td>
-                <td className="px-6 py-4 text-center">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.status ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'}`}>
-                    {item.status ? 'Ativo' : 'Cancelado'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button onClick={() => handleOpenModal(item)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg mr-2">
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => handleDelete(item.id)} className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 uppercase text-xs">
+              <tr>
+                <th className="px-3 sm:px-4 py-3 font-semibold">Data</th>
+                <th className="px-3 sm:px-4 py-3 font-semibold">Tipo</th>
+                <th className="px-3 sm:px-4 py-3 font-semibold">Comum</th>
+                <th className="hidden md:table-cell px-3 sm:px-4 py-3 font-semibold">Descrição Extra</th>
+                <th className="px-3 sm:px-4 py-3 font-semibold text-center">Status</th>
+                <th className="px-3 sm:px-4 py-3 font-semibold text-right">Ações</th>
               </tr>
-            ))}
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+              {filteredReunioes.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-xs sm:text-sm whitespace-nowrap">{formatDate(item.data)}</td>
+                  <td className="px-3 sm:px-4 py-2.5 sm:py-3 font-medium">
+                    <div className="flex flex-col">
+                      <div className="flex items-center space-x-1.5">
+                        <div 
+                          className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: item.tipos_evento?.cor || '#ccc' }}
+                        />
+                        <span className="text-xs sm:text-sm">{item.tipos_evento?.nome || 'N/A'}</span>
+                      </div>
+                      {item.nome && (
+                        <span className="md:hidden text-[10px] text-slate-400 mt-0.5">
+                          {item.nome}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm">{item.comum_congregacao?.nome || 'Geral/Regional'}</td>
+                  <td className="hidden md:table-cell px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm">{item.nome || '-'}</td>
+                  <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${item.status ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'}`}>
+                      {item.status ? 'Ativo' : 'Cancelado'}
+                    </span>
+                  </td>
+                  <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right">
+                    <button onClick={() => handleOpenModal(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg mr-1 cursor-pointer">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDelete(item.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg cursor-pointer">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
             {filteredReunioes.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
@@ -291,6 +299,7 @@ export const AdminReunioesEventosView: React.FC<AdminReunioesEventosViewProps> =
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {isModalOpen && (

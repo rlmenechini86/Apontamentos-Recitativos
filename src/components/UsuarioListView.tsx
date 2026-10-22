@@ -301,12 +301,12 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
           <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
             <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="px-6 py-4">Usuário</th>
-                <th className="px-6 py-4">Contato (Email / Celular)</th>
-                <th className="px-6 py-4">Perfil de Acesso</th>
-                <th className="px-6 py-4">Vínculo Comum (Regra 3)</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Ações</th>
+                <th className="px-3 sm:px-4 py-3">Usuário</th>
+                <th className="hidden md:table-cell px-3 sm:px-4 py-3">Contato</th>
+                <th className="px-3 sm:px-4 py-3">Perfil</th>
+                <th className="hidden lg:table-cell px-3 sm:px-4 py-3">Vínculo Comum</th>
+                <th className="px-3 sm:px-4 py-3">Status</th>
+                <th className="px-3 sm:px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
@@ -332,9 +332,9 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
               ) : (
                 paginatedUsuarios.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-slate-800 border border-emerald-200 dark:border-slate-700 flex items-center justify-center font-bold text-xs text-emerald-700 dark:text-emerald-400 flex-shrink-0">
+                    <td className="px-3 sm:px-4 py-3">
+                      <div className="flex items-center space-x-2.5 sm:space-x-3">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-emerald-100 dark:bg-slate-800 border border-emerald-200 dark:border-slate-700 flex items-center justify-center font-bold text-xs text-emerald-700 dark:text-emerald-400 flex-shrink-0">
                           {user.nome_completo
                             .split(' ')
                             .map((n) => n[0])
@@ -342,25 +342,34 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
                             .join('')}
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900 dark:text-slate-100">{user.nome_completo}</p>
-                          <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2 mt-0.5 text-[11px]">
+                          <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{user.nome_completo}</p>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-[11px]">
                             {user.cargo_ministerio && (
-                              <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded font-medium">
+                              <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded font-medium text-[10px]">
                                 {user.cargo_ministerio}
                               </span>
                             )}
-                            <span className="text-slate-400 dark:text-slate-500 font-mono">
+                            <span className="hidden sm:inline text-slate-400 dark:text-slate-500 font-mono text-[10px]">
                               ID: {user.id.slice(0, 8)}...
                             </span>
+                            {/* Em mobile, exibe contato e comum resumidos */}
+                            <span className="md:hidden text-slate-500 dark:text-slate-400 text-[10px]">
+                              • {user.email}
+                            </span>
+                            {user.comum_congregacao && (
+                              <span className="lg:hidden text-slate-500 dark:text-slate-400 text-[10px]">
+                                • {user.comum_congregacao.nome}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-xs space-y-1">
+                    <td className="hidden md:table-cell px-3 sm:px-4 py-3 text-xs space-y-1">
                       <div className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-300">
                         <Mail className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
-                        <span className="truncate max-w-[200px]">{user.email}</span>
+                        <span className="truncate max-w-[180px]">{user.email}</span>
                       </div>
                       <div className="flex items-center space-x-1.5 text-slate-600 dark:text-slate-400">
                         <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500 flex-shrink-0" />
@@ -368,11 +377,11 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
                       </div>
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-4 py-3">
                       {getPerfilBadge(user.perfis)}
                     </td>
 
-                    <td className="px-6 py-4 text-xs">
+                    <td className="hidden lg:table-cell px-3 sm:px-4 py-3 text-xs">
                       {user.comum_congregacao ? (
                         <div className="flex items-center space-x-1.5 text-slate-800 dark:text-slate-200">
                           <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
@@ -387,12 +396,12 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
                         </div>
                       ) : (
                         <span className="text-slate-400 dark:text-slate-500 italic text-[11px]">
-                          {user.perfis?.nome === 'Administrador' ? 'Visão Global (Sem vínculo fixo)' : 'Não vinculado'}
+                          {user.perfis?.nome === 'Administrador' ? 'Visão Global' : 'Não vinculado'}
                         </span>
                       )}
                     </td>
 
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-4 py-3">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${
                           user.ativo
@@ -404,8 +413,8 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
                       </span>
                     </td>
 
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                    <td className="px-3 sm:px-4 py-3 text-right">
+                      <div className="flex items-center justify-end space-x-1 sm:space-x-2">
                         <button
                           onClick={() => onOpenEdit(user)}
                           title="Editar Usuário"

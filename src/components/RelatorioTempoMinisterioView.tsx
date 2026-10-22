@@ -301,20 +301,20 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
           <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
             <thead className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase sticky top-0 shadow-sm z-10">
               <tr>
-                <th className="px-4 py-3 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('comumNome')}>
-                  <div className="flex items-center space-x-1"><span>Comum Congregação</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('comumNome')}>
+                  <div className="flex items-center space-x-1"><span>Comum</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-4 py-3 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('nome_completo')}>
+                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('nome_completo')}>
                   <div className="flex items-center space-x-1"><span>Nome</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-4 py-3 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('cargo')}>
-                  <div className="flex items-center space-x-1"><span>Cargo / Ministério</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="hidden sm:table-cell px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('cargo')}>
+                  <div className="flex items-center space-x-1"><span>Cargo</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-4 py-3 font-semibold text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('dataFormatada')}>
-                  <div className="flex items-center justify-center space-x-1"><span>Data de Apresentação</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="hidden md:table-cell px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('dataFormatada')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Apresentação</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-4 py-3 font-semibold text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('tempoAnos')}>
-                  <div className="flex items-center justify-center space-x-1"><span>Tempo (Anos)</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('tempoAnos')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Anos</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
               </tr>
             </thead>
@@ -328,12 +328,15 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
               ) : (
                 tableData.map((u, i) => (
                   <tr key={u.id || i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{u.comumNome}</td>
-                    <td className="px-4 py-3">{u.nome_completo}</td>
-                    <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{u.cargo}</td>
-                    <td className="px-4 py-3 text-center text-slate-600 dark:text-slate-300">{u.dataFormatada}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center justify-center px-2.5 py-1 text-xs font-bold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{u.comumNome}</td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm">
+                      <div className="font-semibold text-slate-900 dark:text-slate-100">{u.nome_completo}</div>
+                      <div className="sm:hidden text-[11px] text-slate-500 mt-0.5">{u.cargo}</div>
+                    </td>
+                    <td className="hidden sm:table-cell px-3 sm:px-4 py-2.5 sm:py-3 text-slate-500 dark:text-slate-400 text-xs">{u.cargo}</td>
+                    <td className="hidden md:table-cell px-3 sm:px-4 py-2.5 sm:py-3 text-center text-slate-600 dark:text-slate-300 text-xs">{u.dataFormatada}</td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center">
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                         {u.tempoAnos}
                       </span>
                     </td>

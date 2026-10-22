@@ -86,40 +86,41 @@ export const AdminTiposEventoView: React.FC<AdminTiposEventoViewProps> = ({ tipo
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-        <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
-          <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 uppercase text-xs">
-            <tr>
-              <th className="px-6 py-4 font-semibold">Nome do Evento</th>
-              <th className="px-6 py-4 font-semibold text-center">Cor</th>
-              <th className="px-6 py-4 font-semibold text-center">Status</th>
-              <th className="px-6 py-4 font-semibold text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-            {tiposEvento.map((tipo) => (
-              <tr key={tipo.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                <td className="px-6 py-4 font-medium">{tipo.nome}</td>
-                <td className="px-6 py-4 text-center">
-                  <div 
-                    className="w-6 h-6 rounded-full mx-auto border border-slate-200 dark:border-slate-700 shadow-sm" 
-                    style={{ backgroundColor: tipo.cor }}
-                  />
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tipo.status ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'}`}>
-                    {tipo.status ? 'Ativo' : 'Inativo'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button onClick={() => handleOpenModal(tipo)} className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg mr-2">
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => handleDelete(tipo.id)} className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-slate-200 uppercase text-xs">
+              <tr>
+                <th className="px-3 sm:px-4 py-3 font-semibold">Nome do Evento</th>
+                <th className="px-3 sm:px-4 py-3 font-semibold text-center">Cor</th>
+                <th className="px-3 sm:px-4 py-3 font-semibold text-center">Status</th>
+                <th className="px-3 sm:px-4 py-3 font-semibold text-right">Ações</th>
               </tr>
-            ))}
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+              {tiposEvento.map((tipo) => (
+                <tr key={tipo.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                  <td className="px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-xs sm:text-sm">{tipo.nome}</td>
+                  <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center">
+                    <div 
+                      className="w-5 h-5 sm:w-6 sm:h-6 rounded-full mx-auto border border-slate-200 dark:border-slate-700 shadow-sm" 
+                      style={{ backgroundColor: tipo.cor }}
+                    />
+                  </td>
+                  <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${tipo.status ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400'}`}>
+                      {tipo.status ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </td>
+                  <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right">
+                    <button onClick={() => handleOpenModal(tipo)} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg mr-1 cursor-pointer">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDelete(tipo.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg cursor-pointer">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
             {tiposEvento.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
@@ -129,6 +130,7 @@ export const AdminTiposEventoView: React.FC<AdminTiposEventoViewProps> = ({ tipo
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {isModalOpen && (

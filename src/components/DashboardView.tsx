@@ -634,65 +634,122 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
         ) : (
-          /* ============================================================ */
-          /* VISUALIZAÇÃO FIXA: AGRUPADO POR CONGREGAÇÃO (COM TAGS DE DATA)*/
-          /* ============================================================ */
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
-              <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
-                <tr>
-                  <th className="px-6 py-3.5">Comum Congregação</th>
-                  <th className="px-6 py-3.5">Setor Pertencente</th>
-                  <th className="px-6 py-3.5">Responsável (CJM/Secretário)</th>
-                  <th className="px-6 py-3.5">Datas Faltantes (Domingos)</th>
-                  <th className="px-6 py-3.5 text-center">Total Faltas</th>
-                  <th className="px-6 py-3.5 text-right">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
-                {pendenciasPorComum.map((item) => (
-                  <tr key={item.comum.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                    <td className="px-6 py-3.5 font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap flex items-center space-x-2">
-                      <Building2 className="w-4 h-4 text-slate-400" />
-                      <span>{item.comum.nome}</span>
-                    </td>
-                    <td className="px-6 py-3.5 text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                      {item.comum.setor_pertencente || '-'}
-                    </td>
-                    <td className="px-6 py-3.5 text-slate-600 dark:text-slate-400 whitespace-nowrap">
-                      {item.responsavelNome}
-                    </td>
-                    <td className="px-6 py-3.5">
-                      <div className="flex flex-wrap gap-1.5">
-                        {item.datasFaltando.map((d) => (
-                          <span
-                            key={d}
-                            onClick={() => onNavigate('controle-apontamentos', { date: d, comumId: item.comum.id })}
-                            className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-2xs cursor-pointer hover:bg-rose-200 dark:hover:bg-rose-900 transition"
-                            title={`Clique para lançar o apontamento de ${formatDateFull(d)}`}
-                          >
-                            <Calendar className="w-3 h-3 mr-1 text-rose-500" />
-                            {formatDateBadge(d)}
-                          </span>
-                        ))}
+          <>
+            {/* Visualização Mobile: Cards Responsivos Sem Barra de Rolagem */}
+            <div className="md:hidden divide-y divide-slate-200 dark:divide-slate-800">
+              {pendenciasPorComum.map((item) => (
+                <div key={item.comum.id} className="p-4 space-y-3 bg-white dark:bg-slate-900 hover:bg-slate-50/50 transition">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center space-x-1.5 font-bold text-slate-900 dark:text-slate-100 text-sm">
+                        <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                        <span>{item.comum.nome}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-3.5 text-center font-bold font-mono text-rose-600 dark:text-rose-400">
-                      {item.totalFaltas}
-                    </td>
-                    <td className="px-6 py-3.5 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => onNavigate('controle-apontamentos', { date: item.datasFaltando[0], comumId: item.comum.id })}
-                        className="px-2.5 py-1 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-semibold hover:bg-emerald-100 transition cursor-pointer"
-                      >
-                        Lançar
-                      </button>
-                    </td>
+                      <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        <span>{item.comum.setor_pertencente || 'Sem setor'}</span>
+                        <span>•</span>
+                        <span className="truncate max-w-[150px]">{item.responsavelNome}</span>
+                      </div>
+                    </div>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 flex-shrink-0">
+                      {item.totalFaltas} {item.totalFaltas === 1 ? 'pendência' : 'pendências'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1.5">
+                      Domingos Faltantes:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.datasFaltando.map((d) => (
+                        <span
+                          key={d}
+                          onClick={() => onNavigate('controle-apontamentos', { date: d, comumId: item.comum.id })}
+                          className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800 active:scale-95 transition cursor-pointer"
+                        >
+                          <Calendar className="w-3 h-3 mr-1 text-rose-500" />
+                          {formatDateBadge(d)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pt-1 flex justify-end">
+                    <button
+                      onClick={() => onNavigate('controle-apontamentos', { date: item.datasFaltando[0], comumId: item.comum.id })}
+                      className="w-full py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-semibold flex items-center justify-center space-x-1 transition cursor-pointer"
+                    >
+                      <ClipboardCheck className="w-4 h-4" />
+                      <span>Lançar no Controle</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Visualização Desktop: Tabela Compacta */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+                <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="px-4 py-3">Comum Congregação</th>
+                    <th className="px-4 py-3 hidden lg:table-cell">Setor Pertencente</th>
+                    <th className="px-4 py-3 hidden xl:table-cell">Responsável</th>
+                    <th className="px-4 py-3">Datas Faltantes (Domingos)</th>
+                    <th className="px-4 py-3 text-center">Total Faltas</th>
+                    <th className="px-4 py-3 text-right">Ação</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
+                  {pendenciasPorComum.map((item) => (
+                    <tr key={item.comum.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                      <td className="px-4 py-3 font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                        <div className="flex items-center space-x-2">
+                          <Building2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <span>{item.comum.nome}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-normal lg:hidden mt-0.5">
+                          {item.comum.setor_pertencente || '-'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap hidden lg:table-cell">
+                        {item.comum.setor_pertencente || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 dark:text-slate-400 whitespace-nowrap hidden xl:table-cell">
+                        {item.responsavelNome}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {item.datasFaltando.map((d) => (
+                            <span
+                              key={d}
+                              onClick={() => onNavigate('controle-apontamentos', { date: d, comumId: item.comum.id })}
+                              className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-extrabold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 shadow-2xs cursor-pointer hover:bg-rose-200 dark:hover:bg-rose-900 transition"
+                              title={`Clique para lançar o apontamento de ${formatDateFull(d)}`}
+                            >
+                              <Calendar className="w-3 h-3 mr-1 text-rose-500" />
+                              {formatDateBadge(d)}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-center font-bold font-mono text-rose-600 dark:text-rose-400">
+                        {item.totalFaltas}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => onNavigate('controle-apontamentos', { date: item.datasFaltando[0], comumId: item.comum.id })}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-semibold hover:bg-emerald-100 transition cursor-pointer"
+                        >
+                          Lançar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

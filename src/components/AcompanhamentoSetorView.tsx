@@ -448,10 +448,10 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
               <thead className="bg-slate-600 text-white">
                 <tr>
                    <th className="py-2 px-2 border-r border-slate-500">Ano</th>
-                  <th className="py-2 px-2 border-r border-slate-500">Meninas</th>
-                  <th className="py-2 px-2 border-r border-slate-500">Meninos</th>
-                  <th className="py-2 px-2 border-r border-slate-500">Moças</th>
-                  <th className="py-2 px-2 border-r border-slate-500">Moços</th>
+                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Meninas</th>
+                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Meninos</th>
+                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Moças</th>
+                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Moços</th>
                   <th className="py-2 px-2 border-r border-slate-500 font-bold">Subtotal</th>
                   <th className="py-2 px-2 border-r border-slate-500 font-bold">Expectativa</th>
                   <th className="py-2 px-2 font-bold">Resultado</th>
@@ -461,10 +461,10 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                 {annualData.map((row) => (
                   <tr key={row.ano} className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold">{row.ano}</td>
-                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
+                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
+                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
+                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
+                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
                     <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold">{row.subtotal.toLocaleString('pt-BR')}</td>
                     <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold text-slate-500">{row.expectativa.toLocaleString('pt-BR')}</td>
                     <td className={`py-2 px-2 font-bold ${row.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -524,10 +524,10 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
               <thead className="bg-slate-600 text-white">
                 <tr>
                   <th className="py-2 px-2 border-r border-slate-500">Mês</th>
-                  <th className="py-2 px-2 border-r border-slate-500">Meninas</th>
-                  <th className="py-2 px-2 border-r border-slate-500">Meninos</th>
-                  <th className="py-2 px-2 border-r border-slate-500">Moças</th>
-                  <th className="py-2 px-2 border-r border-slate-500">Moços</th>
+                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Meninas</th>
+                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Meninos</th>
+                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Moças</th>
+                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Moços</th>
                   <th className="py-2 px-2 border-r border-slate-500 font-bold">Subtotal</th>
                   <th className="py-2 px-2 font-bold">Resultado</th>
                 </tr>
@@ -536,10 +536,10 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                 {monthlyData.map((row) => (
                   <tr key={row.mes} className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold">{row.mes}</td>
-                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
+                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
+                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
+                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
+                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
                     <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold">{row.subtotal.toLocaleString('pt-BR')}</td>
                     <td className={`py-2 px-2 font-bold ${row.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {row.resultado.toLocaleString('pt-BR')}
