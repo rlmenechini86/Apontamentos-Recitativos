@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { X, Shield, Lock, FileText, UserCheck, AlertTriangle, CheckCircle } from 'lucide-react';
+import { X, Shield, Lock, FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface LgpdTermsModalProps {
   isOpen: boolean;
@@ -83,18 +83,8 @@ export const LgpdTermsModal: React.FC<LgpdTermsModalProps> = ({
 
           <section className="space-y-2">
             <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center space-x-2">
-              <UserCheck className="w-4 h-4 text-slate-500" />
-              <span>3. Tratamento de Dados de Menores de Idade</span>
-            </h3>
-            <p>
-              Conforme o <strong>Art. 14 da LGPD</strong> e o Estatuto da Criança e do Adolescente (ECA), o cadastro de jovens menores de 18 anos exige o consentimento prévio e expresso de ao menos um dos pais ou responsável legal, devidamente informado nos cadastros do sistema.
-            </p>
-          </section>
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center space-x-2">
               <AlertTriangle className="w-4 h-4 text-slate-500" />
-              <span>4. Direitos do Titular (Artigo 18 da LGPD)</span>
+              <span>3. Direitos do Titular (Artigo 18 da LGPD)</span>
             </h3>
             <p>
               Você, como titular dos dados, tem o direito de solicitar a qualquer momento:

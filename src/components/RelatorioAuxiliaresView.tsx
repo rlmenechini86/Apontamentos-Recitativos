@@ -3,7 +3,7 @@ import {
   Users, User, Calendar, Building2, ArrowUpDown, TrendingUp, Filter, Sparkles
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList
 } from 'recharts';
 import { ComumCongregacao, ContagemMocidade, Setor } from '../types';
 import { apiGet } from '../utils/api';
@@ -85,6 +85,10 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, s
     });
   }, [contagens, selectedYear, selectedSetorId, selectedComumId, comuns, setores]);
 
+  const totalCongregacoes = useMemo(() => {
+    return selectedComumId ? 1 : comunsDoSetor.length;
+  }, [selectedComumId, comunsDoSetor]);
+
   // Totais Consolidados
   const totals = useMemo(() => {
     let mocos = 0;
@@ -110,22 +114,38 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, s
     };
   }, [filteredContagens]);
 
-  // Dados para o Gráfico Recharts (agrupado por congregação)
+  // Dados para o Gráfico Recharts (agrupado por congregação - todas as localidades)
   const chartData = useMemo(() => {
+    const targetComuns = selectedComumId 
+      ? comunsDoSetor.filter(c => c.id === selectedComumId)
+      : comunsDoSetor;
+
     const agrupado: Record<string, { nome: string; mocos: number; mocas: number; total: number }> = {};
 
-    filteredContagens.forEach(c => {
-      const comumNome = c.comum_congregacao?.nome || comuns.find(item => item.id === c.comum_id)?.nome || 'Outros';
-      if (!agrupado[comumNome]) {
-        agrupado[comumNome] = { nome: comumNome, mocos: 0, mocas: 0, total: 0 };
-      }
-      agrupado[comumNome].mocos += Number(c.auxiliares_mocos) || 0;
-      agrupado[comumNome].mocas += Number(c.auxiliares_mocas) || 0;
-      agrupado[comumNome].total += (Number(c.auxiliares_mocos) || 0) + (Number(c.auxiliares_mocas) || 0);
+    // Inicializa todas as congregações para que todas apareçam no gráfico
+    targetComuns.forEach(c => {
+      agrupado[c.id] = { nome: c.nome, mocos: 0, mocas: 0, total: 0 };
     });
 
-    return Object.values(agrupado).sort((a, b) => b.total - a.total).slice(0, 10);
-  }, [filteredContagens, comuns]);
+    filteredContagens.forEach(c => {
+      const comumId = c.comum_id;
+      const comum = comuns.find(item => item.id === comumId);
+      const comumNome = c.comum_congregacao?.nome || comum?.nome || 'Outros';
+      const key = comumId || comumNome;
+
+      if (!agrupado[key]) {
+        agrupado[key] = { nome: comumNome, mocos: 0, mocas: 0, total: 0 };
+      }
+      agrupado[key].mocos += Number(c.auxiliares_mocos) || 0;
+      agrupado[key].mocas += Number(c.auxiliares_mocas) || 0;
+      agrupado[key].total += (Number(c.auxiliares_mocos) || 0) + (Number(c.auxiliares_mocas) || 0);
+    });
+
+    return Object.values(agrupado).sort((a, b) => {
+      if (b.total !== a.total) return b.total - a.total;
+      return a.nome.localeCompare(b.nome);
+    });
+  }, [filteredContagens, comuns, comunsDoSetor, selectedComumId]);
 
   // Ordenação da Tabela
   const sortedItems = useMemo(() => {
@@ -244,11 +264,11 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, s
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
           <div className="flex items-center space-x-2 text-slate-500 dark:text-slate-400 text-xs">
-            <Calendar className="w-4 h-4 text-slate-500" />
-            <span>Reuniões com Apontamento</span>
+            <Building2 className="w-4 h-4 text-slate-500" />
+            <span>Total de Localidade</span>
           </div>
           <p className="text-xl font-bold font-mono text-slate-900 dark:text-white mt-2">
-            {totals.reunioesCount}
+            {totalCongregacoes}
           </p>
         </div>
 
@@ -299,22 +319,32 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, s
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Distribuição de Auxiliares Moços e Moças por Congregação (Top 10)</span>
+              <span>Distribuição de Auxiliares Moços e Moças por Congregação (Todas as Localidades)</span>
             </h2>
           </div>
 
-          <div className="h-64 sm:h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                <XAxis dataKey="nome" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" height={40} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <RechartsTooltip />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="mocos" name="Auxiliares Moços" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="mocas" name="Auxiliares Moças" fill="#a855f7" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="w-full overflow-x-auto pb-2">
+            <div style={{ minWidth: chartData.length > 8 ? `${Math.max(chartData.length * 55, 600)}px` : '100%' }} className="h-64 sm:h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 30 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                  <XAxis dataKey="nome" tick={{ fontSize: 11 }} interval={0} angle={-20} textAnchor="end" height={50} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <RechartsTooltip />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Bar dataKey="mocos" name="Auxiliares Moços" fill="#3b82f6" stackId="a" />
+                  <Bar dataKey="mocas" name="Auxiliares Moças" fill="#a855f7" stackId="a" radius={[4, 4, 0, 0]}>
+                    <LabelList
+                      dataKey="total"
+                      position="top"
+                      offset={6}
+                      className="text-[11px] font-bold fill-slate-700 dark:fill-slate-300"
+                      formatter={(val: any) => (Number(val) > 0 ? val : '')}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
       )}
@@ -350,7 +380,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, s
                   <div className="flex items-center justify-center space-x-1"><span>Total Aux.</span><ArrowUpDown className="w-3 h-3" /></div>
                 </th>
                 <th className="px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('presenca')}>
-                  <div className="flex items-center justify-center space-x-1"><span>Presença Mocidade</span><ArrowUpDown className="w-3 h-3" /></div>
+                  <div className="flex items-center justify-center space-x-1"><span>Total de Mocidade</span><ArrowUpDown className="w-3 h-3" /></div>
                 </th>
               </tr>
             </thead>
