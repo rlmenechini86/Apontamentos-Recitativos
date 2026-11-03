@@ -3,7 +3,7 @@ import {
   Music, ArrowUpDown, BarChart as BarChartIcon, Users, Calendar, Filter, Sparkles
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell, LabelList
 } from 'recharts';
 import { ComumCongregacao, ContagemMocidade, Setor } from '../types';
 import { apiGet } from '../utils/api';
@@ -376,12 +376,19 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
 
           <div className="h-64 sm:h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 10 }}>
+              <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
                 <XAxis dataKey="familia" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <RechartsTooltip formatter={(value: any, name: any, item: any) => [`${value} músicos (${item.payload.percentual}%)`, 'Quantidade']} />
                 <Bar dataKey="quantidade" radius={[6, 6, 0, 0]}>
+                  <LabelList
+                    dataKey="quantidade"
+                    position="top"
+                    offset={6}
+                    className="text-[11px] font-bold fill-slate-700 dark:fill-slate-300"
+                    formatter={(val: any) => (Number(val) > 0 ? val : '')}
+                  />
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.cor} />
                   ))}
