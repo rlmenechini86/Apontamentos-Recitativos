@@ -1,5 +1,43 @@
-const cache = new Map<string, { data: any, timestamp: number }>();
+﻿const cache = new Map<string, { data: any, timestamp: number }>();
 const CACHE_TTL = 1000 * 60 * 5; // 5 minutos
+
+/**
+ * Retorna o token JWT armazenado no localStorage
+ */
+function getAuthToken(): string | null {
+  return localStorage.getItem('ccb_token');
+}
+
+/**
+ * Retorna os headers padrao com Authorization Bearer JWT
+ */
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = 'Bearer ' + token;
+  }
+  return headers;
+}
+
+/**
+ * Trata respostas 401 (token expirado/invalido) fazendo logout automatico
+ */
+function handleUnauthorized(response: Response): Response {
+  if (response.status === 401) {
+    const currentPath = window.location.pathname;
+    // Evita loop se ja esta na tela de login
+    if (currentPath !== '/' && currentPath !== '/login') {
+      localStorage.removeItem('ccb_user');
+      localStorage.removeItem('ccb_token');
+      localStorage.removeItem('ccb_last_activity');
+      window.location.reload();
+    }
+  }
+  return response;
+}
 
 export const apiGet = async (url: string, forceRefresh = false) => {
   if (!forceRefresh && cache.has(url)) {
@@ -8,7 +46,10 @@ export const apiGet = async (url: string, forceRefresh = false) => {
       return { ok: true, json: async () => cached.data };
     }
   }
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+  });
+  handleUnauthorized(response);
   if (response.ok) {
     const clone = response.clone();
     const data = await clone.json();
@@ -19,27 +60,34 @@ export const apiGet = async (url: string, forceRefresh = false) => {
 
 export const apiPost = async (url: string, body: any) => {
   clearApiCache(url);
-  return fetch(url, {
+  const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(body),
   });
+  handleUnauthorized(response);
+  return response;
 };
 
 export const apiPut = async (url: string, body: any) => {
   clearApiCache();
-  return fetch(url, {
+  const response = await fetch(url, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify(body),
   });
+  handleUnauthorized(response);
+  return response;
 };
 
 export const apiDelete = async (url: string) => {
   clearApiCache();
-  return fetch(url, {
+  const response = await fetch(url, {
     method: 'DELETE',
+    headers: getAuthHeaders(),
   });
+  handleUnauthorized(response);
+  return response;
 };
 
 export const clearApiCache = (url?: string) => {

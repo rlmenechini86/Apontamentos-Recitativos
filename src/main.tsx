@@ -1,3 +1,6 @@
+﻿// LGPD: Interceptor global de fetch - DEVE ser importado ANTES de qualquer componente
+import './utils/fetchInterceptor';
+
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';

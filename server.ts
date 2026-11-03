@@ -1,8 +1,10 @@
-import express from 'express';
+﻿import express from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import apiRouter from './src/server/routes/index.js';
+import { applySecurityMiddleware } from './src/server/middleware/securityMiddleware.js';
+import { authMiddleware } from './src/server/middleware/authMiddleware.js';
 
 dotenv.config();
 
@@ -16,9 +18,15 @@ const PORT = Number(process.env.PORT) || 8080;
 async function startServer() {
   const app = express();
 
+  // LGPD Fase 1: Middlewares de seguranca (Helmet, CORS, Rate Limit)
+  applySecurityMiddleware(app);
+
   app.use(express.json());
 
-  // Rota de documentação breve e saúde do backend
+  // LGPD Fase 1: Middleware de autenticacao JWT em todas as rotas /api
+  app.use(authMiddleware);
+
+  // Rota de documentacao breve e saude do backend
   app.use('/api', apiRouter);
 
   if (!isProduction) {
@@ -36,7 +44,8 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Server] Sistema de Controle de Apontamentos ativo na porta ${PORT}`);
+    console.log('[Server] Sistema de Controle de Apontamentos ativo na porta ' + PORT);
+    console.log('[LGPD] Helmet, CORS, Rate Limit e JWT Auth ativos');
   });
 }
 

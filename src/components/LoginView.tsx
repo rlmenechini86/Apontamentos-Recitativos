@@ -18,6 +18,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { validatePassword } from '../utils/passwordValidator';
+import { LgpdTermsModal } from './LgpdTermsModal';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Perfil, ComumCongregacao } from '../types';
@@ -42,6 +43,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ perfis, comuns }) => {
   const [nomeCompleto, setNomeCompleto] = useState('');
   const [celular, setCelular] = useState('');
   const [perfilId, setPerfilId] = useState(perfis[0]?.id || '');
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [comumId, setComumId] = useState('');
 
   // Status & feedback
@@ -118,6 +121,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ perfis, comuns }) => {
     e.preventDefault();
     setErrorMsg(null);
     setSuccessMsg(null);
+
+    if (!acceptedTerms) {
+      setErrorMsg('É obrigatório ler e aceitar os Termos de Uso e Política de Privacidade (LGPD) para prosseguir com o cadastro.');
+      return;
+    }
 
     if (!pwdValidation.isValid) {
       setErrorMsg('A senha precisa cumprir todos os 5 requisitos de segurança listados abaixo.');
@@ -569,6 +577,29 @@ export const LoginView: React.FC<LoginViewProps> = ({ perfis, comuns }) => {
                 )}
               </div>
 
+              {mode === 'register' && (
+                <div className="flex items-start space-x-2.5 p-2.5 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 text-xs">
+                  <input
+                    type="checkbox"
+                    id="lgpd_consent_check"
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 text-emerald-600 rounded border-slate-300 dark:border-slate-700 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <label htmlFor="lgpd_consent_check" className="text-slate-600 dark:text-slate-300 select-none cursor-pointer leading-tight">
+                    Declaro que li e concordo com os{' '}
+                    <button
+                      type="button"
+                      onClick={() => setShowTermsModal(true)}
+                      className="text-emerald-600 dark:text-emerald-400 font-bold underline hover:text-emerald-700 transition"
+                    >
+                      Termos de Privacidade (LGPD)
+                    </button>{' '}
+                    e autorizo o tratamento dos meus dados para fins eclesiásticos.
+                  </label>
+                </div>
+              )}
+
               {/* Badge de Criptografia */}
               <div className="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700/60">
                 <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
@@ -590,7 +621,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ perfis, comuns }) => {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || !pwdValidation.isValid || senha !== confirmSenha}
+                  disabled={loading || !pwdValidation.isValid || senha !== confirmSenha || (mode === 'register' && !acceptedTerms)}
                   className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center space-x-2 shadow-sm transition disabled:opacity-40 cursor-pointer"
                 >
                   {loading ? (

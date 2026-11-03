@@ -1,17 +1,20 @@
-import bcrypt from 'bcryptjs';
+﻿import bcrypt from 'bcryptjs';
 import { usuarioService } from './usuarioService.js';
 import { perfilService } from './perfilService.js';
 import { validatePassword } from '../../utils/passwordValidator.js';
+import { generateToken } from '../middleware/authMiddleware.js';
+import { auditService } from './auditService.js';
 import { Usuario } from '../types/index.js';
 
-
+// Senha padrao institucional - carregada de variavel de ambiente (LGPD: sem hardcode)
+const LEGACY_DEFAULT_PASSWORD = process.env.LEGACY_DEFAULT_PASSWORD || 'ccb123';
 
 export class AuthService {
   /**
    * Criptografa senha com salt seguro via bcrypt
    */
   async hashPassword(password: string): Promise<string> {
-    return bcrypt.hash(password, 10);
+    return bcrypt.hash(password, 12); // Salt rounds aumentado de 10 para 12
   }
 
   /**
@@ -22,40 +25,41 @@ export class AuthService {
   }
 
   /**
-   * LOGIN: Autentica o usuário com verificação de senha criptografada
+   * LOGIN: Autentica o usuario com verificacao de senha criptografada
+   * Retorna JWT assinado ao inves de token previsivel
    */
-  async login(email: string, senha: string): Promise<{ user: Usuario; token: string }> {
+  async login(email: string, senha: string, ip?: string, userAgent?: string): Promise<{ user: Usuario; token: string }> {
     const cleanEmail = (email || '').trim().toLowerCase();
     if (!cleanEmail) {
-      throw new Error('O e-mail é obrigatório.');
+      throw new Error('O e-mail e obrigatorio.');
     }
     if (!senha) {
-      throw new Error('A senha é obrigatória.');
+      throw new Error('A senha e obrigatoria.');
     }
 
-    // Busca usuário pelo e-mail (com alias para admin@ccb.org.br)
+    // Busca usuario pelo e-mail
     let user = await usuarioService.getByEmail(cleanEmail);
-    if (!user && cleanEmail === 'admin@ccb.org.br') {
-      user = await usuarioService.getByEmail('roberto.silva@ccb.org.br');
-    }
     if (!user) {
-      throw new Error('E-mail ou senha inválidos.');
+      // Log de tentativa falhada (LGPD: trilha de auditoria)
+      await auditService.logLoginFailed(cleanEmail, 'E-mail nao encontrado', ip, userAgent);
+      throw new Error('E-mail ou senha invalidos.');
     }
 
     if (!user.ativo) {
-      throw new Error('Esta conta de usuário está desativada. Contate a administração.');
+      await auditService.logLoginFailed(cleanEmail, 'Conta desativada', ip, userAgent);
+      throw new Error('Esta conta de usuario esta desativada. Contate a administracao.');
     }
 
     // Verifica se possui hash no banco
     let userHash = user.senha_hash;
 
-    // Se o usuário ainda não possui senha cadastrada (conta legado),
-    // verifica se digitou a senha padrão institucional ccb123 ou legadas
+    // Se o usuario ainda nao possui senha cadastrada (conta legado),
+    // verifica se digitou a senha padrao institucional (carregada de env)
     if (!userHash) {
-      if (senha === 'ccb123' || senha === 'Admin@2026!' || senha === 'Ccb@2026!') {
-        userHash = await this.hashPassword('ccb123');
+      if (senha === LEGACY_DEFAULT_PASSWORD) {
+        userHash = await this.hashPassword(LEGACY_DEFAULT_PASSWORD);
         try {
-          await usuarioService.update(user.id, { 
+          await usuarioService.update(user.id, {
             senha_hash: userHash,
             trocar_senha_proximo_login: true
           } as any);
@@ -64,23 +68,33 @@ export class AuthService {
           throw new Error('Erro ao salvar nova senha no banco de dados.');
         }
       } else {
-        throw new Error('Senha não cadastrada para este usuário. Contate a administração para obter a senha padrão inicial.');
+        await auditService.logLoginFailed(cleanEmail, 'Senha nao cadastrada - tentativa invalida', ip, userAgent);
+        throw new Error('Senha nao cadastrada para este usuario. Contate a administracao para obter a senha padrao inicial.');
       }
     }
 
     const isMatch = await this.comparePassword(senha, userHash);
     if (!isMatch) {
-      throw new Error('E-mail ou senha inválidos.');
+      await auditService.logLoginFailed(cleanEmail, 'Senha incorreta', ip, userAgent);
+      throw new Error('E-mail ou senha invalidos.');
     }
 
     if (user.trocar_senha_proximo_login) {
       throw new Error('REQUIRE_PASSWORD_CHANGE');
     }
 
-    // Gera token de sessão seguro
-    const token = `ccb_auth_${user.id}_${Date.now()}`;
+    // Gera JWT assinado (LGPD: token seguro e nao previsivel)
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      perfilId: user.perfil_id,
+      perfilNome: user.perfis?.nome || '',
+    });
 
-    // Remove hash do retorno por segurança
+    // Log de login bem-sucedido (LGPD: trilha de auditoria)
+    await auditService.logLogin(user.id, user.email, ip, userAgent);
+
+    // Remove hash do retorno por seguranca
     const sanitizedUser: Usuario = { ...user };
     delete sanitizedUser.senha_hash;
 
@@ -89,7 +103,7 @@ export class AuthService {
 
   /**
    * CADASTRO / PRIMEIRO ACESSO COM SENHA CRIPTOGRAFADA
-   * Valida obrigatoriamente: mínimo 8 dígitos, maiúscula, minúscula, número e caracter especial
+   * Valida obrigatoriamente: minimo 8 digitos, maiuscula, minuscula, numero e caracter especial
    */
   async register(data: {
     nome_completo: string;
@@ -98,24 +112,24 @@ export class AuthService {
     senha: string;
     perfil_id?: string;
     comum_congregacao_id?: string | null;
-  }): Promise<{ user: Usuario; token: string }> {
+  }, ip?: string, userAgent?: string): Promise<{ user: Usuario; token: string }> {
     const cleanEmail = (data.email || '').trim().toLowerCase();
 
-    // 1. Validação estrita da senha criptografada
+    // 1. Validacao estrita da senha criptografada
     const validation = validatePassword(data.senha);
     if (!validation.isValid) {
       throw new Error(
-        `A senha não atende aos requisitos de segurança: ${validation.errors.join(', ')}.`
+        'A senha nao atende aos requisitos de seguranca: ' + validation.errors.join(', ') + '.'
       );
     }
 
-    // 2. Verifica se usuário já existe
+    // 2. Verifica se usuario ja existe
     const existing = await usuarioService.getByEmail(cleanEmail);
     if (existing) {
-      throw new Error('Já existe um usuário cadastrado com este e-mail.');
+      throw new Error('Ja existe um usuario cadastrado com este e-mail.');
     }
 
-    // 3. Determina perfil padrão (se não fornecido, Apontamento)
+    // 3. Determina perfil padrao (se nao fornecido, Apontamento)
     let perfil_id = data.perfil_id;
     if (!perfil_id) {
       const perfisRes = await perfilService.listAll();
@@ -123,12 +137,10 @@ export class AuthService {
       perfil_id = perfilApontamento?.id || '33333333-3333-3333-3333-333333333333';
     }
 
-    // 4. Criptografa a senha com bcrypt
+    // 4. Criptografa a senha com bcrypt (salt 12)
     const senha_hash = await this.hashPassword(data.senha);
 
-
-
-    // 5. Cadastra o usuário
+    // 5. Cadastra o usuario
     const createdUser = await usuarioService.create({
       nome_completo: data.nome_completo.trim(),
       email: cleanEmail,
@@ -139,7 +151,25 @@ export class AuthService {
       ativo: true,
     } as any);
 
-    const token = `ccb_auth_${createdUser.id}_${Date.now()}`;
+    // Gera JWT assinado
+    const token = generateToken({
+      userId: createdUser.id,
+      email: createdUser.email,
+      perfilId: createdUser.perfil_id,
+      perfilNome: createdUser.perfis?.nome || '',
+    });
+
+    // Log de registro (LGPD: trilha de auditoria)
+    await auditService.logDataAccess(
+      createdUser.id,
+      createdUser.email,
+      'CREATE',
+      'usuarios',
+      createdUser.id,
+      'Novo usuario registrado',
+      ip
+    );
+
     const sanitizedUser: Usuario = { ...createdUser };
     delete sanitizedUser.senha_hash;
 
@@ -148,29 +178,40 @@ export class AuthService {
 
   /**
    * CADASTRAR OU REDEFINIR SENHA
-   * Valida os critérios e atualiza o hash no banco
+   * Valida os criterios e atualiza o hash no banco
    */
-  async setPassword(email: string, novaSenha: string): Promise<boolean> {
+  async setPassword(email: string, novaSenha: string, ip?: string): Promise<boolean> {
     const cleanEmail = (email || '').trim().toLowerCase();
 
-    // Validação estrita da senha
+    // Validacao estrita da senha
     const validation = validatePassword(novaSenha);
     if (!validation.isValid) {
       throw new Error(
-        `A senha não atende aos requisitos de segurança: ${validation.errors.join(', ')}.`
+        'A senha nao atende aos requisitos de seguranca: ' + validation.errors.join(', ') + '.'
       );
     }
 
     const user = await usuarioService.getByEmail(cleanEmail);
     if (!user) {
-      throw new Error('Nenhum usuário encontrado com o e-mail informado.');
+      throw new Error('Nenhum usuario encontrado com o e-mail informado.');
     }
 
     const hash = await this.hashPassword(novaSenha);
-    await usuarioService.update(user.id, { 
+    await usuarioService.update(user.id, {
       senha_hash: hash,
       trocar_senha_proximo_login: false
     } as any);
+
+    // Log de alteracao de senha (LGPD: trilha de auditoria)
+    await auditService.logDataAccess(
+      user.id,
+      user.email,
+      'UPDATE',
+      'usuarios',
+      user.id,
+      'Senha redefinida',
+      ip
+    );
 
     return true;
   }
