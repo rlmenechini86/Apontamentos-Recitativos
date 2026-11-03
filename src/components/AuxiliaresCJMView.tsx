@@ -79,7 +79,10 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
   const { user } = useAuth();
   const [setores, setSetores] = useState<Setor[]>(propSetores || []);
   const [auxiliares, setAuxiliares] = useState<AuxiliarJovens[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [todosInstrumentos, setTodosInstrumentos] = useState<string[]>(INSTRUMENTOS_PADRAO);
+  const instrumentosDinamicos = todosInstrumentos;
   const [searchTerm, setSearchTerm] = useState('');
   
   // Filtros em cascata da barra superior: Setor Pertencente -> Congregações
@@ -155,16 +158,23 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
     }
   };
 
-  const instrumentosDinamicos = React.useMemo(() => {
-    const fromDb = auxiliares.map(a => a.instrumento).filter(Boolean) as string[];
-    const unique = Array.from(new Set([...INSTRUMENTOS_PADRAO, ...fromDb]));
-    return unique.sort();
-  }, [auxiliares]);
+  useEffect(() => {
+    fetch('/api/auxiliares')
+      .then(res => res.json())
+      .then(json => {
+        if (json.data && Array.isArray(json.data)) {
+          const fromDb = (json.data as AuxiliarJovens[]).map(a => a.instrumento).filter(Boolean) as string[];
+          const unique = Array.from(new Set([...INSTRUMENTOS_PADRAO, ...fromDb]));
+          setTodosInstrumentos(unique.sort());
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const instrumentosFiltradosPorFamilia = React.useMemo(() => {
-    if (!selectedFamilia) return instrumentosDinamicos;
-    return instrumentosDinamicos.filter(inst => obterFamiliaInstrumento(inst) === selectedFamilia);
-  }, [instrumentosDinamicos, selectedFamilia]);
+    if (!selectedFamilia) return todosInstrumentos;
+    return todosInstrumentos.filter(inst => obterFamiliaInstrumento(inst) === selectedFamilia);
+  }, [todosInstrumentos, selectedFamilia]);
 
 
   const handleSort = (key: string) => {
@@ -189,13 +199,36 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
     nome_responsavel: '',
   });
 
-  const fetchAuxiliares = async () => {
+  const fetchAuxiliares = async (pageToFetch = currentPage) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/auxiliares');
+      const params = new URLSearchParams();
+      params.set('page', String(pageToFetch));
+      params.set('limit', String(itemsPerPage));
+
+      if (searchTerm.trim()) params.set('search', searchTerm.trim());
+      if (selectedSetorId) params.set('setor_id', selectedSetorId);
+      if (selectedComumId) params.set('comum_id', selectedComumId);
+      if (selectedSexo) params.set('sexo', selectedSexo);
+      if (selectedAuxiliar) params.set('auxiliar', selectedAuxiliar);
+      if (selectedMusico) params.set('musico', selectedMusico);
+      if (selectedFamilia) params.set('familia', selectedFamilia);
+      if (selectedInstrumento) params.set('instrumento', selectedInstrumento);
+      if (sortConfig?.key) {
+        params.set('sort_by', sortConfig.key);
+        params.set('sort_direction', sortConfig.direction);
+      }
+
+      const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
+      if (isRestrictedProfile && user?.comum_congregacao_id) {
+        params.set('comum_id', user.comum_congregacao_id);
+      }
+
+      const res = await fetch(`/api/auxiliares?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
         setAuxiliares(json.data || []);
+        setTotalCount(json.total || 0);
       }
     } catch (err) {
       console.error('Erro ao buscar auxiliares:', err);
@@ -205,101 +238,28 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
   };
 
   useEffect(() => {
-    fetchAuxiliares();
-  }, []);
-
-  const filtered = auxiliares.filter((item) => {
-    const matchesSearch =
-      !searchTerm ||
-      item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.celular && item.celular.includes(searchTerm));
-
-    const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
-    const matchesUserComum = isRestrictedProfile ? item.comum_id === user?.comum_congregacao_id : true;
-
-    // Filtro por Setor
-    let matchesFilterSetor = true;
-    if (selectedSetorId) {
-      const itemComum = comuns.find(c => c.id === item.comum_id);
-      const selectedSetor = setores.find(s => s.id === selectedSetorId);
-      matchesFilterSetor = Boolean(
-        itemComum && (
-          itemComum.setor_id === selectedSetorId || 
-          (selectedSetor && itemComum.setor_pertencente === selectedSetor.nome)
-        )
-      );
-    }
-
-    // Filtro por Congregação específica
-    const matchesFilterComum = selectedComumId ? item.comum_id === selectedComumId : true;
-
-    // Filtro por Sexo
-    const matchesSexo = selectedSexo ? item.sexo === selectedSexo : true;
-
-    // Filtro por Auxiliar de Jovens
-    const matchesAuxiliar = selectedAuxiliar === 'sim' 
-      ? !!item.is_auxiliar 
-      : selectedAuxiliar === 'nao' 
-      ? !item.is_auxiliar 
-      : true;
-
-    // Filtro por Músico
-    const matchesMusico = selectedMusico === 'sim' 
-      ? !!item.is_musico 
-      : selectedMusico === 'nao' 
-      ? !item.is_musico 
-      : true;
-
-    // Filtro por Família de Instrumento
-    const matchesFamilia = selectedFamilia 
-      ? obterFamiliaInstrumento(item.instrumento || '') === selectedFamilia 
-      : true;
-
-    // Filtro por Instrumento
-    const matchesInstrumento = selectedInstrumento 
-      ? (item.instrumento || '').toLowerCase() === selectedInstrumento.toLowerCase() 
-      : true;
-
-    return (
-      matchesSearch && 
-      matchesUserComum && 
-      matchesFilterSetor && 
-      matchesFilterComum &&
-      matchesSexo &&
-      matchesAuxiliar &&
-      matchesMusico &&
-      matchesFamilia &&
-      matchesInstrumento
-    );
-  });
-
-  if (sortConfig) {
-    filtered.sort((a, b) => {
-      let valA: any = a[sortConfig.key as keyof typeof a];
-      let valB: any = b[sortConfig.key as keyof typeof b];
-
-      if (sortConfig.key === 'comum_nome') {
-        const comumA = comuns.find(c => c.id === a.comum_id)?.nome || '';
-        const comumB = comuns.find(c => c.id === b.comum_id)?.nome || '';
-        valA = comumA;
-        valB = comumB;
-      }
-
-      if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  } else {
-    // Default sort by name asc
-    filtered.sort((a, b) => a.nome.localeCompare(b.nome));
-  }
+    setCurrentPage(1);
+    const timer = setTimeout(() => {
+      fetchAuxiliares(1);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [
+    searchTerm,
+    selectedSetorId,
+    selectedComumId,
+    selectedSexo,
+    selectedAuxiliar,
+    selectedMusico,
+    selectedFamilia,
+    selectedInstrumento,
+    sortConfig
+  ]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedSetorId, selectedComumId, selectedSexo, selectedAuxiliar, selectedMusico, selectedFamilia, selectedInstrumento]);
+    fetchAuxiliares(currentPage);
+  }, [currentPage]);
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginatedAuxiliares = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
 
   const maskPhone = (v: string) => {
     let r = v.replace(/\D/g, "");
@@ -477,7 +437,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
           </div>
 
           <span className="text-xs font-bold text-slate-500 dark:text-slate-400 self-end md:self-center whitespace-nowrap bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
-            {filtered.length} {filtered.length === 1 ? 'jovem' : 'jovens'}
+            {totalCount} {totalCount === 1 ? 'jovem' : 'jovens'}
           </span>
         </div>
 
@@ -650,14 +610,14 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                     </div>
                   </td>
                 </tr>
-              ) : filtered.length === 0 ? (
+              ) : auxiliares.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center py-10 text-slate-500">
                     Nenhum cadastro encontrado.
                   </td>
                 </tr>
               ) : (
-                paginatedAuxiliares.map((aux) => (
+                auxiliares.map((aux) => (
                   <tr key={aux.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                     <td className="px-3 sm:px-4 py-2.5 sm:py-3">
                       <div className="font-semibold text-slate-900 dark:text-slate-100 text-xs sm:text-sm">{aux.nome}</div>
@@ -786,7 +746,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
-          totalItems={filtered.length}
+          totalItems={totalCount}
           itemsPerPage={itemsPerPage}
           onPageChange={setCurrentPage}
         />
