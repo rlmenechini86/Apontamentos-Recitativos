@@ -852,28 +852,40 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
               <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
                 <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider sticky top-0 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th className="px-4 py-3 min-w-[220px] sticky left-0 z-20 bg-slate-100 dark:bg-slate-950 shadow-[1px_0_0_rgba(0,0,0,0.06)] dark:shadow-[1px_0_0_rgba(255,255,255,0.06)]">
+                    <th className="px-4 py-3 min-w-[200px] sticky left-0 z-20 bg-slate-100 dark:bg-slate-950 shadow-[1px_0_0_rgba(0,0,0,0.06)] dark:shadow-[1px_0_0_rgba(255,255,255,0.06)]">
                       Congregação
                     </th>
-                    <th className="px-3 sm:px-4 py-3 text-center min-w-[200px]">
+                    <th className="px-3 sm:px-4 py-3 text-center min-w-[170px]">
                       <div className="flex items-center justify-center space-x-1.5 text-blue-700 dark:text-blue-400 font-bold">
                         <Users className="w-3.5 h-3.5" />
                         <span>Mocidade ({selectedYear})</span>
                       </div>
                     </th>
-                    <th className="px-3 sm:px-4 py-3 text-center min-w-[200px]">
+                    <th className="px-3 sm:px-4 py-3 text-center min-w-[140px]">
+                      <div className="flex items-center justify-center space-x-1.5 text-purple-700 dark:text-purple-400 font-bold">
+                        <Users className="w-3.5 h-3.5" />
+                        <span>Auxiliares</span>
+                      </div>
+                    </th>
+                    <th className="px-3 sm:px-4 py-3 text-center min-w-[140px]">
+                      <div className="flex items-center justify-center space-x-1.5 text-teal-700 dark:text-teal-400 font-bold">
+                        <Music className="w-3.5 h-3.5" />
+                        <span>Total Músicos</span>
+                      </div>
+                    </th>
+                    <th className="px-3 sm:px-4 py-3 text-center min-w-[170px]">
                       <div className="flex items-center justify-center space-x-1.5 text-amber-700 dark:text-amber-400 font-bold">
                         <Sparkles className="w-3.5 h-3.5" />
                         <span>Santa Ceia ({selectedYear})</span>
                       </div>
                     </th>
-                    <th className="px-3 py-3 text-center w-36">Status no Ano</th>
+                    <th className="px-3 py-3 text-center w-32">Status no Ano</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
                   {loading ? (
                     <tr>
-                      <td colSpan={4} className="text-center py-12 text-slate-500">
+                      <td colSpan={6} className="text-center py-12 text-slate-500">
                         <div className="flex items-center justify-center space-x-2">
                           <RefreshCw className="w-5 h-5 animate-spin text-emerald-600 dark:text-emerald-400" />
                           <span>Carregando dados anuais...</span>
@@ -882,7 +894,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                     </tr>
                   ) : filteredComuns.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-center py-12 text-slate-500">
+                      <td colSpan={6} className="text-center py-12 text-slate-500">
                         <CheckCircle2 className="w-10 h-10 mx-auto text-slate-400 dark:text-slate-600 mb-2" />
                         <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Nenhuma congregação encontrada para os filtros aplicados.</p>
                       </td>
@@ -967,6 +979,60 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                                   + Lançar Mocidade
                                 </span>
                               </div>
+                            )}
+                          </td>
+
+                          {/* Coluna Nova: Auxiliares */}
+                          <td className="px-3 sm:px-4 py-2.5 text-center">
+                            {itemMoc ? (
+                              <div
+                                onClick={() => handleCellClick(comum, 'Mocidade', selectedYear)}
+                                className="inline-flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/80 text-purple-800 dark:text-purple-200 shadow-2xs hover:bg-purple-100/70 dark:hover:bg-purple-900/50 transition cursor-pointer group/cell w-full max-w-[160px] mx-auto"
+                                title={`Auxiliares ${selectedYear}: ${itemMoc.auxiliares_mocos || 0} Moços e ${itemMoc.auxiliares_mocas || 0} Moças`}
+                              >
+                                <div className="flex items-center space-x-1.5">
+                                  <Users className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                                  <span className="font-mono font-black text-sm text-purple-700 dark:text-purple-300">
+                                    {(itemMoc.auxiliares_mocos || 0) + (itemMoc.auxiliares_mocas || 0)}
+                                  </span>
+                                  <span className="text-[10px] text-purple-600/80 dark:text-purple-400 font-semibold">
+                                    aux.
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-purple-700 dark:text-purple-300 font-medium">
+                                  {itemMoc.auxiliares_mocos || 0}M / {itemMoc.auxiliares_mocas || 0}F
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 text-xs">-</span>
+                            )}
+                          </td>
+
+                          {/* Coluna Nova: Total Músicos */}
+                          <td className="px-3 sm:px-4 py-2.5 text-center">
+                            {itemMoc ? (
+                              <div
+                                onClick={() => handleCellClick(comum, 'Mocidade', selectedYear)}
+                                className="inline-flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-teal-50/80 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800/80 text-teal-800 dark:text-teal-200 shadow-2xs hover:bg-teal-100/70 dark:hover:bg-teal-900/50 transition cursor-pointer group/cell w-full max-w-[160px] mx-auto"
+                                title={`Músicos apontados: ${itemMoc.total_musicos || (itemMoc.detalhes_musicos?.reduce((sum, m) => sum + (Number(m.quantidade) || 0), 0)) || 0}`}
+                              >
+                                <div className="flex items-center space-x-1.5">
+                                  <Music className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 flex-shrink-0" />
+                                  <span className="font-mono font-black text-sm text-teal-700 dark:text-teal-300">
+                                    {itemMoc.total_musicos || (itemMoc.detalhes_musicos?.reduce((sum, m) => sum + (Number(m.quantidade) || 0), 0)) || 0}
+                                  </span>
+                                  <span className="text-[10px] text-teal-600/80 dark:text-teal-400 font-semibold">
+                                    músicos
+                                  </span>
+                                </div>
+                                {Array.isArray(itemMoc.detalhes_musicos) && itemMoc.detalhes_musicos.length > 0 && (
+                                  <span className="text-[9px] text-teal-600 dark:text-teal-400 font-medium">
+                                    {itemMoc.detalhes_musicos.length} {itemMoc.detalhes_musicos.length === 1 ? 'família' : 'famílias'}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 text-xs">-</span>
                             )}
                           </td>
 
