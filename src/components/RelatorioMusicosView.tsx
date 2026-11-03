@@ -8,7 +8,7 @@ import {
 import { ComumCongregacao, ContagemMocidade, Setor } from '../types';
 import { apiGet } from '../utils/api';
 import { Pagination } from './Pagination';
-import { FAMILIAS_INSTRUMENTOS } from './ContagensMocidadeView';
+import { FAMILIAS_INSTRUMENTOS } from '../types';
 import { useAuth } from '../context/AuthContext';
 
 interface Props {

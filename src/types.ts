@@ -158,3 +158,11 @@ export interface AgendaVisita {
   created_at?: string;
   comum_congregacao?: { id: string; nome: string; codigo: string };
 }
+
+export const FAMILIAS_INSTRUMENTOS = [
+  'Cordas Friccionadas',
+  'Madeiras',
+  'Metais',
+  'Teclas',
+  'Outros'
+];

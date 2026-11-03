@@ -4,18 +4,10 @@ import {
   User, ArrowUpDown, Lock, AlertCircle, CheckCircle2, TrendingUp, 
   Layers, ListFilter, Sparkles, Filter, ChevronRight, Eye, EyeOff
 } from 'lucide-react';
-import { ContagemMocidade, ComumCongregacao, Usuario, Setor, DetalheMusicoFamilia } from '../types';
+import { ContagemMocidade, ComumCongregacao, Usuario, Setor, DetalheMusicoFamilia, FAMILIAS_INSTRUMENTOS } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from './Pagination';
 import { apiGet, clearApiCache } from '../utils/api';
-
-export const FAMILIAS_INSTRUMENTOS = [
-  'Cordas Friccionadas',
-  'Madeiras',
-  'Metais',
-  'Teclas',
-  'Outros'
-];
 
 export interface ContagemInitialParams {
   date?: string;
