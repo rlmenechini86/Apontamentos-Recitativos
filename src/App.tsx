@@ -20,8 +20,10 @@ import {
   LogOut,
   ArrowUpDown,
   Clock,
+  Shield,
 } from 'lucide-react';
 import { Sidebar, NavRoute } from './components/Sidebar';
+import { LgpdTermsModal } from './components/LgpdTermsModal';
 import { DashboardView } from './components/DashboardView';
 import { ApontamentosView } from './components/ApontamentosView';
 import { AcompanhamentoSetorView } from './components/AcompanhamentoSetorView';
@@ -58,6 +60,7 @@ export default function App() {
   const { isAuthenticated, logout, user } = useAuth();
   const [currentRoute, setCurrentRoute] = useState<NavRoute>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLgpdModalOpen, setIsLgpdModalOpen] = useState(false);
 
   // Dados de Comuns e Setores
   const [comuns, setComuns] = useState<ComumCongregacao[]>([]);
@@ -631,6 +634,7 @@ export default function App() {
         onCloseMobile={() => setIsMobileMenuOpen(false)}
         reunioesHojeCount={compromissosHoje.reunioesHoje.length}
         visitasHojeCount={compromissosHoje.visitasHoje.length}
+        onOpenLgpdModal={() => setIsLgpdModalOpen(true)}
       />
 
       {/* Área Principal de Conteúdo (Lado Direito) */}
@@ -1176,6 +1180,19 @@ export default function App() {
             />
           )}
         </main>
+
+        {/* Rodape Permanente LGPD */}
+        <footer className="mt-auto py-3 px-4 sm:px-6 lg:px-8 border-t border-slate-200/80 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xs text-xs text-slate-500 dark:text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2 print:hidden">
+          <p>© 2026 Controle de Apontamentos — Uso exclusivo eclesiástico interno</p>
+          <button
+            type="button"
+            onClick={() => setIsLgpdModalOpen(true)}
+            className="inline-flex items-center space-x-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 font-medium transition cursor-pointer"
+          >
+            <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Termos de Uso & Política de Privacidade (LGPD)</span>
+          </button>
+        </footer>
       </div>
 
       {/* Modais Globais */}
@@ -1197,6 +1214,11 @@ export default function App() {
         perfis={perfis}
         comuns={comuns}
         setores={setores}
+      />
+
+      <LgpdTermsModal
+        isOpen={isLgpdModalOpen}
+        onClose={() => setIsLgpdModalOpen(false)}
       />
     </div>
   );

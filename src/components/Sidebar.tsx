@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   ClipboardCheck,
   ShieldCheck,
+  Shield,
   ChevronDown,
   ChevronRight,
   Building2,
@@ -58,6 +59,7 @@ interface SidebarProps {
   reunioesHojeCount?: number;
   visitasHojeCount?: number;
   perfisCount?: number;
+  onOpenLgpdModal?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -71,6 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   reunioesHojeCount = 0,
   visitasHojeCount = 0,
   perfisCount = 3,
+  onOpenLgpdModal,
 }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
@@ -552,6 +555,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Rodapé da Sidebar */}
       <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/60 space-y-3">
+
+          {onOpenLgpdModal && (
+            <button
+              type="button"
+              onClick={() => {
+                onOpenLgpdModal();
+                onCloseMobile();
+              }}
+              className="w-full flex items-center justify-center space-x-1.5 py-1 text-[11px] text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 transition cursor-pointer"
+            >
+              <Shield className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span>Privacidade & LGPD</span>
+            </button>
+          )}
 
           {/* Usuário logado atual */}
           <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/50">
