@@ -151,7 +151,7 @@ export class UsuarioService {
     }
 
     const salt = await bcrypt.genSalt(10);
-    const senha_hash = await bcrypt.hash('ccb123', salt);
+    const senha_hash = await bcrypt.hash('padrao123', salt);
 
     const newRecordPayload = {
       nome_completo: dto.nome_completo.trim(),
@@ -279,7 +279,7 @@ export class UsuarioService {
 
   /**
    * RESET PASSWORD:
-   * Reseta a senha para 'ccb123' criptografada e ativa trocar_senha_proximo_login = true
+   * Reseta a senha para 'padrao123' criptografada e ativa trocar_senha_proximo_login = true
    */
   async resetPassword(id: string): Promise<Usuario> {
     const existing = await this.getById(id);
@@ -288,7 +288,7 @@ export class UsuarioService {
     }
 
     const salt = await bcrypt.genSalt(10);
-    const senha_hash = await bcrypt.hash('ccb123', salt);
+    const senha_hash = await bcrypt.hash('padrao123', salt);
 
     try {
       const { data, error } = await supabase

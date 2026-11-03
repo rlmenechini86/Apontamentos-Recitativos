@@ -173,7 +173,7 @@ export class UsuarioController {
 
   /**
    * POST /api/usuarios/:id/reset-password
-   * Redefine a senha do usuário para 'ccb123' e marca trocar_senha_proximo_login = true
+   * Redefine a senha do usuário para 'padrao123' e marca trocar_senha_proximo_login = true
    */
   async resetPassword(req: Request, res: Response): Promise<void> {
     try {
@@ -182,7 +182,7 @@ export class UsuarioController {
 
       res.status(200).json({
         success: true,
-        message: 'Senha resetada com sucesso para "ccb123"! No próximo acesso, o usuário será obrigado a cadastrar uma nova senha.',
+        message: 'Senha resetada com sucesso para "padrao123"! No próximo acesso, o usuário será obrigado a cadastrar uma nova senha.',
         data: updated,
       });
     } catch (error: any) {

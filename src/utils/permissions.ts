@@ -27,7 +27,7 @@ export const defaultMatriz: PermissaoRegra[] = [
 
 export const getPermissoes = (): PermissaoRegra[] => {
   try {
-    const saved = localStorage.getItem('ccb_permissoes');
+    const saved = localStorage.getItem('app_permissoes');
     if (!saved) return defaultMatriz;
     
     const parsed = JSON.parse(saved);
@@ -46,7 +46,7 @@ export const getPermissoes = (): PermissaoRegra[] => {
 
 export const savePermissoes = (newMatriz: PermissaoRegra[]) => {
   try {
-    localStorage.setItem('ccb_permissoes', JSON.stringify(newMatriz));
+    localStorage.setItem('app_permissoes', JSON.stringify(newMatriz));
     window.dispatchEvent(new Event('permissions-updated'));
 
     // Salva centralizado no backend para sincronizar todos os usuários e dispositivos
@@ -104,7 +104,7 @@ export const initPermissoesSync = async () => {
     if (res.ok) {
       const json = await res.json();
       if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-        localStorage.setItem('ccb_permissoes', JSON.stringify(json.data));
+        localStorage.setItem('app_permissoes', JSON.stringify(json.data));
         window.dispatchEvent(new Event('permissions-updated'));
       }
     }

@@ -141,7 +141,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <div>
               <h1 className="font-bold text-base text-slate-900 dark:text-slate-100 tracking-tight leading-tight">
-                CCB Apontamentos
+                Controle de Apontamentos
               </h1>
               <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
                 Reunião de Jovens e Menores

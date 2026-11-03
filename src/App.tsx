@@ -466,7 +466,7 @@ export default function App() {
   };
 
   const handleResetPasswordUsuario = async (id: string, nome: string) => {
-    if (!window.confirm(`Deseja realmente resetar a senha de "${nome}" para a senha padrão "ccb123"?\n\nNo próximo login, o usuário será obrigado a cadastrar uma nova senha pessoal.`)) {
+    if (!window.confirm(`Deseja realmente resetar a senha de "${nome}" para a senha padrão "padrao123"?\n\nNo próximo login, o usuário será obrigado a cadastrar uma nova senha pessoal.`)) {
       return;
     }
 
@@ -479,7 +479,7 @@ export default function App() {
 
       setFeedbackMsg({
         type: 'success',
-        text: `Senha de "${nome}" resetada com sucesso para "ccb123"! O usuário será solicitado a cadastrar uma nova senha no próximo login.`,
+        text: `Senha de "${nome}" resetada com sucesso para "padrao123"! O usuário será solicitado a cadastrar uma nova senha no próximo login.`,
       });
       await fetchUsuarios();
       setTimeout(() => setFeedbackMsg(null), 5000);

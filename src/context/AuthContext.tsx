@@ -32,9 +32,9 @@ const TIMEOUT_MS = 10 * 60 * 1000; // 10 minutos de inatividade
 
 const getInitialAuth = (): { user: Usuario | null; token: string | null } => {
   try {
-    const savedUser = localStorage.getItem('ccb_user');
-    const savedToken = localStorage.getItem('ccb_token');
-    const lastActivityStr = localStorage.getItem('ccb_last_activity');
+    const savedUser = localStorage.getItem('app_user');
+    const savedToken = localStorage.getItem('app_token');
+    const lastActivityStr = localStorage.getItem('app_last_activity');
 
     if (!savedUser || !savedToken) {
       return { user: null, token: null };
@@ -45,15 +45,15 @@ const getInitialAuth = (): { user: Usuario | null; token: string | null } => {
       const lastActivity = parseInt(lastActivityStr, 10);
       if (isNaN(lastActivity) || now - lastActivity > TIMEOUT_MS) {
         // Expirou por inatividade
-        localStorage.removeItem('ccb_user');
-        localStorage.removeItem('ccb_token');
-        localStorage.removeItem('ccb_last_activity');
+        localStorage.removeItem('app_user');
+        localStorage.removeItem('app_token');
+        localStorage.removeItem('app_last_activity');
         return { user: null, token: null };
       }
     } else {
       // Sem carimbo de atividade anterior, requer novo login
-      localStorage.removeItem('ccb_user');
-      localStorage.removeItem('ccb_token');
+      localStorage.removeItem('app_user');
+      localStorage.removeItem('app_token');
       return { user: null, token: null };
     }
 
@@ -73,12 +73,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (user && token) {
-      localStorage.setItem('ccb_user', JSON.stringify(user));
-      localStorage.setItem('ccb_token', token);
+      localStorage.setItem('app_user', JSON.stringify(user));
+      localStorage.setItem('app_token', token);
     } else {
-      localStorage.removeItem('ccb_user');
-      localStorage.removeItem('ccb_token');
-      localStorage.removeItem('ccb_last_activity');
+      localStorage.removeItem('app_user');
+      localStorage.removeItem('app_token');
+      localStorage.removeItem('app_last_activity');
     }
   }, [user, token]);
 
@@ -91,14 +91,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const logoutDueToInactivity = () => {
       setUser(null);
       setToken(null);
-      localStorage.removeItem('ccb_user');
-      localStorage.removeItem('ccb_token');
-      localStorage.removeItem('ccb_last_activity');
+      localStorage.removeItem('app_user');
+      localStorage.removeItem('app_token');
+      localStorage.removeItem('app_last_activity');
     };
 
     const checkExpiration = (): boolean => {
       const now = Date.now();
-      const lastActivityStr = localStorage.getItem('ccb_last_activity');
+      const lastActivityStr = localStorage.getItem('app_last_activity');
       if (lastActivityStr) {
         const lastActivity = parseInt(lastActivityStr, 10);
         if (isNaN(lastActivity) || now - lastActivity > TIMEOUT_MS) {
@@ -118,13 +118,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Agenda o timeout para o tempo restante real da sessão
-    const lastActivity = parseInt(localStorage.getItem('ccb_last_activity') || '0', 10);
+    const lastActivity = parseInt(localStorage.getItem('app_last_activity') || '0', 10);
     const initialRemaining = Math.max(1000, TIMEOUT_MS - (Date.now() - lastActivity));
     timeoutId = window.setTimeout(logoutDueToInactivity, initialRemaining);
 
     const handleUserActivity = () => {
       const now = Date.now();
-      const lastActivityStr = localStorage.getItem('ccb_last_activity');
+      const lastActivityStr = localStorage.getItem('app_last_activity');
       const currentLastActivity = lastActivityStr ? parseInt(lastActivityStr, 10) : 0;
 
       // Se já expirou antes da interação
@@ -135,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Atualiza o storage com moderação (máx a cada 5s)
       if (now - currentLastActivity > 5000) {
-        localStorage.setItem('ccb_last_activity', now.toString());
+        localStorage.setItem('app_last_activity', now.toString());
       }
 
       window.clearTimeout(timeoutId);
@@ -146,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Ao voltar à visibilidade (ex: celular desbloqueado ou aba reaberta)
       if (document.visibilityState === 'visible') {
         if (!checkExpiration()) {
-          const currentLast = parseInt(localStorage.getItem('ccb_last_activity') || '0', 10);
+          const currentLast = parseInt(localStorage.getItem('app_last_activity') || '0', 10);
           const remaining = Math.max(1000, TIMEOUT_MS - (Date.now() - currentLast));
           window.clearTimeout(timeoutId);
           timeoutId = window.setTimeout(logoutDueToInactivity, remaining);
@@ -183,7 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setUser(json.data.user);
     setToken(json.data.token);
-    localStorage.setItem('ccb_last_activity', Date.now().toString());
+    localStorage.setItem('app_last_activity', Date.now().toString());
   };
 
   const register = async (data: {
@@ -207,7 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setUser(json.data.user);
     setToken(json.data.token);
-    localStorage.setItem('ccb_last_activity', Date.now().toString());
+    localStorage.setItem('app_last_activity', Date.now().toString());
   };
 
   const setPassword = async (email: string, novaSenha: string) => {
@@ -226,9 +226,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('ccb_user');
-    localStorage.removeItem('ccb_token');
-    localStorage.removeItem('ccb_last_activity');
+    localStorage.removeItem('app_user');
+    localStorage.removeItem('app_token');
+    localStorage.removeItem('app_last_activity');
   };
 
   return (

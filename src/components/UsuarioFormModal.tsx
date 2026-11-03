@@ -161,7 +161,7 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
       return;
     }
 
-    // Regra 3 CCB: Se perfil for "Apontamento", a comum é estritamente obrigatória
+    // Regra 3: Se perfil for "Apontamento", a comum é estritamente obrigatória
     if (selectedPerfil?.nome === 'Apontamento' && !formData.comum_congregacao_id) {
       setErrorMsg('Para o perfil "Apontamento", a Comum Congregação de vínculo é obrigatória.');
       return;
@@ -508,7 +508,7 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                   <span>Segurança e Acesso à Conta</span>
                 </span>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  Redefinir a senha deste usuário para a senha inicial padrão <strong>ccb123</strong>.
+                  Redefinir a senha deste usuário para a senha inicial padrão <strong>padrao123</strong>.
                 </p>
                 {resetSuccess && (
                   <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 flex items-center space-x-1">
@@ -521,7 +521,7 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                 type="button"
                 onClick={async () => {
                   if (!initialData?.id) return;
-                  if (!confirm(`Deseja realmente resetar a senha de "${initialData.nome_completo}" para a senha padrão "ccb123"?\n\nNo próximo login, o usuário será obrigado a cadastrar uma nova senha.`)) {
+                  if (!confirm(`Deseja realmente resetar a senha de "${initialData.nome_completo}" para a senha padrão "padrao123"?\n\nNo próximo login, o usuário será obrigado a cadastrar uma nova senha.`)) {
                     return;
                   }
 
@@ -532,12 +532,12 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                   try {
                     if (onResetPassword) {
                       await onResetPassword(initialData.id, initialData.nome_completo);
-                      setResetSuccess('Senha resetada com sucesso para "ccb123"! O usuário deverá cadastrar uma nova senha no próximo login.');
+                      setResetSuccess('Senha resetada com sucesso para "padrao123"! O usuário deverá cadastrar uma nova senha no próximo login.');
                     } else {
                       const res = await fetch(`/api/usuarios/${initialData.id}/reset-password`, { method: 'POST' });
                       const json = await res.json();
                       if (res.ok && json.success) {
-                        setResetSuccess('Senha resetada com sucesso para "ccb123"! O usuário deverá cadastrar uma nova senha no próximo login.');
+                        setResetSuccess('Senha resetada com sucesso para "padrao123"! O usuário deverá cadastrar uma nova senha no próximo login.');
                       } else {
                         setErrorMsg(json.message || 'Erro ao resetar senha.');
                       }
@@ -552,7 +552,7 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                 className="px-3.5 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-xs font-bold flex items-center space-x-1.5 transition cursor-pointer flex-shrink-0 shadow-2xs"
               >
                 <KeyRound className="w-3.5 h-3.5" />
-                <span>{resettingPassword ? 'Resetando...' : 'Resetar Senha para ccb123'}</span>
+                <span>{resettingPassword ? 'Resetando...' : 'Resetar Senha para padrao123'}</span>
               </button>
             </div>
           )}

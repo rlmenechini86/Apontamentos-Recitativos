@@ -14,7 +14,7 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Res
   const isPublicAuth = ['/api/auth/login', '/api/auth/register', '/api/auth/set-password', '/api/auth/validate-password'].some(p => url.includes(p));
 
   if (isApiRoute && !isPublicAuth) {
-    const token = localStorage.getItem('ccb_token');
+    const token = localStorage.getItem('app_token');
     if (token) {
       const headers = new Headers(init?.headers || {});
       if (!headers.has('Authorization')) {
@@ -31,9 +31,9 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Res
     const currentPath = window.location.pathname;
     if (currentPath !== '/' && currentPath !== '/login') {
       console.warn('[LGPD Auth] Sessao expirada - redirecionando para login');
-      localStorage.removeItem('ccb_user');
-      localStorage.removeItem('ccb_token');
-      localStorage.removeItem('ccb_last_activity');
+      localStorage.removeItem('app_user');
+      localStorage.removeItem('app_token');
+      localStorage.removeItem('app_last_activity');
       window.location.reload();
     }
   }

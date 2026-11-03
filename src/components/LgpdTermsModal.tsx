@@ -47,7 +47,7 @@ export const LgpdTermsModal: React.FC<LgpdTermsModalProps> = ({
           <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl flex items-start space-x-3">
             <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
             <p className="text-emerald-800 dark:text-emerald-200 text-[11px]">
-              Este sistema foi desenvolvido exclusivamente para a organização, apontamento e gestão eclesiástica interna da Congregação Cristã no Brasil. Seus dados são protegidos por rigorosos padrões de segurança da informação.
+              Este sistema foi desenvolvido exclusivamente para a organização, apontamento e gestão interna de atividades eclesiásticas. Seus dados são protegidos por rigorosos padrões de segurança da informação.
             </p>
           </div>
 
@@ -109,7 +109,7 @@ export const LgpdTermsModal: React.FC<LgpdTermsModalProps> = ({
 
           <section className="space-y-1 pt-2 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-400">
             <p><strong>Versão da Política:</strong> 1.0 — Novembro/2026</p>
-            <p><strong>Controlador:</strong> Administração Setorial / Regional da CCB</p>
+            <p><strong>Controlador:</strong> Administração Setorial / Regional</p>
           </section>
         </div>
 

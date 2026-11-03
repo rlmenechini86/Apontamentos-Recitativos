@@ -252,7 +252,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ perfis, comuns }) => {
                   <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                   <input
                     type="email"
-                    placeholder="seu.email@ccb.org.br"
+                    placeholder="seu.email@exemplo.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -342,7 +342,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ perfis, comuns }) => {
                   <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                   <input
                     type="email"
-                    placeholder="seu.email@ccb.org.br"
+                    placeholder="seu.email@exemplo.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required

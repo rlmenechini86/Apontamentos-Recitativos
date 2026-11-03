@@ -425,7 +425,7 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
                         {onResetPassword && (
                           <button
                             onClick={() => onResetPassword(user.id, user.nome_completo)}
-                            title="Resetar Senha para 'ccb123'"
+                            title="Resetar Senha para 'padrao123'"
                             className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition cursor-pointer"
                           >
                             <KeyRound className="w-4 h-4" />

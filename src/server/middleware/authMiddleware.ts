@@ -1,7 +1,7 @@
 ﻿import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ccb_jwt_secret_change_in_production_2026';
+const JWT_SECRET = process.env.JWT_SECRET || 'app_jwt_secret_change_in_production_2026';
 
 export interface JwtPayload {
   userId: string;

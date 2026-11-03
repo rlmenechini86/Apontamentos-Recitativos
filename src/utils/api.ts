@@ -5,7 +5,7 @@ const CACHE_TTL = 1000 * 60 * 5; // 5 minutos
  * Retorna o token JWT armazenado no localStorage
  */
 function getAuthToken(): string | null {
-  return localStorage.getItem('ccb_token');
+  return localStorage.getItem('app_token');
 }
 
 /**
@@ -30,9 +30,9 @@ function handleUnauthorized(response: Response): Response {
     const currentPath = window.location.pathname;
     // Evita loop se ja esta na tela de login
     if (currentPath !== '/' && currentPath !== '/login') {
-      localStorage.removeItem('ccb_user');
-      localStorage.removeItem('ccb_token');
-      localStorage.removeItem('ccb_last_activity');
+      localStorage.removeItem('app_user');
+      localStorage.removeItem('app_token');
+      localStorage.removeItem('app_last_activity');
       window.location.reload();
     }
   }

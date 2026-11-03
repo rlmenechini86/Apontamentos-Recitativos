@@ -234,7 +234,7 @@ export const PerfisAcessoView: React.FC<PerfisAcessoViewProps> = ({
 
   const handleResetDefaults = () => {
     if (confirm('Deseja restaurar as permissões padrões de segurança do sistema?')) {
-      localStorage.removeItem('ccb_permissoes');
+      localStorage.removeItem('app_permissoes');
       const reset = getPermissoes();
       setMatrizPermissoes(reset);
       savePermissoes(reset);

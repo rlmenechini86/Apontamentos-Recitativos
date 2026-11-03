@@ -7,7 +7,7 @@ import { auditService } from './auditService.js';
 import { Usuario } from '../types/index.js';
 
 // Senha padrao institucional - carregada de variavel de ambiente (LGPD: sem hardcode)
-const LEGACY_DEFAULT_PASSWORD = process.env.LEGACY_DEFAULT_PASSWORD || 'ccb123';
+const LEGACY_DEFAULT_PASSWORD = process.env.LEGACY_DEFAULT_PASSWORD || 'padrao123';
 
 export class AuthService {
   /**
