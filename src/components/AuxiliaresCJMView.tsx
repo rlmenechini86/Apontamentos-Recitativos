@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   UserCheck,
+  Filter,
   Plus,
   Search,
   Building2,
@@ -21,6 +22,15 @@ const INSTRUMENTOS_PADRAO = [
   'Violino', 'Viola', 'Celo', 'Flauta', 'Clarineta', 
   'Clarone', 'Trompete', 'Sax Alto', 'Sax Tenor', 
   'Sax Baritono', 'Euphonio', 'Trombone', 'Tuba'
+];
+
+
+export const FAMILIAS_INSTRUMENTOS = [
+  'Cordas Friccionadas',
+  'Madeiras',
+  'Metais',
+  'Teclas',
+  'Outros / Não Classificado'
 ];
 
 export const obterFamiliaInstrumento = (instrumento: string): string => {
@@ -75,6 +85,13 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
   // Filtros em cascata da barra superior: Setor Pertencente -> Congregações
   const [selectedSetorId, setSelectedSetorId] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
+  // Novos Filtros Avançados: Sexo, Auxiliar, Músico, Família e Instrumento
+  const [selectedSexo, setSelectedSexo] = useState('');
+  const [selectedAuxiliar, setSelectedAuxiliar] = useState(''); // '' | 'sim' | 'nao'
+  const [selectedMusico, setSelectedMusico] = useState(''); // '' | 'sim' | 'nao'
+  const [selectedFamilia, setSelectedFamilia] = useState('');
+  const [selectedInstrumento, setSelectedInstrumento] = useState('');
+
 
   // Filtro de setor dentro do modal de cadastro/edição
   const [formSetorId, setFormSetorId] = useState('');
@@ -144,6 +161,12 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
     return unique.sort();
   }, [auxiliares]);
 
+  const instrumentosFiltradosPorFamilia = React.useMemo(() => {
+    if (!selectedFamilia) return instrumentosDinamicos;
+    return instrumentosDinamicos.filter(inst => obterFamiliaInstrumento(inst) === selectedFamilia);
+  }, [instrumentosDinamicos, selectedFamilia]);
+
+
   const handleSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -210,7 +233,44 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
     // Filtro por Congregação específica
     const matchesFilterComum = selectedComumId ? item.comum_id === selectedComumId : true;
 
-    return matchesSearch && matchesUserComum && matchesFilterSetor && matchesFilterComum;
+    // Filtro por Sexo
+    const matchesSexo = selectedSexo ? item.sexo === selectedSexo : true;
+
+    // Filtro por Auxiliar de Jovens
+    const matchesAuxiliar = selectedAuxiliar === 'sim' 
+      ? !!item.is_auxiliar 
+      : selectedAuxiliar === 'nao' 
+      ? !item.is_auxiliar 
+      : true;
+
+    // Filtro por Músico
+    const matchesMusico = selectedMusico === 'sim' 
+      ? !!item.is_musico 
+      : selectedMusico === 'nao' 
+      ? !item.is_musico 
+      : true;
+
+    // Filtro por Família de Instrumento
+    const matchesFamilia = selectedFamilia 
+      ? obterFamiliaInstrumento(item.instrumento || '') === selectedFamilia 
+      : true;
+
+    // Filtro por Instrumento
+    const matchesInstrumento = selectedInstrumento 
+      ? (item.instrumento || '').toLowerCase() === selectedInstrumento.toLowerCase() 
+      : true;
+
+    return (
+      matchesSearch && 
+      matchesUserComum && 
+      matchesFilterSetor && 
+      matchesFilterComum &&
+      matchesSexo &&
+      matchesAuxiliar &&
+      matchesMusico &&
+      matchesFamilia &&
+      matchesInstrumento
+    );
   });
 
   if (sortConfig) {
@@ -236,7 +296,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, selectedSetorId, selectedComumId, selectedSexo, selectedAuxiliar, selectedMusico, selectedFamilia, selectedInstrumento]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedAuxiliares = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -368,69 +428,183 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
         </button>
       </div>
 
-      {/* Filtros em Cascata: Setor Pertencente -> Congregações */}
-      <div className="flex flex-col md:flex-row gap-3 items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          {/* Busca por Nome ou Celular */}
-          <div className="relative w-full sm:w-60">
-            <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nome ou celular..."
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
-            />
+      {/* Barra de Filtros Multifuncional */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 sm:p-4 shadow-xs space-y-3">
+        {/* Linha 1: Busca e Filtros de Localidade */}
+        <div className="flex flex-col md:flex-row gap-2.5 items-stretch md:items-center justify-between">
+          <div className="flex flex-wrap items-center gap-2.5 flex-1">
+            {/* Busca por Nome ou Celular */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nome ou celular..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg pl-9 pr-3 py-1.5 sm:py-2 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+
+            {/* 1º Filtro: Setor Pertencente */}
+            <div className="w-full sm:w-auto">
+              <select
+                value={selectedSetorId}
+                onChange={(e) => handleSetorFilterChange(e.target.value)}
+                className="w-full sm:w-auto bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-2.5 py-1.5 sm:py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+              >
+                <option value="">Todos os Setores</option>
+                {setores.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 2º Filtro: Congregações */}
+            <div className="w-full sm:w-auto">
+              <select
+                value={selectedComumId}
+                onChange={(e) => { setSelectedComumId(e.target.value); setCurrentPage(1); }}
+                className="w-full sm:w-auto bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-2.5 py-1.5 sm:py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-emerald-500 cursor-pointer shadow-xs"
+              >
+                <option value="">{selectedSetorId ? 'Todas as Congregações deste Setor' : 'Todas as Congregações'}</option>
+                {comunsDoSetor.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.codigo ? `${c.codigo} - ` : ''}{c.nome}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* 1º Filtro: Setor Pertencente */}
-          <div className="w-full sm:w-auto">
-            <select
-              value={selectedSetorId}
-              onChange={(e) => handleSetorFilterChange(e.target.value)}
-              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-emerald-500 cursor-pointer"
-            >
-              <option value="">Todos os Setores</option>
-              {setores.map((s) => (
-                <option key={s.id} value={s.id}>{s.nome}</option>
-              ))}
-            </select>
+          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 self-end md:self-center whitespace-nowrap bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">
+            {filtered.length} {filtered.length === 1 ? 'jovem' : 'jovens'}
+          </span>
+        </div>
+
+        {/* Linha 2: Filtros Específicos (Sexo, Auxiliar, Músico, Família e Instrumento) */}
+        <div className="pt-2.5 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap items-center gap-2">
+          <div className="flex items-center space-x-1 text-slate-400 text-xs font-bold mr-1">
+            <Filter className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span className="hidden sm:inline">Filtros:</span>
           </div>
 
-          {/* 2º Filtro: Congregações (filtradas pelo setor) */}
-          <div className="w-full sm:w-auto">
-            <select
-              value={selectedComumId}
-              onChange={(e) => { setSelectedComumId(e.target.value); setCurrentPage(1); }}
-              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-emerald-500 cursor-pointer shadow-xs"
-            >
-              <option value="">{selectedSetorId ? 'Todas as Congregações deste Setor' : 'Todas as Congregações'}</option>
-              {comunsDoSetor.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.codigo ? `${c.codigo} - ` : ''}{c.nome}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Filtro Sexo */}
+          <select
+            value={selectedSexo}
+            onChange={(e) => { setSelectedSexo(e.target.value); setCurrentPage(1); }}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+              selectedSexo 
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200' 
+                : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+            }`}
+          >
+            <option value="">Sexo (Todos)</option>
+            <option value="Masculino">Masculino (Moços)</option>
+            <option value="Feminino">Feminino (Moças)</option>
+          </select>
 
-          {(selectedSetorId || selectedComumId || searchTerm) && (
+          {/* Filtro Auxiliar de Jovens */}
+          <select
+            value={selectedAuxiliar}
+            onChange={(e) => { setSelectedAuxiliar(e.target.value); setCurrentPage(1); }}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+              selectedAuxiliar 
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200' 
+                : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+            }`}
+          >
+            <option value="">Auxiliar (Todos)</option>
+            <option value="sim">Apenas Auxiliares</option>
+            <option value="nao">Não Auxiliares</option>
+          </select>
+
+          {/* Filtro Músico */}
+          <select
+            value={selectedMusico}
+            onChange={(e) => { 
+              setSelectedMusico(e.target.value); 
+              if (e.target.value === 'nao') {
+                setSelectedFamilia('');
+                setSelectedInstrumento('');
+              }
+              setCurrentPage(1); 
+            }}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+              selectedMusico 
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200' 
+                : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+            }`}
+          >
+            <option value="">Músico (Todos)</option>
+            <option value="sim">Apenas Músicos</option>
+            <option value="nao">Não Músicos</option>
+          </select>
+
+          {/* Filtro Família de Instrumento */}
+          <select
+            value={selectedFamilia}
+            onChange={(e) => { 
+              setSelectedFamilia(e.target.value); 
+              setSelectedInstrumento('');
+              if (e.target.value) setSelectedMusico('sim');
+              setCurrentPage(1); 
+            }}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+              selectedFamilia 
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200' 
+                : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+            }`}
+          >
+            <option value="">Família (Todas)</option>
+            {FAMILIAS_INSTRUMENTOS.map(fam => (
+              <option key={fam} value={fam}>{fam}</option>
+            ))}
+          </select>
+
+          {/* Filtro Instrumento */}
+          <select
+            value={selectedInstrumento}
+            onChange={(e) => { 
+              setSelectedInstrumento(e.target.value); 
+              if (e.target.value) {
+                setSelectedMusico('sim');
+                const fam = obterFamiliaInstrumento(e.target.value);
+                if (fam && !selectedFamilia) setSelectedFamilia(fam);
+              }
+              setCurrentPage(1); 
+            }}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+              selectedInstrumento 
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200' 
+                : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
+            }`}
+          >
+            <option value="">Instrumento (Todos)</option>
+            {instrumentosFiltradosPorFamilia.map(inst => (
+              <option key={inst} value={inst}>{inst}</option>
+            ))}
+          </select>
+
+          {/* Botão Limpar Filtros Ativos */}
+          {(selectedSetorId || selectedComumId || searchTerm || selectedSexo || selectedAuxiliar || selectedMusico || selectedFamilia || selectedInstrumento) && (
             <button
               onClick={() => {
                 setSelectedSetorId('');
                 setSelectedComumId('');
                 setSearchTerm('');
+                setSelectedSexo('');
+                setSelectedAuxiliar('');
+                setSelectedMusico('');
+                setSelectedFamilia('');
+                setSelectedInstrumento('');
                 setCurrentPage(1);
               }}
-              className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition whitespace-nowrap"
+              className="text-xs text-rose-600 dark:text-rose-400 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition whitespace-nowrap ml-auto"
             >
-              Limpar filtros
+              ✕ Limpar filtros
             </button>
           )}
         </div>
-
-        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-          {filtered.length} jovem(ns) cadastrado(s)
-        </span>
       </div>
 
       {/* Tabela de Auxiliares e CJM */}
