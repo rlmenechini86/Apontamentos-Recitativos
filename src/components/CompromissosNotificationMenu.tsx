@@ -1,3 +1,5 @@
+import { hasPermission } from '../utils/permissions';
+import { useAuth } from '../context/AuthContext';
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bell, 
@@ -21,6 +23,7 @@ export const CompromissosNotificationMenu: React.FC<CompromissosNotificationMenu
   compromissos,
   onNavigate,
 }) => {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -200,12 +203,14 @@ export const CompromissosNotificationMenu: React.FC<CompromissosNotificationMenu
 
           {/* Rodapé do Menu com Links Diretos */}
           <div className="p-2.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs">
-            <button
-              onClick={() => handleItemClick('calendario')}
-              className="text-slate-600 hover:text-emerald-600 dark:text-slate-300 dark:hover:text-emerald-400 font-semibold transition cursor-pointer"
-            >
-              Ver Calendário
-            </button>
+            {hasPermission(user, 'visualizar_calendario') && (
+              <button
+                onClick={() => handleItemClick('calendario')}
+                className="text-slate-600 hover:text-emerald-600 dark:text-slate-300 dark:hover:text-emerald-400 font-semibold transition cursor-pointer"
+              >
+                Ver Calendário
+              </button>
+            )}
             <span className="text-slate-300 dark:text-slate-700">•</span>
             <button
               onClick={() => handleItemClick('agenda-visitas')}

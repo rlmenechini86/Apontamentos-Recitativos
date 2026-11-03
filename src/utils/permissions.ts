@@ -14,7 +14,7 @@ export const defaultMatriz: PermissaoRegra[] = [
   { id: 'lancar_apontamento', funcionalidade: 'Lançar Apontamento da Comum', admin: true, cjm: true, apontamento: true },
   { id: 'editar_apontamento', funcionalidade: 'Editar Apontamentos do Setor', admin: true, cjm: true, apontamento: false },
   { id: 'agenda_visitas', funcionalidade: 'Visualizar e Gerenciar Agenda de Visitas', admin: true, cjm: true, apontamento: true },
-  { id: 'visualizar_calendario', funcionalidade: 'Visualizar Calendário de Reuniões', admin: true, cjm: true, apontamento: true },
+  { id: 'visualizar_calendario', funcionalidade: 'Visualizar Calendário de Reuniões', admin: true, cjm: true, apontamento: false, '33333333-3333-3333-3333-333333333333': false },
   { id: 'gerenciar_reunioes', funcionalidade: 'Gerenciar Reuniões e Eventos (CRUD)', admin: true, cjm: true, apontamento: false },
   { id: 'gerenciar_tipos_evento', funcionalidade: 'Gerenciar Tipos de Eventos (CRUD)', admin: true, cjm: false, apontamento: false },
   { id: 'exportar_relatorios', funcionalidade: 'Relatórios / Gestão e Controle', admin: true, cjm: true, apontamento: false },
@@ -48,6 +48,13 @@ export const savePermissoes = (newMatriz: PermissaoRegra[]) => {
   try {
     localStorage.setItem('ccb_permissoes', JSON.stringify(newMatriz));
     window.dispatchEvent(new Event('permissions-updated'));
+
+    // Salva centralizado no backend para sincronizar todos os usuários e dispositivos
+    fetch('/api/perfis/permissoes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newMatriz),
+    }).catch(err => console.error('Erro ao salvar permissões no backend:', err));
   } catch (err) {
     console.error('Erro ao salvar permissões no localStorage:', err);
   }
@@ -90,3 +97,23 @@ export const hasPermission = (user: Usuario | null, actionId: string): boolean =
 
   return false;
 };
+
+export const initPermissoesSync = async () => {
+  try {
+    const res = await fetch('/api/perfis/permissoes');
+    if (res.ok) {
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        localStorage.setItem('ccb_permissoes', JSON.stringify(json.data));
+        window.dispatchEvent(new Event('permissions-updated'));
+      }
+    }
+  } catch (e) {
+    console.warn('Sync de permissões offline, usando cache local');
+  }
+};
+
+// Dispara sync em background
+if (typeof window !== 'undefined') {
+  initPermissoesSync();
+}

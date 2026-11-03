@@ -374,19 +374,19 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3 sm:space-y-6">
       {/* 1. CABEÇALHO DA TELA & TÍTULO */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-4">
         <div>
           <div className="flex items-center space-x-2.5">
-            <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80 shadow-2xs">
+            <div className="p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80 shadow-2xs">
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+              <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
                 Controle Anual - Mocidade & Santa Ceia
               </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="hidden sm:block text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                 Acompanhamento e controle dos lançamentos anuais por congregação com identificação do responsável.
               </p>
             </div>
@@ -417,7 +417,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
             onClick={() => fetchContagens(true)}
             disabled={loading || refreshing}
             title="Atualizar dados"
-            className="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer shadow-2xs disabled:opacity-50"
+            className="p-1.5 sm:p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer shadow-2xs disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-emerald-600' : ''}`} />
           </button>
@@ -431,7 +431,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
               });
               setIsModalOpen(true);
             }}
-            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold flex items-center space-x-2 shadow-sm transition cursor-pointer"
+            className="px-2.5 py-1.5 sm:px-4 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold flex items-center space-x-1.5 sm:space-x-2 shadow-sm transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Novo Lançamento</span>
@@ -440,15 +440,15 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
       </div>
 
       {/* 2. CARDS DE RESUMO & CONFORMIDADE ANUAL (ESTILO CONTROLE DE APONTAMENTOS) */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
         {/* Card 1: Total Congregações */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
+        <div className="p-2 sm:p-4 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider">Congregações</span>
             <Building2 className="w-4 h-4 text-slate-400" />
           </div>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-mono">
+            <span className="text-base sm:text-2xl font-black text-slate-900 dark:text-white font-mono">
               {yearStats.totalComuns}
             </span>
             <span className="text-[10px] text-slate-400">ativas no filtro</span>
@@ -456,14 +456,14 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
         </div>
 
         {/* Card 2: Conformidade Geral */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
+        <div className="p-2 sm:p-4 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider">Conformidade {selectedYear}</span>
             <TrendingUp className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="mt-2">
             <div className="flex items-baseline justify-between">
-              <span className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+              <span className="text-base sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
                 {yearStats.conformidadeRate}%
               </span>
               <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
@@ -480,13 +480,13 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
         </div>
 
         {/* Card 3: Mocidade */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/40 shadow-2xs flex flex-col justify-between">
+        <div className="p-2 sm:p-4 rounded-lg sm:rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/40 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-blue-700 dark:text-blue-300">
             <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider">Mocidade ({selectedYear})</span>
             <Users className="w-4 h-4 text-blue-600" />
           </div>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-xl sm:text-2xl font-black text-blue-700 dark:text-blue-400 font-mono">
+            <span className="text-base sm:text-2xl font-black text-blue-700 dark:text-blue-400 font-mono">
               {showTotals ? yearStats.mocidadeTotalQtd.toLocaleString() : '••••'}
             </span>
             <span className="text-[10px] font-semibold text-blue-600/80 dark:text-blue-400">
@@ -496,13 +496,13 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
         </div>
 
         {/* Card 4: Santa Ceia */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 shadow-2xs flex flex-col justify-between">
+        <div className="p-2 sm:p-4 rounded-lg sm:rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-amber-800 dark:text-amber-300">
             <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider">Santa Ceia ({selectedYear})</span>
             <Sparkles className="w-4 h-4 text-amber-600" />
           </div>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-xl sm:text-2xl font-black text-amber-800 dark:text-amber-400 font-mono">
+            <span className="text-base sm:text-2xl font-black text-amber-800 dark:text-amber-400 font-mono">
               {showTotals ? yearStats.santaCeiaTotalQtd.toLocaleString() : '••••'}
             </span>
             <span className="text-[10px] font-semibold text-amber-700/80 dark:text-amber-400">
@@ -512,13 +512,13 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
         </div>
 
         {/* Card 5: Pendências */}
-        <div className="col-span-2 lg:col-span-1 p-3.5 sm:p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
+        <div className="col-span-2 lg:col-span-1 p-2 sm:p-4 rounded-lg sm:rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs flex flex-col justify-between">
           <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
             <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider">Pendências no Ano</span>
             <AlertCircle className={`w-4 h-4 ${yearStats.pendentesCount > 0 ? 'text-rose-500' : 'text-emerald-500'}`} />
           </div>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className={`text-xl sm:text-2xl font-black font-mono ${yearStats.pendentesCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            <span className={`text-base sm:text-2xl font-black font-mono ${yearStats.pendentesCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
               {yearStats.pendentesCount}
             </span>
             <span className="text-[10px] text-slate-400">
@@ -529,7 +529,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
       </div>
 
       {/* 3. BARRA DE FILTROS & SELETOR DE MODOS */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-xs space-y-3">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 sm:p-4 shadow-xs space-y-2 sm:space-y-3">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
           {/* Seletor de Modos (Tabs) */}
           <div className="flex items-center space-x-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/60 self-start overflow-x-auto max-w-full scrollbar-none">
@@ -677,7 +677,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
       {viewMode === 'anual' && (
         <div className="space-y-4">
           {/* A. VISÃO MOBILE: CARDS DINÂMICOS PARA TELAS PEQUENAS (block md:hidden) */}
-          <div className="block md:hidden space-y-3">
+          <div className="block md:hidden space-y-2">
             {loading ? (
               <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
                 <RefreshCw className="w-5 h-5 animate-spin text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
@@ -737,12 +737,12 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                     </div>
 
                     {/* Blocos de Ação Lado a Lado (Mocidade e Santa Ceia) */}
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-1.5">
                       {/* Bloco 1: Mocidade */}
                       {itemMoc ? (
                         <div
                           onClick={() => handleCellClick(comum, 'Mocidade', selectedYear)}
-                          className="flex flex-col items-center justify-between p-2 rounded-xl bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/80 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition cursor-pointer text-left shadow-2xs group"
+                          className="flex flex-col items-center justify-between p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/80 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition cursor-pointer text-left shadow-2xs group"
                         >
                           <div className="w-full flex items-center justify-between text-blue-700 dark:text-blue-300 mb-1">
                             <span className="text-[9px] font-extrabold uppercase tracking-wider">Mocidade</span>
@@ -772,7 +772,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                       ) : (
                         <div
                           onClick={() => handleCellClick(comum, 'Mocidade', selectedYear)}
-                          className="flex flex-col items-center justify-center p-2 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition cursor-pointer text-center shadow-2xs group"
+                          className="flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition cursor-pointer text-center shadow-2xs group"
                         >
                           <div className="w-full flex items-center justify-between text-rose-700 dark:text-rose-300 mb-1">
                             <span className="text-[9px] font-extrabold uppercase tracking-wider">Mocidade</span>
@@ -789,7 +789,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                       {itemSC ? (
                         <div
                           onClick={() => handleCellClick(comum, 'Santa Ceia', selectedYear)}
-                          className="flex flex-col items-center justify-between p-2 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition cursor-pointer text-left shadow-2xs group"
+                          className="flex flex-col items-center justify-between p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition cursor-pointer text-left shadow-2xs group"
                         >
                           <div className="w-full flex items-center justify-between text-amber-800 dark:text-amber-300 mb-1">
                             <span className="text-[9px] font-extrabold uppercase tracking-wider">Santa Ceia</span>
@@ -819,7 +819,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                       ) : (
                         <div
                           onClick={() => handleCellClick(comum, 'Santa Ceia', selectedYear)}
-                          className="flex flex-col items-center justify-center p-2 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition cursor-pointer text-center shadow-2xs group"
+                          className="flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition cursor-pointer text-center shadow-2xs group"
                         >
                           <div className="w-full flex items-center justify-between text-amber-800 dark:text-amber-300 mb-1">
                             <span className="text-[9px] font-extrabold uppercase tracking-wider">Sta Ceia</span>
@@ -918,7 +918,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                             {itemMoc ? (
                               <div
                                 onClick={() => handleCellClick(comum, 'Mocidade', selectedYear)}
-                                className="inline-flex flex-col items-center justify-center p-2 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/80 text-blue-800 dark:text-blue-200 shadow-2xs hover:bg-blue-100/70 hover:border-blue-400 dark:hover:bg-blue-900/50 transition cursor-pointer group/cell w-full max-w-[240px] mx-auto"
+                                className="inline-flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/80 text-blue-800 dark:text-blue-200 shadow-2xs hover:bg-blue-100/70 hover:border-blue-400 dark:hover:bg-blue-900/50 transition cursor-pointer group/cell w-full max-w-[240px] mx-auto"
                                 title={`Mocidade ${selectedYear} - ${comum.nome}\n• Quantidade: ${itemMoc.quantidade}\n• Cadastrado por: ${authorMoc}\n• Data: ${itemMoc.data}\n\nClique para visualizar ou editar.`}
                               >
                                 <div className="flex items-center space-x-1.5">
@@ -948,7 +948,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                             ) : (
                               <div
                                 onClick={() => handleCellClick(comum, 'Mocidade', selectedYear)}
-                                className="inline-flex flex-col items-center justify-center p-2 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-300 shadow-2xs hover:bg-rose-100 hover:border-rose-400 dark:hover:bg-rose-900/50 transition cursor-pointer group/cell w-full max-w-[240px] mx-auto"
+                                className="inline-flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-300 shadow-2xs hover:bg-rose-100 hover:border-rose-400 dark:hover:bg-rose-900/50 transition cursor-pointer group/cell w-full max-w-[240px] mx-auto"
                                 title={`Clique para lançar a contagem de Mocidade de ${comum.nome} (${selectedYear})`}
                               >
                                 <div className="flex items-center space-x-1">
@@ -967,7 +967,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                             {itemSC ? (
                               <div
                                 onClick={() => handleCellClick(comum, 'Santa Ceia', selectedYear)}
-                                className="inline-flex flex-col items-center justify-center p-2 rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-amber-900 dark:text-amber-200 shadow-2xs hover:bg-amber-100/70 hover:border-amber-400 dark:hover:bg-amber-900/50 transition cursor-pointer group/cell w-full max-w-[240px] mx-auto"
+                                className="inline-flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-amber-900 dark:text-amber-200 shadow-2xs hover:bg-amber-100/70 hover:border-amber-400 dark:hover:bg-amber-900/50 transition cursor-pointer group/cell w-full max-w-[240px] mx-auto"
                                 title={`Santa Ceia ${selectedYear} - ${comum.nome}\n• Quantidade: ${itemSC.quantidade}\n• Cadastrado por: ${authorSC}\n• Data: ${itemSC.data}\n\nClique para visualizar ou editar.`}
                               >
                                 <div className="flex items-center space-x-1.5">
@@ -997,7 +997,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                             ) : (
                               <div
                                 onClick={() => handleCellClick(comum, 'Santa Ceia', selectedYear)}
-                                className="inline-flex flex-col items-center justify-center p-2 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-300 shadow-2xs hover:bg-rose-100 hover:border-rose-400 dark:hover:bg-rose-900/50 transition cursor-pointer group/cell w-full max-w-[240px] mx-auto"
+                                className="inline-flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-800 dark:text-rose-300 shadow-2xs hover:bg-rose-100 hover:border-rose-400 dark:hover:bg-rose-900/50 transition cursor-pointer group/cell w-full max-w-[240px] mx-auto"
                                 title={`Clique para lançar a contagem de Santa Ceia de ${comum.nome} (${selectedYear})`}
                               >
                                 <div className="flex items-center space-x-1">

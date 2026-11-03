@@ -372,14 +372,14 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
   }
 
   return (
-    <div className="flex-1 flex flex-col space-y-6 animate-in fade-in duration-300 pb-12">
+    <div className="flex-1 flex flex-col space-y-3 sm:space-y-6 animate-in fade-in duration-300 pb-6 sm:pb-12">
       
       {/* Top Banner & Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-2xl shadow-xs">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2.5 sm:gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 sm:p-6 rounded-xl sm:rounded-2xl shadow-xs">
         <div>
           <div className="flex items-center space-x-2.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
-              <ClipboardCheck className="w-6 h-6" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+              <ClipboardCheck className="w-4 h-4 sm:w-6 sm:h-6" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
@@ -390,7 +390,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                   Matriz Semanal
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="hidden sm:block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Acompanhamento dinâmico do preenchimento semanal de recitativos por domingo para cada congregação.
               </p>
             </div>
@@ -398,7 +398,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+        <div className="flex items-center space-x-1.5 sm:space-x-2 w-full sm:w-auto justify-end">
           {/* Botão Mostrar / Ocultar Total Lançado */}
           <button
             onClick={() => setShowTotals(prev => !prev)}
@@ -439,20 +439,20 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         {/* Card 1: Taxa de Conformidade */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Conformidade no Mês
             </span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-800/60">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-1.5 sm:mt-3">
             <div className="flex items-baseline space-x-2">
-              <span className="text-2xl font-black text-slate-900 dark:text-white">
+              <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white">
                 {stats.conformidadeRate}%
               </span>
               <span className="text-xs text-slate-500">
@@ -472,17 +472,17 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
         </div>
 
         {/* Card 2: Congregações Monitoradas */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Congregações Ativas
             </span>
             <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-800/60">
               <Building2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-slate-900 dark:text-white">
+          <div className="mt-1.5 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white">
               {filteredComuns.length}
             </span>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -492,17 +492,17 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
         </div>
 
         {/* Card 3: Total Recitados no Mês */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Total de Recitados
             </span>
             <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center border border-purple-200 dark:border-purple-800/60">
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-slate-900 dark:text-white">
+          <div className="mt-1.5 sm:mt-3">
+            <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white">
               {showTotals ? stats.totalRecitadosNoMes.toLocaleString('pt-BR') : '••••'}
             </span>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate" title={`${stats.totalMocos} moços, ${stats.totalMocas} moças, ${stats.totalCriancas} crianças`}>
@@ -512,9 +512,9 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
         </div>
 
         {/* Card 4: Apontamentos Pendentes */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+            <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Pendências no Mês
             </span>
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${
@@ -525,7 +525,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
               {stats.totalFaltas > 0 ? <AlertTriangle className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
             </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-1.5 sm:mt-3">
             <div className="flex items-center space-x-2">
               <span className={`text-2xl font-black ${stats.totalFaltas > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 {stats.totalFaltas}
@@ -548,7 +548,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
       </div>
 
       {/* Barra de Filtros e Status Tabs */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-xs space-y-2 sm:space-y-4">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
           
           {/* Busca por comum */}
@@ -697,7 +697,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
       </div>
 
       {/* Tabela Matriz Moderna */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 border-collapse">
             

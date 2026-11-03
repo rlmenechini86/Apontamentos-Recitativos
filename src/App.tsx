@@ -51,6 +51,7 @@ import { apiGet, clearApiCache } from './utils/api';
 import { useTheme } from './context/ThemeContext';
 import { useAuth } from './context/AuthContext';
 import { filtrarCompromissosHoje } from './utils/compromissosHelper';
+import { hasPermission } from './utils/permissions';
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -78,10 +79,22 @@ export default function App() {
   const [reunioesEventos, setReunioesEventos] = useState<ReuniaoEvento[]>([]);
   const [visitas, setVisitas] = useState<AgendaVisita[]>([]);
 
+  // Permissões reativas
+  const [permsVersion, setPermsVersion] = useState(0);
+  useEffect(() => {
+    const handleUpdate = () => setPermsVersion(v => v + 1);
+    window.addEventListener('permissions-updated', handleUpdate);
+    return () => window.removeEventListener('permissions-updated', handleUpdate);
+  }, []);
+
   // Cálculo reativo de compromissos marcados para hoje (Reuniões e Visitas)
   const compromissosHoje = useMemo(() => {
-    return filtrarCompromissosHoje(reunioesEventos, visitas, user);
-  }, [reunioesEventos, visitas, user]);
+    const podeVerCalendario = hasPermission(user, 'visualizar_calendario');
+    const podeVerVisitas = hasPermission(user, 'agenda_visitas');
+    const reunioesValidas = podeVerCalendario ? reunioesEventos : [];
+    const visitasValidas = podeVerVisitas ? visitas : [];
+    return filtrarCompromissosHoje(reunioesValidas, visitasValidas, user);
+  }, [reunioesEventos, visitas, user, permsVersion]);
 
   // Estados de Carregamento e Conexão
   const [status, setStatus] = useState<DbStatus | null>(null);
