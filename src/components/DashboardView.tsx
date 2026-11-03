@@ -478,32 +478,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Card 3: Total Mocidade */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs">
+        <div 
+          onClick={() => onNavigate('apontamentos-contagens')}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs hover:border-blue-400 dark:hover:border-blue-500/40 transition cursor-pointer group"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Total Mocidade ({currentYear})
             </span>
-            <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-105 transition">
               <Users className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline space-x-2">
             <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{totalMocidade.toLocaleString('pt-BR')}</span>
           </div>
+          <div className="mt-3 flex items-center text-xs text-blue-600 dark:text-blue-400 font-medium">
+            <span>Ver controle anual</span>
+            <ArrowRight className="w-3.5 h-3.5 ml-1" />
+          </div>
         </div>
 
         {/* Card 4: Santa Ceia */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs">
+        <div 
+          onClick={() => onNavigate('apontamentos-contagens')}
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs hover:border-purple-400 dark:hover:border-purple-500/40 transition cursor-pointer group"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Santa Ceia ({currentYear})
             </span>
-            <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
+            <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400 group-hover:scale-105 transition">
               <Layers className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline space-x-2">
             <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{totalSantaCeia.toLocaleString('pt-BR')}</span>
+          </div>
+          <div className="mt-3 flex items-center text-xs text-purple-600 dark:text-purple-400 font-medium">
+            <span>Ver controle anual</span>
+            <ArrowRight className="w-3.5 h-3.5 ml-1" />
           </div>
         </div>
 

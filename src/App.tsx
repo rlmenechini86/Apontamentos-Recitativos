@@ -300,6 +300,20 @@ export default function App() {
     clearApiCache('/api/recitativos');
   };
 
+  // Atualização em tempo real quando uma contagem (Mocidade / Santa Ceia) é salva no sistema
+  const handleContagemSaved = (saved: ContagemMocidade) => {
+    setContagens(prev => {
+      const idx = prev.findIndex(c => c.id === saved.id || (c.data === saved.data && c.comum_id === saved.comum_id && c.tipo === saved.tipo));
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = saved;
+        return next;
+      }
+      return [saved, ...prev];
+    });
+    clearApiCache('/api/contagens');
+  };
+
   useEffect(() => {
     Promise.all([
       fetchStatus(),
@@ -825,7 +839,13 @@ export default function App() {
 
           {/* ROTA 2.3: APONTAMENTOS - CONTAGENS */}
           {currentRoute === 'apontamentos-contagens' && (
-            <ContagensMocidadeView comuns={comuns} usuarios={usuarios} setores={setores} />
+            <ContagensMocidadeView 
+              comuns={comuns} 
+              usuarios={usuarios} 
+              setores={setores} 
+              contagens={contagens}
+              onContagemSaved={handleContagemSaved}
+            />
           )}
 
           {/* ROTA 3: ADMINISTRAÇÃO -> COMUM CONGREGAÇÃO */}

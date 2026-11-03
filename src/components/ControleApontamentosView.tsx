@@ -66,6 +66,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
   // Modal de Lançamento Direto na Tela
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalParams, setModalParams] = useState<RecitativoInitialParams | null>(null);
+  const [editingRecitativo, setEditingRecitativo] = useState<Recitativo | null>(null);
 
   // RBAC permissions check
   const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
@@ -76,6 +77,15 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
   useEffect(() => {
     if (initialParams && (initialParams.date || initialParams.comumId)) {
       setModalParams(initialParams);
+      if (initialParams.date && initialParams.comumId) {
+        const found = recitativos.find(r => 
+          (r.data ? r.data.split('T')[0] : '') === initialParams.date && 
+          r.comum_id === initialParams.comumId
+        );
+        setEditingRecitativo(found || null);
+      } else {
+        setEditingRecitativo(null);
+      }
       setIsModalOpen(true);
       if (initialParams.date) {
         const parts = initialParams.date.split('-');
@@ -83,7 +93,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
         if (parts[1]) setSelectedMonth(parts[1]);
       }
     }
-  }, [initialParams]);
+  }, [initialParams, recitativos]);
 
   useEffect(() => {
     if (propSetores && propSetores.length > 0) {
@@ -778,8 +788,15 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                               className="py-1.5 sm:py-2.5 px-1 sm:px-2.5 text-center border-l border-slate-200/60 dark:border-slate-800/60"
                             >
                               <div 
-                                className="inline-flex flex-col items-center justify-center px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/70 text-emerald-800 dark:text-emerald-200 shadow-2xs hover:border-emerald-400 transition cursor-default w-full"
-                                title={r ? `Apontamento Realizado!\n• Total: ${status.total}\n• Moços: ${r.mocos} | Moças: ${r.mocas}\n• Meninos: ${r.meninos} | Meninas: ${r.meninas}\n• Data: ${r.data}` : 'Apontamento Realizado'}
+                                onClick={() => {
+                                  if (r) {
+                                    setEditingRecitativo(r);
+                                    setModalParams(null);
+                                    setIsModalOpen(true);
+                                  }
+                                }}
+                                className="inline-flex flex-col items-center justify-center px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/70 text-emerald-800 dark:text-emerald-200 shadow-2xs hover:bg-emerald-100 hover:border-emerald-400 dark:hover:bg-emerald-900/60 transition cursor-pointer group/cell w-full"
+                                title={r ? `Apontamento Realizado!\n• Total: ${status.total}\n• Moços: ${r.mocos} | Moças: ${r.mocas}\n• Meninos: ${r.meninos} | Meninas: ${r.meninas}\n• Data: ${r.data}\n\nClique para visualizar ou editar.` : 'Apontamento Realizado (Clique para abrir)'}
                               >
                                 <div className="flex items-center space-x-1">
                                   <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
@@ -787,7 +804,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                                     {status.total}
                                   </span>
                                 </div>
-                                <span className="hidden sm:inline text-[9px] sm:text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium leading-none mt-0.5">
+                                <span className="hidden sm:inline text-[9px] sm:text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium leading-none mt-0.5 group-hover/cell:underline">
                                   recitativos
                                 </span>
                               </div>
@@ -829,6 +846,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                             >
                               <div 
                                 onClick={() => {
+                                  setEditingRecitativo(null);
                                   setModalParams({ date: sunday, comumId: comum.id });
                                   setIsModalOpen(true);
                                 }}
@@ -949,15 +967,18 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
           onClose={() => {
             setIsModalOpen(false);
             setModalParams(null);
+            setEditingRecitativo(null);
             onClearInitialParams?.();
           }}
-          initialData={null}
+          initialData={editingRecitativo}
           initialParams={modalParams}
           comuns={comuns}
           setores={setores}
+          recitativos={recitativos}
           onSuccess={async (saved) => {
             setIsModalOpen(false);
             setModalParams(null);
+            setEditingRecitativo(null);
             onClearInitialParams?.();
             if (saved) {
               setRecitativos(prev => {
