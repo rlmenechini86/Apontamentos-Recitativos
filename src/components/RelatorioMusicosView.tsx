@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Music, ArrowUpDown, BarChart as BarChartIcon, Users
+  Music, ArrowUpDown, BarChart as BarChartIcon, Users, Calendar, Filter, Sparkles
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList, Cell
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, Cell
 } from 'recharts';
-import { ComumCongregacao, AuxiliarJovens, Setor } from '../types';
+import { ComumCongregacao, ContagemMocidade, Setor } from '../types';
 import { apiGet } from '../utils/api';
-import { obterFamiliaInstrumento } from './AuxiliaresCJMView';
+import { Pagination } from './Pagination';
+import { FAMILIAS_INSTRUMENTOS } from './ContagensMocidadeView';
 import { useAuth } from '../context/AuthContext';
 
 interface Props {
@@ -15,20 +16,27 @@ interface Props {
   setores?: Setor[];
 }
 
+const CORES_FAMILIAS: Record<string, string> = {
+  'Cordas Friccionadas': '#3b82f6', // blue
+  'Madeiras': '#10b981',           // emerald
+  'Metais': '#f59e0b',             // amber
+  'Teclas': '#8b5cf6',             // violet
+  'Outros': '#64748b',             // slate
+};
+
 export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, setores: propSetores }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [setores, setSetores] = useState<Setor[]>(propSetores || []);
   const [selectedSetorId, setSelectedSetorId] = useState('');
-  const [auxiliares, setAuxiliares] = useState<AuxiliarJovens[]>([]);
-  
-  const isCJM = user?.perfis?.nome?.includes('CJM') || false;
-  const userIsGlobal = !isCJM && (user?.perfis?.nivel_acesso === 'global' || user?.perfis?.nivel_acesso === 'setor');
   const [selectedComumId, setSelectedComumId] = useState(user?.comum_congregacao_id || '');
-  
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedFamilia, setSelectedFamilia] = useState('');
-  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
-  const [familySortConfig, setFamilySortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>({ key: 'data', direction: 'desc' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+
+  const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
 
   useEffect(() => {
     if (propSetores && propSetores.length > 0) {
@@ -41,20 +49,13 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
     }
   }, [propSetores]);
 
-  // Força o valor inicial para a comum do usuário logado (corrige problemas de estado mantido ou load assíncrono)
-  useEffect(() => {
-    if (user?.comum_congregacao_id) {
-      setSelectedComumId(user.comum_congregacao_id);
-    }
-  }, [user?.comum_congregacao_id]);
-
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const resAuxiliares = await apiGet('/api/auxiliares').catch(() => ({ ok: true, json: () => ({ data: [] }) }));
-        const jsonAuxiliares = 'ok' in resAuxiliares ? await resAuxiliares.json() : { data: [] };
-        setAuxiliares(jsonAuxiliares.data || []);
+        const res = await apiGet('/api/contagens');
+        const json = res.ok ? await res.json() : { data: [] };
+        setContagens(json.data || []);
       } catch (err) {
         console.error('Erro ao carregar dados:', err);
       } finally {
@@ -65,7 +66,7 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
     fetchData();
   }, []);
 
-  const comuns = userIsGlobal ? propComuns : propComuns.filter(c => c.id === user?.comum_congregacao_id);
+  const comuns = propComuns;
 
   const comunsDoSetor = useMemo(() => {
     if (!selectedSetorId) return comuns;
@@ -76,474 +77,416 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
     );
   }, [comuns, setores, selectedSetorId]);
 
-  const musicos = useMemo(() => {
-    return auxiliares.filter(a => {
-      const activeAndMusico = a.ativo && a.is_musico === true;
-      const matchesComum = userIsGlobal 
-        ? (selectedComumId ? (a.comum_id || '') === selectedComumId : true)
-        : (a.comum_id || '') === (user?.comum_congregacao_id || '');
-      const matchesFamilia = selectedFamilia ? obterFamiliaInstrumento(a.instrumento || '') === selectedFamilia : true;
+  // Filtra as contagens apenas de Mocidade com apontamento de músicos
+  const filteredContagens = useMemo(() => {
+    return contagens.filter(c => {
+      if (c.tipo !== 'Mocidade') return false;
+      if (selectedYear && !c.data.startsWith(selectedYear)) return false;
 
-      const matchesSetor = !selectedSetorId || (() => {
-        const c = propComuns.find(item => item.id === a.comum_id);
-        const s = setores.find(st => st.id === selectedSetorId);
-        return c?.setor_id === selectedSetorId || (s && c?.setor_pertencente === s.nome);
-      })();
+      if (selectedSetorId) {
+        const comum = comuns.find(item => item.id === c.comum_id);
+        const selectedSetor = setores.find(s => s.id === selectedSetorId);
+        const matchesSetor = comum && (comum.setor_id === selectedSetorId || (selectedSetor && comum.setor_pertencente === selectedSetor.nome));
+        if (!matchesSetor) return false;
+      }
 
-      return activeAndMusico && matchesComum && matchesFamilia && matchesSetor;
+      if (selectedComumId && c.comum_id !== selectedComumId) return false;
+
+      if (selectedFamilia) {
+        const hasFam = Array.isArray(c.detalhes_musicos) && c.detalhes_musicos.some(d => d.familia === selectedFamilia && (Number(d.quantidade) || 0) > 0);
+        if (!hasFam) return false;
+      }
+
+      return true;
     });
-  }, [auxiliares, selectedComumId, selectedFamilia, selectedSetorId, propComuns, setores, userIsGlobal, user?.comum_congregacao_id]);
+  }, [contagens, selectedYear, selectedSetorId, selectedComumId, selectedFamilia, comuns, setores]);
 
-  const instrumentData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    let total = 0;
+  // Totais por família de instrumentos
+  const totalsByFamily = useMemo(() => {
+    const totals: Record<string, number> = {
+      'Cordas Friccionadas': 0,
+      'Madeiras': 0,
+      'Metais': 0,
+      'Teclas': 0,
+      'Outros': 0,
+    };
+    let totalGeral = 0;
 
-    musicos.forEach(m => {
-      if (m.instrumento) {
-        counts[m.instrumento] = (counts[m.instrumento] || 0) + 1;
-        total++;
+    filteredContagens.forEach(c => {
+      if (Array.isArray(c.detalhes_musicos)) {
+        c.detalhes_musicos.forEach(d => {
+          const qtd = Number(d.quantidade) || 0;
+          if (totals[d.familia] !== undefined) {
+            totals[d.familia] += qtd;
+          } else {
+            totals['Outros'] += qtd;
+          }
+          totalGeral += qtd;
+        });
+      } else if (c.total_musicos) {
+        totalGeral += Number(c.total_musicos) || 0;
       }
     });
 
-    const data = Object.keys(counts).map(inst => {
-      const count = counts[inst];
-      const percent = total > 0 ? ((count / total) * 100).toFixed(1) + '%' : '0%';
-      return {
-        instrumento: inst,
-        familia: obterFamiliaInstrumento(inst),
-        quantidade: count,
-        percentual: percent,
-        rawPercent: total > 0 ? (count / total) * 100 : 0
-      };
-    });
+    return {
+      totals,
+      totalGeral,
+      reunioesCount: filteredContagens.length,
+    };
+  }, [filteredContagens]);
 
-    if (sortConfig) {
-      data.sort((a, b) => {
-        let valA: any = a[sortConfig.key as keyof typeof a];
-        let valB: any = b[sortConfig.key as keyof typeof b];
+  // Dados para o Gráfico de Barras
+  const chartData = useMemo(() => {
+    return FAMILIAS_INSTRUMENTOS.map(fam => {
+      const qtd = totalsByFamily.totals[fam] || 0;
+      const pct = totalsByFamily.totalGeral > 0 
+        ? ((qtd / totalsByFamily.totalGeral) * 100).toFixed(1) 
+        : '0';
 
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    } else {
-      // Default sort by quantity descending
-      data.sort((a, b) => b.quantidade - a.quantidade);
-    }
-
-    return data;
-  }, [musicos, sortConfig]);
-
-  const totalMusicos = musicos.length;
-  const topInstrumento = useMemo(() => {
-    if (instrumentData.length === 0) return '-';
-    // copy and sort by quantity descending
-    const sorted = [...instrumentData].sort((a, b) => b.quantidade - a.quantidade);
-    return sorted[0].instrumento;
-  }, [instrumentData]);
-
-  const familyData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    let total = 0;
-
-    musicos.forEach(m => {
-      if (m.instrumento) {
-        const fam = obterFamiliaInstrumento(m.instrumento);
-        counts[fam] = (counts[fam] || 0) + 1;
-        total++;
-      }
-    });
-
-    const data = Object.keys(counts).map(fam => {
-      const count = counts[fam];
-      const percent = total > 0 ? ((count / total) * 100).toFixed(1) + '%' : '0%';
       return {
         familia: fam,
-        quantidade: count,
-        percentual: percent,
-        rawPercent: total > 0 ? (count / total) * 100 : 0
+        quantidade: qtd,
+        percentual: pct,
+        cor: CORES_FAMILIAS[fam] || '#10b981'
       };
     });
+  }, [totalsByFamily]);
 
-    if (familySortConfig) {
-      data.sort((a, b) => {
-        let valA: any = a[familySortConfig.key as keyof typeof a];
-        let valB: any = b[familySortConfig.key as keyof typeof b];
+  // Linhas detalhadas por reunião
+  const detailedRows = useMemo(() => {
+    return filteredContagens.map(c => {
+      const breakdown: Record<string, number> = {
+        'Cordas Friccionadas': 0,
+        'Madeiras': 0,
+        'Metais': 0,
+        'Teclas': 0,
+        'Outros': 0,
+      };
+      let rowTotal = 0;
 
-        if (valA < valB) return familySortConfig.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return familySortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    } else {
-      data.sort((a, b) => b.quantidade - a.quantidade);
-    }
-
-    return data;
-  }, [musicos, familySortConfig]);
-
-  const allFamilies = useMemo(() => {
-    const fams = new Set<string>();
-    auxiliares.forEach(a => {
-      if (a.is_musico && a.instrumento) {
-        fams.add(obterFamiliaInstrumento(a.instrumento));
+      if (Array.isArray(c.detalhes_musicos)) {
+        c.detalhes_musicos.forEach(d => {
+          const qtd = Number(d.quantidade) || 0;
+          if (breakdown[d.familia] !== undefined) {
+            breakdown[d.familia] += qtd;
+          } else {
+            breakdown['Outros'] += qtd;
+          }
+          rowTotal += qtd;
+        });
+      } else if (c.total_musicos) {
+        rowTotal = Number(c.total_musicos) || 0;
       }
+
+      const comumNome = c.comum_congregacao?.nome || comuns.find(item => item.id === c.comum_id)?.nome || '-';
+
+      return {
+        id: c.id,
+        data: c.data,
+        comumNome,
+        breakdown,
+        total: rowTotal,
+        presencaMocidade: c.quantidade || 0
+      };
     });
-    return Array.from(fams).sort();
-  }, [auxiliares]);
+  }, [filteredContagens, comuns]);
+
+  // Ordenação da Tabela
+  const sortedRows = useMemo(() => {
+    const list = [...detailedRows];
+    if (!sortConfig) return list;
+
+    list.sort((a, b) => {
+      let aVal: any = '';
+      let bVal: any = '';
+
+      if (sortConfig.key === 'data') {
+        aVal = a.data;
+        bVal = b.data;
+      } else if (sortConfig.key === 'comum') {
+        aVal = a.comumNome;
+        bVal = b.comumNome;
+      } else if (sortConfig.key === 'total') {
+        aVal = a.total;
+        bVal = b.total;
+      } else if (sortConfig.key === 'cordas') {
+        aVal = a.breakdown['Cordas Friccionadas'] || 0;
+        bVal = b.breakdown['Cordas Friccionadas'] || 0;
+      } else if (sortConfig.key === 'madeiras') {
+        aVal = a.breakdown['Madeiras'] || 0;
+        bVal = b.breakdown['Madeiras'] || 0;
+      } else if (sortConfig.key === 'metais') {
+        aVal = a.breakdown['Metais'] || 0;
+        bVal = b.breakdown['Metais'] || 0;
+      } else if (sortConfig.key === 'teclas') {
+        aVal = a.breakdown['Teclas'] || 0;
+        bVal = b.breakdown['Teclas'] || 0;
+      }
+
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return list;
+  }, [detailedRows, sortConfig]);
+
+  const paginatedRows = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedRows.slice(start, start + itemsPerPage);
+  }, [sortedRows, currentPage]);
 
   const handleSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const handleFamilySort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (familySortConfig && familySortConfig.key === key && familySortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setFamilySortConfig({ key, direction });
-  };
-
-  if (loading) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="mt-4 text-slate-500 font-medium">Carregando relatório...</p>
-      </div>
-    );
-  }
-
-  // Custom label inside the bars
-  const renderInsideLabel = (props: any) => {
-    const { x, y, width, height, value } = props;
-    if (value === 0 || height < 15) return null;
-    
-    return (
-      <text 
-        x={x + width / 2} 
-        y={y + height / 2 + 4} 
-        fill="#ffffff" 
-        fontSize="12" 
-        fontWeight="bold"
-        textAnchor="middle"
-      >
-        {value}
-      </text>
-    );
-  };
-
-  // Custom label on top of the bars
-  const renderTopLabel = (props: any) => {
-    const { x, y, width, value } = props;
-    if (value === 0) return null;
-    
-    return (
-      <text 
-        x={x + width / 2} 
-        y={y - 8} 
-        fill="#475569" 
-        fontSize="12" 
-        fontWeight="bold"
-        textAnchor="middle"
-      >
-        {value}
-      </text>
-    );
+    setSortConfig(current => {
+      if (current?.key === key) {
+        return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'desc' };
+    });
   };
 
   return (
-    <div className="flex-1 flex flex-col space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
-      {/* Filtros */}
-      <div className="flex flex-col md:flex-row gap-3 items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex flex-wrap items-center gap-3 w-full">
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Setor:
-            </label>
-            <select
-              value={selectedSetorId}
-              onChange={(e) => {
-                setSelectedSetorId(e.target.value);
-                setSelectedComumId('');
-              }}
-              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-            >
-              <option value="">Todos os Setores</option>
-              {setores.map((s) => (
-                <option key={s.id} value={s.id}>{s.nome}</option>
-              ))}
-            </select>
-          </div>
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white flex items-center space-x-2.5">
+            <Music className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            <span>Relatório de Músicos por Família de Instrumentos</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Distribuição consolidada da orquestra apontada nas Reuniões da Mocidade
+          </p>
+        </div>
 
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Comum:
-            </label>
-            <select
-              value={selectedComumId}
-              onChange={(e) => setSelectedComumId(e.target.value)}
-              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-            >
-              <option value="">{selectedSetorId ? 'Todas as Congregações do Setor' : 'Todas as Congregações'}</option>
-              {comunsDoSetor.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
-              ))}
-            </select>
-          </div>
+        {/* Filtros */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Ano */}
+          <select
+            value={selectedYear}
+            onChange={(e) => { setSelectedYear(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            {[2024, 2025, 2026, 2027].map(y => (
+              <option key={y} value={y.toString()}>{y}</option>
+            ))}
+          </select>
 
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Família:
-            </label>
-            <select
-              value={selectedFamilia}
-              onChange={(e) => setSelectedFamilia(e.target.value)}
-              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-            >
-              <option value="">Todas as Famílias</option>
-              {allFamilies.map((fam) => (
-                <option key={fam} value={fam}>{fam}</option>
-              ))}
-            </select>
-          </div>
+          {/* Setor */}
+          <select
+            value={selectedSetorId}
+            onChange={(e) => { setSelectedSetorId(e.target.value); setSelectedComumId(''); setCurrentPage(1); }}
+            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            <option value="">Setores (Todos)</option>
+            {setores.map(s => (
+              <option key={s.id} value={s.id}>{s.nome}</option>
+            ))}
+          </select>
+
+          {/* Comum */}
+          <select
+            value={selectedComumId}
+            onChange={(e) => { setSelectedComumId(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            <option value="">Congregações (Todas)</option>
+            {comunsDoSetor.map(c => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+
+          {/* Família */}
+          <select
+            value={selectedFamilia}
+            onChange={(e) => { setSelectedFamilia(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            <option value="">Famílias (Todas)</option>
+            {FAMILIAS_INSTRUMENTOS.map(f => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+          </select>
 
           {(selectedSetorId || selectedComumId || selectedFamilia) && (
             <button
-              onClick={() => {
-                setSelectedSetorId('');
-                setSelectedComumId('');
-                setSelectedFamilia('');
-              }}
-              className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition whitespace-nowrap"
+              onClick={() => { setSelectedSetorId(''); setSelectedComumId(''); setSelectedFamilia(''); setCurrentPage(1); }}
+              className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2 py-1 cursor-pointer"
             >
-              Limpar filtros
+              Limpar
             </button>
           )}
         </div>
       </div>
 
-      {/* Cards de Totais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Card Total Músicos */}
-        <div className="bg-emerald-600 text-white rounded-xl overflow-hidden shadow-md flex flex-col">
-          <div className="p-4 flex-1 flex flex-col justify-center items-center text-center">
-            <span className="text-4xl font-bold">{totalMusicos}</span>
-          </div>
-          <div className="bg-emerald-700 py-2 text-center text-xs font-bold uppercase tracking-wider flex items-center justify-center">
-            <Users className="w-4 h-4 mr-2" />
-            Total de Músicos
-          </div>
+      {/* KPI Cards por Família */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 shadow-xs">
+          <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">🎻 Cordas</p>
+          <p className="text-xl font-bold font-mono text-blue-700 dark:text-blue-400 mt-2">
+            {totalsByFamily.totals['Cordas Friccionadas'] || 0}
+          </p>
         </div>
 
-        {/* Card Instrumento Mais Comum */}
-        <div className="bg-sky-600 text-white rounded-xl overflow-hidden shadow-md flex flex-col">
-          <div className="p-4 flex-1 flex flex-col justify-center items-center text-center">
-            <span className="text-3xl font-bold">{topInstrumento}</span>
-          </div>
-          <div className="bg-sky-700 py-2 text-center text-xs font-bold uppercase tracking-wider flex items-center justify-center">
-            <Music className="w-4 h-4 mr-2" />
-            Instrumento Mais Comum
-          </div>
-        </div>
-      </div>
-
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Gráfico por Instrumento */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col">
-          <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex items-center">
-            <BarChartIcon className="w-5 h-5 mr-2 text-emerald-400" />
-            <h3 className="font-bold text-sm tracking-wider uppercase">QUANTIDADE POR INSTRUMENTO</h3>
-          </div>
-          <div className="p-4 bg-slate-50 dark:bg-slate-950/50 overflow-x-auto w-full h-[400px]">
-            <div style={{ minWidth: `${Math.max(400, instrumentData.length * 60)}px`, height: '100%' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={instrumentData} margin={{ top: 30, right: 10, left: 10, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis 
-                    dataKey="instrumento" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#475569', fontSize: 11, angle: -45, textAnchor: 'end' }} 
-                    interval={0}
-                    tickMargin={10}
-                  />
-                  <YAxis hide domain={[0, (dataMax: number) => (dataMax === 0 ? 5 : Math.ceil(dataMax * 1.2))]} />
-                  <RechartsTooltip 
-                    cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value, name) => [value, name === 'quantidade' ? 'Total' : name]}
-                  />
-                  <Bar dataKey="quantidade" fill="#0ea5e9" radius={[4, 4, 0, 0]} barSize={40}>
-                    <LabelList dataKey="quantidade" content={renderTopLabel} />
-                    {
-                      instrumentData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#0ea5e9' : '#38bdf8'} />
-                      ))
-                    }
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+        <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 shadow-xs">
+          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">🎷 Madeiras</p>
+          <p className="text-xl font-bold font-mono text-emerald-700 dark:text-emerald-400 mt-2">
+            {totalsByFamily.totals['Madeiras'] || 0}
+          </p>
         </div>
 
-        {/* Gráfico por Família */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col">
-          <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex items-center">
-            <BarChartIcon className="w-5 h-5 mr-2 text-violet-400" />
-            <h3 className="font-bold text-sm tracking-wider uppercase">QUANTIDADE POR FAMÍLIA</h3>
-          </div>
-          <div className="p-4 bg-slate-50 dark:bg-slate-950/50 overflow-x-auto w-full h-[400px]">
-            <div style={{ minWidth: `${Math.max(400, familyData.length * 80)}px`, height: '100%' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={familyData} margin={{ top: 30, right: 10, left: 10, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis 
-                    dataKey="familia" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#475569', fontSize: 11, angle: -45, textAnchor: 'end' }} 
-                    interval={0}
-                    tickMargin={10}
-                  />
-                  <YAxis hide domain={[0, (dataMax: number) => (dataMax === 0 ? 5 : Math.ceil(dataMax * 1.2))]} />
-                  <RechartsTooltip 
-                    cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    formatter={(value, name) => [value, name === 'quantidade' ? 'Total' : name]}
-                  />
-                  <Bar dataKey="quantidade" fill="#8b5cf6" radius={[4, 4, 0, 0]} barSize={60}>
-                    <LabelList dataKey="quantidade" content={renderTopLabel} />
-                    {
-                      familyData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#8b5cf6' : '#a78bfa'} />
-                      ))
-                    }
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+        <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 shadow-xs">
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">🎺 Metais</p>
+          <p className="text-xl font-bold font-mono text-amber-700 dark:text-amber-400 mt-2">
+            {totalsByFamily.totals['Metais'] || 0}
+          </p>
+        </div>
+
+        <div className="p-4 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40 shadow-xs">
+          <p className="text-xs font-semibold text-purple-700 dark:text-purple-400">🎹 Teclas</p>
+          <p className="text-xl font-bold font-mono text-purple-700 dark:text-purple-400 mt-2">
+            {totalsByFamily.totals['Teclas'] || 0}
+          </p>
+        </div>
+
+        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">🎵 Outros</p>
+          <p className="text-xl font-bold font-mono text-slate-800 dark:text-slate-200 mt-2">
+            {totalsByFamily.totals['Outros'] || 0}
+          </p>
+        </div>
+
+        <div className="p-4 rounded-xl bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/50 shadow-xs col-span-2 sm:col-span-1">
+          <p className="text-xs font-bold text-teal-800 dark:text-teal-300">🎼 Total Músicos</p>
+          <p className="text-xl font-bold font-mono text-teal-800 dark:text-teal-300 mt-2">
+            {totalsByFamily.totalGeral}
+          </p>
         </div>
       </div>
 
-      {/* Tabelas */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Tabela de Instrumentos */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col">
-          <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex items-center">
-            <Music className="w-5 h-5 mr-2 text-sky-400" />
-            <h3 className="font-bold text-sm tracking-wider uppercase">TABELA DE INSTRUMENTOS</h3>
+      {/* Gráfico Recharts */}
+      {totalsByFamily.totalGeral > 0 && (
+        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Distribuição por Família de Instrumento</span>
+            </h2>
           </div>
-          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-            <table className="w-full text-left text-sm text-slate-700">
-              <thead className="bg-slate-50 text-slate-600 text-xs uppercase sticky top-0 shadow-sm z-10">
+
+          <div className="h-64 sm:h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                <XAxis dataKey="familia" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <RechartsTooltip formatter={(value: any, name: any, item: any) => [`${value} músicos (${item.payload.percentual}%)`, 'Quantidade']} />
+                <Bar dataKey="quantidade" radius={[6, 6, 0, 0]}>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.cor} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Tabela Detalhada */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-white">
+            Apontamentos de Músicos por Reunião
+          </h2>
+          <span className="text-xs text-slate-400 font-mono">
+            {detailedRows.length} reuniões
+          </span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+            <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
+              <tr>
+                <th className="px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('data')}>
+                  <div className="flex items-center space-x-1"><span>Data</span><ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+                <th className="px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('comum')}>
+                  <div className="flex items-center space-x-1"><span>Congregação</span><ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+                <th className="px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 text-blue-700 dark:text-blue-400" onClick={() => handleSort('cordas')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Cordas</span><ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+                <th className="px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 text-emerald-700 dark:text-emerald-400" onClick={() => handleSort('madeiras')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Madeiras</span><ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+                <th className="px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 text-amber-700 dark:text-amber-400" onClick={() => handleSort('metais')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Metais</span><ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+                <th className="px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 text-purple-700 dark:text-purple-400" onClick={() => handleSort('teclas')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Teclas</span><ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+                <th className="px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 text-teal-700 dark:text-teal-400 font-bold" onClick={() => handleSort('total')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Total Músicos</span><ArrowUpDown className="w-3 h-3" /></div>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
+              {loading ? (
                 <tr>
-                  <th className="hidden sm:table-cell px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleSort('familia')}>
-                    <div className="flex items-center space-x-1"><span>Família</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
-                  </th>
-                  <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleSort('instrumento')}>
-                    <div className="flex items-center space-x-1"><span>Instrumento</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
-                  </th>
-                  <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 text-center" onClick={() => handleSort('quantidade')}>
-                    <div className="flex items-center justify-center space-x-1"><span>Qtd</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
-                  </th>
-                  <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 text-right" onClick={() => handleSort('rawPercent')}>
-                    <div className="flex items-center justify-end space-x-1"><span>%</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
-                  </th>
+                  <td colSpan={7} className="text-center py-10 text-slate-500">
+                    Carregando dados...
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {instrumentData.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                    <td className="hidden sm:table-cell px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-slate-600 text-xs sm:text-sm">{item.familia}</td>
-                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-slate-900 text-xs sm:text-sm">
-                      <div>{item.instrumento}</div>
-                      <div className="sm:hidden text-[10px] text-slate-500 font-normal">{item.familia}</div>
-                    </td>
-                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center font-bold text-slate-700 text-xs sm:text-sm">{item.quantidade}</td>
-                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-right">
-                      <div className="flex items-center justify-end space-x-1.5 sm:space-x-2">
-                        <span className="font-semibold text-slate-600 text-xs">{item.percentual}</span>
-                        <div className="w-12 sm:w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-emerald-500 rounded-full" 
-                            style={{ width: item.percentual }}
-                          ></div>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {instrumentData.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
-                      Nenhum músico ou instrumento encontrado.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Tabela de Famílias */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col">
-          <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex items-center">
-            <Users className="w-5 h-5 mr-2 text-violet-400" />
-            <h3 className="font-bold text-sm tracking-wider uppercase">TABELA DE FAMÍLIAS</h3>
-          </div>
-          <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-            <table className="w-full text-left text-sm text-slate-700">
-              <thead className="bg-slate-50 text-slate-600 text-xs uppercase sticky top-0 shadow-sm z-10">
+              ) : paginatedRows.length === 0 ? (
                 <tr>
-                  <th className="px-3 sm:px-6 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleFamilySort('familia')}>
-                    <div className="flex items-center space-x-1"><span>Família</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
-                  </th>
-                  <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 text-center" onClick={() => handleFamilySort('quantidade')}>
-                    <div className="flex items-center justify-center space-x-1"><span>Qtd</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
-                  </th>
-                  <th className="px-3 sm:px-6 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 text-right" onClick={() => handleFamilySort('rawPercent')}>
-                    <div className="flex items-center justify-end space-x-1"><span>%</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
-                  </th>
+                  <td colSpan={7} className="text-center py-10 text-slate-500">
+                    Nenhum apontamento de músicos encontrado para os filtros selecionados.
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {familyData.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-3 sm:px-6 py-2.5 sm:py-3 font-medium text-slate-900 text-xs sm:text-sm">{item.familia}</td>
-                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center font-bold text-slate-700 text-xs sm:text-sm">{item.quantidade}</td>
-                    <td className="px-3 sm:px-6 py-2.5 sm:py-3 text-right">
-                      <div className="flex items-center justify-end space-x-2 sm:space-x-3">
-                        <span className="font-semibold text-slate-600 text-xs sm:text-sm">{item.percentual}</span>
-                        <div className="w-16 sm:w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-violet-500 rounded-full" 
-                            style={{ width: item.percentual }}
-                          ></div>
-                        </div>
-                      </div>
+              ) : (
+                paginatedRows.map(row => (
+                  <tr key={row.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                    <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100 text-xs">
+                      {row.data ? row.data.split('T')[0].split('-').reverse().join('/') : '-'}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100 text-xs">
+                      {row.comumNome}
+                    </td>
+                    <td className="px-3 py-3 text-center font-mono font-bold text-blue-700 dark:text-blue-400 text-xs bg-blue-50/20 dark:bg-blue-950/10">
+                      {row.breakdown['Cordas Friccionadas'] || 0}
+                    </td>
+                    <td className="px-3 py-3 text-center font-mono font-bold text-emerald-700 dark:text-emerald-400 text-xs bg-emerald-50/20 dark:bg-emerald-950/10">
+                      {row.breakdown['Madeiras'] || 0}
+                    </td>
+                    <td className="px-3 py-3 text-center font-mono font-bold text-amber-700 dark:text-amber-400 text-xs bg-amber-50/20 dark:bg-amber-950/10">
+                      {row.breakdown['Metais'] || 0}
+                    </td>
+                    <td className="px-3 py-3 text-center font-mono font-bold text-purple-700 dark:text-purple-400 text-xs bg-purple-50/20 dark:bg-purple-950/10">
+                      {row.breakdown['Teclas'] || 0}
+                    </td>
+                    <td className="px-3 py-3 text-center font-mono font-bold text-teal-800 dark:text-teal-300 text-xs bg-teal-50/40 dark:bg-teal-950/30">
+                      {row.total}
                     </td>
                   </tr>
-                ))}
-                {familyData.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="px-6 py-12 text-center text-slate-500">
-                      Nenhuma família encontrada.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      </div>
 
+        {/* Paginação */}
+        {sortedRows.length > itemsPerPage && (
+          <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex justify-center">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(sortedRows.length / itemsPerPage)}
+              totalItems={sortedRows.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,28 +1,31 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Users, UserCheck, HeartHandshake, ArrowUpDown, BarChart as BarChartIcon
+  Users, User, Calendar, Building2, ArrowUpDown, TrendingUp, Filter, Sparkles
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList, Cell, ComposedChart, Line
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import { ComumCongregacao, Usuario, ContagemMocidade, AuxiliarJovens, Setor } from '../types';
+import { ComumCongregacao, ContagemMocidade, Setor } from '../types';
 import { apiGet } from '../utils/api';
+import { Pagination } from './Pagination';
 
 interface Props {
   comuns: ComumCongregacao[];
-  usuarios: Usuario[];
+  usuarios?: any[];
   setores?: Setor[];
 }
 
-export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, usuarios: propUsuarios, setores: propSetores }) => {
+export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, setores: propSetores }) => {
   const [loading, setLoading] = useState(true);
   const [setores, setSetores] = useState<Setor[]>(propSetores || []);
   const [selectedSetorId, setSelectedSetorId] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
-  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>({ key: 'data', direction: 'desc' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
 
   const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
-  const [auxiliares, setAuxiliares] = useState<AuxiliarJovens[]>([]);
 
   useEffect(() => {
     if (propSetores && propSetores.length > 0) {
@@ -39,18 +42,9 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [resContagens, resAuxiliares] = await Promise.all([
-          apiGet('/api/contagens'),
-          apiGet('/api/auxiliares').catch(() => ({ ok: true, json: () => ({ data: [] }) }))
-        ]);
-        
-        const [jsonContagens, jsonAuxiliares] = await Promise.all([
-          resContagens.ok ? resContagens.json() : { data: [] },
-          'ok' in resAuxiliares ? resAuxiliares.json() : { data: [] }
-        ]);
-
-        setContagens(jsonContagens.data || []);
-        setAuxiliares(jsonAuxiliares.data || []);
+        const res = await apiGet('/api/contagens');
+        const json = res.ok ? await res.json() : { data: [] };
+        setContagens(json.data || []);
       } catch (err) {
         console.error('Erro ao carregar dados:', err);
       } finally {
@@ -62,9 +56,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
   }, []);
 
   const comuns = propComuns;
-  const usuarios = propUsuarios;
 
-  // Comuns disponíveis conforme o setor selecionado
   const comunsDoSetor = useMemo(() => {
     if (!selectedSetorId) return comuns;
     const selectedSetor = setores.find(s => s.id === selectedSetorId);
@@ -74,411 +66,353 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, u
     );
   }, [comuns, setores, selectedSetorId]);
 
-  const filteredComuns = useMemo(() => {
-    return comuns.filter(c => {
+  // Filtra as contagens apenas de Mocidade
+  const filteredContagens = useMemo(() => {
+    return contagens.filter(c => {
+      if (c.tipo !== 'Mocidade') return false;
+      if (selectedYear && !c.data.startsWith(selectedYear)) return false;
+
       if (selectedSetorId) {
+        const comum = comuns.find(item => item.id === c.comum_id);
         const selectedSetor = setores.find(s => s.id === selectedSetorId);
-        const matchesSetor = c.setor_id === selectedSetorId || (selectedSetor && c.setor_pertencente === selectedSetor.nome);
+        const matchesSetor = comum && (comum.setor_id === selectedSetorId || (selectedSetor && comum.setor_pertencente === selectedSetor.nome));
         if (!matchesSetor) return false;
       }
-      if (selectedComumId) {
-        if (c.id !== selectedComumId) return false;
-      }
+
+      if (selectedComumId && c.comum_id !== selectedComumId) return false;
+
       return true;
     });
-  }, [comuns, setores, selectedSetorId, selectedComumId]);
+  }, [contagens, selectedYear, selectedSetorId, selectedComumId, comuns, setores]);
 
-  const filteredComumIds = useMemo(() => new Set(filteredComuns.map(c => c.id)), [filteredComuns]);
+  // Totais Consolidados
+  const totals = useMemo(() => {
+    let mocos = 0;
+    let mocas = 0;
+    let presencaTotal = 0;
 
-  const isCjmOrSecretarioCjm = (cargo?: string | null) => {
-    if (!cargo) return false;
-    const c = cargo.trim().toLowerCase();
-    return c === 'cjm' || c === 'secretário / cjm' || c === 'secretario / cjm';
-  };
-
-  const totalCjms = useMemo(() => {
-    return usuarios.filter(u => 
-      u.ativo &&
-      isCjmOrSecretarioCjm(u.cargo_ministerio) &&
-      (u.comum_congregacao_id && filteredComumIds.has(u.comum_congregacao_id))
-    ).length;
-  }, [usuarios, filteredComumIds]);
-
-  const totalAuxiliares = useMemo(() => {
-    return auxiliares.filter(a => 
-      a.ativo && a.is_auxiliar === true &&
-      (a.comum_id && filteredComumIds.has(a.comum_id))
-    ).length;
-  }, [auxiliares, filteredComumIds]);
-
-  const totalMocidade = useMemo(() => {
-    // Pega a maior contagem de mocidade de cada congregação no ano atual
-    const currentYear = new Date().getFullYear().toString();
-    const maxPorComum: Record<string, number> = {};
-    
-    contagens.forEach(c => {
-      if (c.tipo === 'Mocidade' && c.data.startsWith(currentYear)) {
-        if (!filteredComumIds.has(c.comum_id)) return;
-        
-        if (!maxPorComum[c.comum_id] || c.quantidade > maxPorComum[c.comum_id]) {
-          maxPorComum[c.comum_id] = c.quantidade;
-        }
-      }
+    filteredContagens.forEach(c => {
+      mocos += Number(c.auxiliares_mocos) || 0;
+      mocas += Number(c.auxiliares_mocas) || 0;
+      presencaTotal += Number(c.quantidade) || 0;
     });
-    
-    return Object.values(maxPorComum).reduce((a, b) => a + b, 0);
-  }, [contagens, filteredComumIds]);
 
+    const totalAux = mocos + mocas;
+    const mediaPorReuniao = filteredContagens.length > 0 ? (totalAux / filteredContagens.length).toFixed(1) : '0';
+
+    return {
+      mocos,
+      mocas,
+      totalAux,
+      presencaTotal,
+      reunioesCount: filteredContagens.length,
+      mediaPorReuniao
+    };
+  }, [filteredContagens]);
+
+  // Dados para o Gráfico Recharts (agrupado por congregação)
   const chartData = useMemo(() => {
-    const data = filteredComuns.map(comum => {
-      const auxComum = auxiliares.filter(a => a.comum_id === comum.id && a.ativo && a.is_auxiliar === true);
-      const irmaos = auxComum.filter(a => a.sexo === 'Masculino').length;
-      const irmas = auxComum.filter(a => a.sexo === 'Feminino').length;
-      const total = irmaos + irmas;
-      
-      // Encurta nomes muito grandes
-      let shortName = comum.nome;
-      if (shortName.length > 15) {
-        shortName = shortName.substring(0, 15) + '...';
-      }
+    const agrupado: Record<string, { nome: string; mocos: number; mocas: number; total: number }> = {};
 
-      return {
-        id: comum.id,
-        nome: comum.nome,
-        shortName,
-        irmaos,
-        irmas,
-        total
-      };
-    });
-    
-    // Sort by name or total? The mockup seems random or alphabetical.
-    return data.sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [filteredComuns, auxiliares]);
-
-  const tableData = useMemo(() => {
-    let data = auxiliares.filter(a => a.ativo && a.is_auxiliar === true);
-    if (selectedComumId) {
-      data = data.filter(a => a.comum_id === selectedComumId);
-    }
-    
-    const processed = data.map(aux => {
-      const comumNome = comuns.find(c => c.id === aux.comum_id)?.nome || 'Desconhecida';
-      const cjmNames = usuarios
-        .filter(u => u.comum_congregacao_id === aux.comum_id && isCjmOrSecretarioCjm(u.cargo_ministerio) && u.ativo)
-        .map(u => u.nome_completo)
-        .join(', ') || '-';
-      
-      let tempoAnos: number | '-' = '-';
-      let dataFormatada = '-';
-      if (aux.data_apresentacao) {
-        const [y, m, d] = aux.data_apresentacao.split('-');
-        dataFormatada = `${d}/${m}/${y}`;
-        const presDate = new Date(Number(y), Number(m) - 1, Number(d));
-        const today = new Date();
-        let years = today.getFullYear() - presDate.getFullYear();
-        if (today.getMonth() < presDate.getMonth() || (today.getMonth() === presDate.getMonth() && today.getDate() < presDate.getDate())) {
-          years--;
-        }
-        tempoAnos = years >= 0 ? years : 0;
+    filteredContagens.forEach(c => {
+      const comumNome = c.comum_congregacao?.nome || comuns.find(item => item.id === c.comum_id)?.nome || 'Outros';
+      if (!agrupado[comumNome]) {
+        agrupado[comumNome] = { nome: comumNome, mocos: 0, mocas: 0, total: 0 };
       }
-      return { ...aux, comumNome, cjmNames, dataFormatada, tempoAnos, timeMs: aux.data_apresentacao ? new Date(aux.data_apresentacao).getTime() : 0 };
+      agrupado[comumNome].mocos += Number(c.auxiliares_mocos) || 0;
+      agrupado[comumNome].mocas += Number(c.auxiliares_mocas) || 0;
+      agrupado[comumNome].total += (Number(c.auxiliares_mocos) || 0) + (Number(c.auxiliares_mocas) || 0);
     });
 
-    if (sortConfig) {
-      processed.sort((a, b) => {
-        let valA: any = a[sortConfig.key as keyof typeof a];
-        let valB: any = b[sortConfig.key as keyof typeof b];
-        
-        if (sortConfig.key === 'tempoAnos') {
-          valA = a.tempoAnos === '-' ? -1 : a.tempoAnos;
-          valB = b.tempoAnos === '-' ? -1 : b.tempoAnos;
-        } else if (sortConfig.key === 'dataFormatada') {
-           valA = a.timeMs;
-           valB = b.timeMs;
-        }
+    return Object.values(agrupado).sort((a, b) => b.total - a.total).slice(0, 10);
+  }, [filteredContagens, comuns]);
 
-        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
-      });
-    } else {
-      processed.sort((a, b) => a.comumNome.localeCompare(b.comumNome) || a.nome.localeCompare(b.nome));
-    }
-    return processed;
-  }, [auxiliares, comuns, usuarios, selectedComumId, sortConfig]);
+  // Ordenação da Tabela
+  const sortedItems = useMemo(() => {
+    const list = [...filteredContagens];
+    if (!sortConfig) return list;
+
+    list.sort((a, b) => {
+      let aVal: any = '';
+      let bVal: any = '';
+
+      if (sortConfig.key === 'data') {
+        aVal = a.data;
+        bVal = b.data;
+      } else if (sortConfig.key === 'comum') {
+        aVal = a.comum_congregacao?.nome || '';
+        bVal = b.comum_congregacao?.nome || '';
+      } else if (sortConfig.key === 'mocos') {
+        aVal = a.auxiliares_mocos || 0;
+        bVal = b.auxiliares_mocos || 0;
+      } else if (sortConfig.key === 'mocas') {
+        aVal = a.auxiliares_mocas || 0;
+        bVal = b.auxiliares_mocas || 0;
+      } else if (sortConfig.key === 'total') {
+        aVal = (a.auxiliares_mocos || 0) + (a.auxiliares_mocas || 0);
+        bVal = (b.auxiliares_mocos || 0) + (b.auxiliares_mocas || 0);
+      } else if (sortConfig.key === 'presenca') {
+        aVal = a.quantidade || 0;
+        bVal = b.quantidade || 0;
+      }
+
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return list;
+  }, [filteredContagens, sortConfig]);
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedItems.slice(start, start + itemsPerPage);
+  }, [sortedItems, currentPage]);
 
   const handleSort = (key: string) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  if (loading) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-slate-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="mt-4 text-slate-500 font-medium">Carregando relatório...</p>
-      </div>
-    );
-  }
-
-  // Custom Label for the total on top of stacked bars
-  const renderTotalLabel = (props: any) => {
-    const { x, y, width, value, index } = props;
-    let total = chartData[index]?.total;
-    if (total === undefined || total === null) {
-       total = Array.isArray(value) ? value[1] : Number(value);
-    }
-    
-    if (!total || total === 0) return null;
-
-    const cx = width ? Number(x) + Number(width) / 2 : Number(x);
-
-    return (
-      <g>
-        <rect 
-          x={cx - 12} 
-          y={Number(y) - 25} 
-          width="24" 
-          height="16" 
-          fill="#f1f5f9" 
-          rx="4"
-        />
-        <text 
-          x={cx} 
-          y={Number(y) - 14} 
-          fill="#1e293b" 
-          fontSize="11" 
-          fontWeight="bold"
-          textAnchor="middle"
-        >
-          {total}
-        </text>
-      </g>
-    );
-  };
-
-  // Custom label inside the bars
-  const renderInsideLabel = (props: any) => {
-    const { x, y, width, height, value } = props;
-    if (value === 0 || height < 15) return null;
-    
-    return (
-      <text 
-        x={x + width / 2} 
-        y={y + height / 2 + 4} 
-        fill="#ffffff" 
-        fontSize="10" 
-        fontWeight="bold"
-        textAnchor="middle"
-      >
-        {value}
-      </text>
-    );
+    setSortConfig(current => {
+      if (current?.key === key) {
+        return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key, direction: 'desc' };
+    });
   };
 
   return (
-    <div className="flex-1 flex flex-col space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
-      {/* Filtros: Setor e Comum Congregação */}
-      <div className="flex flex-col md:flex-row gap-3 items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex flex-wrap items-center gap-3 w-full">
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Setor:
-            </label>
-            <select
-              value={selectedSetorId}
-              onChange={(e) => {
-                setSelectedSetorId(e.target.value);
-                setSelectedComumId('');
-              }}
-              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-            >
-              <option value="">Todos os Setores</option>
-              {setores.map((s) => (
-                <option key={s.id} value={s.id}>{s.nome}</option>
-              ))}
-            </select>
-          </div>
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white flex items-center space-x-2.5">
+            <Users className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            <span>Relatório de Auxiliares de Jovens</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Consolidado de presença de Auxiliares Moços e Moças nas Reuniões da Mocidade
+          </p>
+        </div>
 
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-              Comum:
-            </label>
-            <select
-              value={selectedComumId}
-              onChange={(e) => setSelectedComumId(e.target.value)}
-              className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-            >
-              <option value="">{selectedSetorId ? 'Todas as Congregações do Setor' : 'Todas as Congregações'}</option>
-              {comunsDoSetor.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
-              ))}
-            </select>
-          </div>
+        {/* Filtros de Topo */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Ano */}
+          <select
+            value={selectedYear}
+            onChange={(e) => { setSelectedYear(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            {[2024, 2025, 2026, 2027].map(y => (
+              <option key={y} value={y.toString()}>{y}</option>
+            ))}
+          </select>
+
+          {/* Setor */}
+          <select
+            value={selectedSetorId}
+            onChange={(e) => { setSelectedSetorId(e.target.value); setSelectedComumId(''); setCurrentPage(1); }}
+            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            <option value="">Setores (Todos)</option>
+            {setores.map(s => (
+              <option key={s.id} value={s.id}>{s.nome}</option>
+            ))}
+          </select>
+
+          {/* Comum */}
+          <select
+            value={selectedComumId}
+            onChange={(e) => { setSelectedComumId(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+          >
+            <option value="">Congregações (Todas)</option>
+            {comunsDoSetor.map(c => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
 
           {(selectedSetorId || selectedComumId) && (
             <button
-              onClick={() => {
-                setSelectedSetorId('');
-                setSelectedComumId('');
-              }}
-              className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition whitespace-nowrap"
+              onClick={() => { setSelectedSetorId(''); setSelectedComumId(''); setCurrentPage(1); }}
+              className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2 py-1 cursor-pointer"
             >
-              Limpar filtros
+              Limpar
             </button>
           )}
         </div>
       </div>
 
-      {/* Cards de Totais */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        
-        {/* Card CJMs */}
-        <div className="bg-slate-700 text-white rounded-xl overflow-hidden shadow-md flex flex-col">
-          <div className="p-4 flex-1 flex flex-col justify-center items-center text-center">
-            <span className="text-3xl font-bold">{totalCjms}</span>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="flex items-center space-x-2 text-slate-500 dark:text-slate-400 text-xs">
+            <Calendar className="w-4 h-4 text-slate-500" />
+            <span>Reuniões com Apontamento</span>
           </div>
-          <div className="bg-slate-800 py-2 text-center text-xs font-bold uppercase tracking-wider">
-            Quantidade de CJMs
-          </div>
+          <p className="text-xl font-bold font-mono text-slate-900 dark:text-white mt-2">
+            {totals.reunioesCount}
+          </p>
         </div>
 
-        {/* Card Auxiliares */}
-        <div className="bg-slate-600 text-white rounded-xl overflow-hidden shadow-md flex flex-col">
-          <div className="p-4 flex-1 flex flex-col justify-center items-center text-center">
-            <span className="text-3xl font-bold">{totalAuxiliares}</span>
+        <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 shadow-xs">
+          <div className="flex items-center space-x-2 text-blue-700 dark:text-blue-400 text-xs font-semibold">
+            <User className="w-4 h-4" />
+            <span>Auxiliares Moços</span>
           </div>
-          <div className="bg-slate-800 py-2 text-center text-xs font-bold uppercase tracking-wider">
-            Quantidade de Auxiliares
-          </div>
+          <p className="text-xl font-bold font-mono text-blue-700 dark:text-blue-400 mt-2">
+            {totals.mocos}
+          </p>
         </div>
 
-        {/* Card Mocidade */}
-        <div className="bg-slate-500 text-white rounded-xl overflow-hidden shadow-md flex flex-col">
-          <div className="p-4 flex-1 flex flex-col justify-center items-center text-center">
-            <span className="text-3xl font-bold">{totalMocidade.toLocaleString('pt-BR')}</span>
+        <div className="p-4 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/40 shadow-xs">
+          <div className="flex items-center space-x-2 text-purple-700 dark:text-purple-400 text-xs font-semibold">
+            <User className="w-4 h-4" />
+            <span>Auxiliares Moças</span>
           </div>
-          <div className="bg-slate-800 py-2 text-center text-xs font-bold uppercase tracking-wider">
-            Quantidade de Mocidade
-          </div>
+          <p className="text-xl font-bold font-mono text-purple-700 dark:text-purple-400 mt-2">
+            {totals.mocas}
+          </p>
         </div>
 
+        <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 shadow-xs">
+          <div className="flex items-center space-x-2 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
+            <Users className="w-4 h-4" />
+            <span>Total Auxiliares</span>
+          </div>
+          <p className="text-xl font-bold font-mono text-emerald-700 dark:text-emerald-400 mt-2">
+            {totals.totalAux}
+          </p>
+        </div>
+
+        <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 shadow-xs col-span-2 sm:col-span-1">
+          <div className="flex items-center space-x-2 text-amber-700 dark:text-amber-400 text-xs font-semibold">
+            <TrendingUp className="w-4 h-4" />
+            <span>Média / Reunião</span>
+          </div>
+          <p className="text-xl font-bold font-mono text-amber-700 dark:text-amber-400 mt-2">
+            {totals.mediaPorReuniao}
+          </p>
+        </div>
       </div>
 
-      {/* Gráfico Stacked */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col">
-        <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex items-center">
-          <BarChartIcon className="w-5 h-5 mr-2 text-emerald-400" />
-          <h3 className="font-bold text-sm tracking-wider uppercase">RELATÓRIO DE AUXILIARES DE JOVENS E MOCIDADE</h3>
-        </div>
-        <div className="p-4 bg-slate-50 dark:bg-slate-950/50 overflow-x-auto w-full h-[600px]">
-          <div style={{ minWidth: `${Math.max(1000, chartData.length * 45)}px`, height: '100%' }}>
+      {/* Gráfico Recharts */}
+      {chartData.length > 0 && (
+        <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center space-x-2">
+              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Distribuição de Auxiliares Moços e Moças por Congregação (Top 10)</span>
+            </h2>
+          </div>
+
+          <div className="h-64 sm:h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={{ top: 80, right: 10, left: 10, bottom: 150 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              <XAxis 
-                dataKey="shortName" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fill: '#475569', fontSize: 11, angle: -45, textAnchor: 'end' }} 
-                interval={0}
-                tickMargin={10}
-              />
-              <YAxis hide domain={[0, (dataMax: number) => (dataMax === 0 ? 5 : Math.ceil(dataMax * 1.3))]} />
-            <RechartsTooltip 
-              cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-              formatter={(value, name) => [value, name]}
-            />
-            
-            <Legend verticalAlign="top" height={36} iconType="circle" />
-            
-            <Bar dataKey="irmaos" name="Moços (Azul)" stackId="a" fill="#3b82f6" barSize={20}>
-              <LabelList dataKey="irmaos" content={renderInsideLabel} />
-            </Bar>
-            <Bar dataKey="irmas" name="Moças (Rosa)" stackId="a" fill="#f472b6" barSize={20}>
-              <LabelList dataKey="irmas" content={renderInsideLabel} />
-            </Bar>
-
-            {/* Linha invisível para forçar a renderização do total mesmo se Moças (irmas) for 0 */}
-            <Line dataKey="total" type="monotone" stroke="none" dot={false} activeDot={false} isAnimationActive={false}>
-              <LabelList dataKey="total" content={renderTotalLabel} />
-            </Line>
-          </ComposedChart>
-        </ResponsiveContainer>
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                <XAxis dataKey="nome" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" height={40} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <RechartsTooltip />
+                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <Bar dataKey="mocos" name="Auxiliares Moços" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="mocas" name="Auxiliares Moças" fill="#a855f7" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Tabela Detalhada */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col">
-        <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex items-center">
-          <Users className="w-5 h-5 mr-2 text-sky-400" />
-          <h3 className="font-bold text-sm tracking-wider uppercase">DETALHAMENTO DOS AUXILIARES DE JOVENS</h3>
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-white">
+            Listagem de Apontamentos de Auxiliares
+          </h2>
+          <span className="text-xs text-slate-400 font-mono">
+            {filteredContagens.length} registros
+          </span>
         </div>
-        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-          <table className="w-full text-left text-sm text-slate-700">
-            <thead className="bg-slate-50 text-slate-600 text-xs uppercase sticky top-0 shadow-sm z-10">
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+            <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
               <tr>
-                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleSort('nome')}>
-                  <div className="flex items-center space-x-1"><span>Nome</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('data')}>
+                  <div className="flex items-center space-x-1"><span>Data</span><ArrowUpDown className="w-3 h-3" /></div>
                 </th>
-                <th className="hidden sm:table-cell px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleSort('sexo')}>
-                  <div className="flex items-center space-x-1"><span>Sexo</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="px-4 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('comum')}>
+                  <div className="flex items-center space-x-1"><span>Congregação</span><ArrowUpDown className="w-3 h-3" /></div>
                 </th>
-                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleSort('comumNome')}>
-                  <div className="flex items-center space-x-1"><span>Comum</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 text-blue-700 dark:text-blue-400 font-bold" onClick={() => handleSort('mocos')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Moços</span><ArrowUpDown className="w-3 h-3" /></div>
                 </th>
-                <th className="hidden lg:table-cell px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleSort('cjmNames')}>
-                  <div className="flex items-center space-x-1"><span>CJM</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 text-purple-700 dark:text-purple-400 font-bold" onClick={() => handleSort('mocas')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Moças</span><ArrowUpDown className="w-3 h-3" /></div>
                 </th>
-                <th className="hidden md:table-cell px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100" onClick={() => handleSort('dataFormatada')}>
-                  <div className="flex items-center space-x-1"><span>Apres.</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 text-emerald-700 dark:text-emerald-400 font-bold" onClick={() => handleSort('total')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Total Aux.</span><ArrowUpDown className="w-3 h-3" /></div>
                 </th>
-                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-center cursor-pointer hover:bg-slate-100" onClick={() => handleSort('tempoAnos')}>
-                  <div className="flex items-center justify-center space-x-1"><span>Anos</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="px-3 py-3 text-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('presenca')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Presença Mocidade</span><ArrowUpDown className="w-3 h-3" /></div>
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
-              {tableData.map(aux => (
-                <tr key={aux.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-xs sm:text-sm">
-                    <div>{aux.nome}</div>
-                    <div className="sm:hidden text-[10px] text-slate-500 mt-0.5">
-                      {aux.sexo} {aux.dataFormatada ? `• ${aux.dataFormatada}` : ''}
-                    </div>
-                  </td>
-                  <td className="hidden sm:table-cell px-3 sm:px-4 py-2.5 sm:py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      aux.sexo === 'Feminino' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700'
-                    }`}>
-                      {aux.sexo}
-                    </span>
-                  </td>
-                  <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm">{aux.comumNome}</td>
-                  <td className="hidden lg:table-cell px-3 sm:px-4 py-2.5 sm:py-3 text-xs">{aux.cjmNames}</td>
-                  <td className="hidden md:table-cell px-3 sm:px-4 py-2.5 sm:py-3 whitespace-nowrap text-xs">{aux.dataFormatada}</td>
-                  <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center font-semibold text-xs sm:text-sm">{aux.tempoAnos}</td>
-                </tr>
-              ))}
-              {tableData.length === 0 && (
+            <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
+              {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                    Nenhum auxiliar encontrado.
+                  <td colSpan={6} className="text-center py-10 text-slate-500">
+                    Carregando dados...
                   </td>
                 </tr>
+              ) : paginatedItems.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-10 text-slate-500">
+                    Nenhum apontamento com auxiliares encontrado para os filtros selecionados.
+                  </td>
+                </tr>
+              ) : (
+                paginatedItems.map(item => {
+                  const totalAux = (item.auxiliares_mocos || 0) + (item.auxiliares_mocas || 0);
+                  const comumNome = item.comum_congregacao?.nome || comuns.find(c => c.id === item.comum_id)?.nome || '-';
+
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                      <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100 text-xs">
+                        {item.data ? item.data.split('T')[0].split('-').reverse().join('/') : '-'}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100 text-xs">
+                        {comumNome}
+                      </td>
+                      <td className="px-3 py-3 text-center font-mono font-bold text-blue-700 dark:text-blue-400 text-xs bg-blue-50/30 dark:bg-blue-950/20">
+                        {item.auxiliares_mocos || 0}
+                      </td>
+                      <td className="px-3 py-3 text-center font-mono font-bold text-purple-700 dark:text-purple-400 text-xs bg-purple-50/30 dark:bg-purple-950/20">
+                        {item.auxiliares_mocas || 0}
+                      </td>
+                      <td className="px-3 py-3 text-center font-mono font-bold text-emerald-700 dark:text-emerald-400 text-xs bg-emerald-50/40 dark:bg-emerald-950/30">
+                        {totalAux}
+                      </td>
+                      <td className="px-3 py-3 text-center font-mono font-bold text-slate-700 dark:text-slate-300 text-xs">
+                        {item.quantidade || 0}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
-      </div>
 
+        {/* Paginação */}
+        {sortedItems.length > itemsPerPage && (
+          <div className="p-3 border-t border-slate-200 dark:border-slate-800 flex justify-center">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(sortedItems.length / itemsPerPage)}
+              totalItems={sortedItems.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -168,12 +168,21 @@ export interface UpdateRecitativoDTO {
   meninas?: number;
 }
 
+export interface DetalheMusicoFamilia {
+  familia: string;
+  quantidade: number;
+}
+
 export interface ContagemMocidade {
   id: string;
   data: string;
   quantidade: number;
   comum_id: string;
   tipo: 'Santa Ceia' | 'Mocidade';
+  auxiliares_mocas?: number;
+  auxiliares_mocos?: number;
+  total_musicos?: number;
+  detalhes_musicos?: DetalheMusicoFamilia[];
   cadastrado_por: string | null;
   created_at?: string;
   updated_at?: string;
@@ -184,6 +193,10 @@ export interface CreateContagemMocidadeDTO {
   quantidade: number;
   comum_id: string;
   tipo: 'Santa Ceia' | 'Mocidade';
+  auxiliares_mocas?: number;
+  auxiliares_mocos?: number;
+  total_musicos?: number;
+  detalhes_musicos?: DetalheMusicoFamilia[];
   cadastrado_por?: string | null;
 }
 
@@ -192,6 +205,10 @@ export interface UpdateContagemMocidadeDTO {
   quantidade?: number;
   comum_id?: string;
   tipo?: 'Santa Ceia' | 'Mocidade';
+  auxiliares_mocas?: number;
+  auxiliares_mocos?: number;
+  total_musicos?: number;
+  detalhes_musicos?: DetalheMusicoFamilia[];
 }
 
 export interface Anciao {

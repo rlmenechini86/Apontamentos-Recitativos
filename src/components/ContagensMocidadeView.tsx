@@ -1,13 +1,21 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  Users, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, 
+  Users, Search, Plus, Music, RefreshCw, Trash2, Edit2, Calendar, Building2, 
   User, ArrowUpDown, Lock, AlertCircle, CheckCircle2, TrendingUp, 
   Layers, ListFilter, Sparkles, Filter, ChevronRight, Eye, EyeOff
 } from 'lucide-react';
-import { ContagemMocidade, ComumCongregacao, Usuario, Setor } from '../types';
+import { ContagemMocidade, ComumCongregacao, Usuario, Setor, DetalheMusicoFamilia } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from './Pagination';
 import { apiGet, clearApiCache } from '../utils/api';
+
+export const FAMILIAS_INSTRUMENTOS = [
+  'Cordas Friccionadas',
+  'Madeiras',
+  'Metais',
+  'Teclas',
+  'Outros'
+];
 
 export interface ContagemInitialParams {
   date?: string;
@@ -1170,7 +1178,13 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                     <div className="flex items-center space-x-1"><span>Tipo</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                   </th>
                   <th className="px-3 sm:px-4 py-3 text-center font-bold cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('quantidade')}>
-                    <div className="flex items-center justify-center space-x-1"><span>Qtd</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                    <div className="flex items-center justify-center space-x-1"><span>Presença</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                  </th>
+                  <th className="hidden sm:table-cell px-3 sm:px-4 py-3 text-center font-bold">
+                    <span>Auxiliares</span>
+                  </th>
+                  <th className="hidden sm:table-cell px-3 sm:px-4 py-3 text-center font-bold">
+                    <span>Músicos</span>
                   </th>
                   <th className="hidden md:table-cell px-3 sm:px-4 py-3">
                     <div className="flex items-center space-x-1"><span>Cadastrado por</span></div>
@@ -1313,6 +1327,9 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
     quantidade: 0,
     comum_id: '',
     tipo: 'Mocidade' as 'Santa Ceia' | 'Mocidade',
+    auxiliares_mocos: 0,
+    auxiliares_mocas: 0,
+    detalhes_musicos: [] as DetalheMusicoFamilia[],
   });
   const [loading, setLoading] = useState(false);
   const recordKeyRef = useRef<string | null>(null);
@@ -1337,6 +1354,9 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
         quantidade: initialData.quantidade ?? 0,
         comum_id: initialData.comum_id,
         tipo: initialData.tipo,
+        auxiliares_mocos: initialData.auxiliares_mocos ?? 0,
+        auxiliares_mocas: initialData.auxiliares_mocas ?? 0,
+        detalhes_musicos: Array.isArray(initialData.detalhes_musicos) ? initialData.detalhes_musicos : [],
       });
     } else {
       setActiveItem(null);
@@ -1359,6 +1379,9 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
         quantidade: 0,
         comum_id: boundComum ? boundComum.id : targetComumId,
         tipo: initialParams?.tipo || 'Mocidade',
+        auxiliares_mocos: 0,
+        auxiliares_mocas: 0,
+        detalhes_musicos: [],
       });
     }
   }, [initialData, initialParams, comuns, setores, isRestrictedUser, userComumId, user?.comum_congregacao?.nome]);
@@ -1384,6 +1407,9 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
         quantidade: activeItem.quantidade ?? 0,
         comum_id: activeItem.comum_id,
         tipo: activeItem.tipo,
+        auxiliares_mocos: activeItem.auxiliares_mocos ?? 0,
+        auxiliares_mocas: activeItem.auxiliares_mocas ?? 0,
+        detalhes_musicos: Array.isArray(activeItem.detalhes_musicos) ? activeItem.detalhes_musicos : [],
       });
       setIsEditing(false);
     } else {
@@ -1401,6 +1427,34 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
     return 'Sistema';
   }, [activeItem, usuarios]);
 
+  const handleAddFamilia = () => {
+    setFormData(prev => ({
+      ...prev,
+      detalhes_musicos: [
+        ...prev.detalhes_musicos,
+        { familia: 'Cordas Friccionadas', quantidade: 1 }
+      ]
+    }));
+  };
+
+  const handleUpdateFamilia = (index: number, field: 'familia' | 'quantidade', value: any) => {
+    setFormData(prev => {
+      const updated = [...prev.detalhes_musicos];
+      updated[index] = {
+        ...updated[index],
+        [field]: field === 'quantidade' ? Math.max(0, Number(value) || 0) : value
+      };
+      return { ...prev, detalhes_musicos: updated };
+    });
+  };
+
+  const handleRemoveFamilia = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      detalhes_musicos: prev.detalhes_musicos.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -1408,8 +1462,10 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
 
       const enforcedComumId = (isRestrictedUser && userComumId) ? userComumId : formData.comum_id;
 
+      const totalMusicos = formData.detalhes_musicos.reduce((s, m) => s + (Number(m.quantidade) || 0), 0);
       const payload = {
         ...formData,
+        total_musicos: totalMusicos,
         comum_id: enforcedComumId,
         cadastrado_por: user?.id || null
       };
@@ -1432,6 +1488,10 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
           comum_id: enforcedComumId,
           quantidade: Number(formData.quantidade) || 0,
           tipo: formData.tipo,
+          auxiliares_mocos: Number(formData.auxiliares_mocos) || 0,
+          auxiliares_mocas: Number(formData.auxiliares_mocas) || 0,
+          total_musicos: totalMusicos,
+          detalhes_musicos: formData.detalhes_musicos,
           cadastrado_por: user?.id || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -1595,9 +1655,11 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
             </select>
           </div>
 
-          {/* Quantidade */}
+          {/* Quantidade Geral */}
           <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Quantidade Apontada *</label>
+            <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">
+              {formData.tipo === 'Mocidade' ? 'Presença Geral da Mocidade *' : 'Participantes da Santa Ceia *'}
+            </label>
             <input
               type="number"
               min="0"
@@ -1610,6 +1672,126 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
               }`}
             />
           </div>
+
+          {/* Seção Unificada: Auxiliares e Músicos (Exclusivo para Reunião da Mocidade) */}
+          {formData.tipo === 'Mocidade' && (
+            <div className="space-y-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+              {/* Auxiliares de Jovens */}
+              <div className="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+                      Auxiliares de Jovens
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                    Total: {(Number(formData.auxiliares_mocos) || 0) + (Number(formData.auxiliares_mocas) || 0)}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                      Auxiliares Moços
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      disabled={!isEditing}
+                      value={formData.auxiliares_mocos}
+                      onChange={(e) => setFormData({ ...formData, auxiliares_mocos: Math.max(0, Number(e.target.value) || 0) })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                      Auxiliares Moças
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      disabled={!isEditing}
+                      value={formData.auxiliares_mocas}
+                      onChange={(e) => setFormData({ ...formData, auxiliares_mocas: Math.max(0, Number(e.target.value) || 0) })}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Músicos por Família */}
+              <div className="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Music className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+                      Músicos por Família de Instrumento
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                    Total: {formData.detalhes_musicos.reduce((acc, curr) => acc + (Number(curr.quantidade) || 0), 0)}
+                  </span>
+                </div>
+
+                {formData.detalhes_musicos.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic py-1">
+                    Nenhuma família de instrumento apontada.
+                  </p>
+                ) : (
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {formData.detalhes_musicos.map((item, idx) => (
+                      <div key={idx} className="flex items-center space-x-2 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
+                        <select
+                          disabled={!isEditing}
+                          value={item.familia}
+                          onChange={(e) => handleUpdateFamilia(idx, 'familia', e.target.value)}
+                          className="flex-1 bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
+                        >
+                          {FAMILIAS_INSTRUMENTOS.map(f => (
+                            <option key={f} value={f}>{f}</option>
+                          ))}
+                        </select>
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-[11px] text-slate-400">Qtd:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            disabled={!isEditing}
+                            value={item.quantidade}
+                            onChange={(e) => handleUpdateFamilia(idx, 'quantidade', e.target.value)}
+                            className="w-16 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-xs font-mono font-bold text-center text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-emerald-500"
+                          />
+                        </div>
+                        {isEditing && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFamilia(idx)}
+                            className="p-1 text-slate-400 hover:text-rose-500 transition cursor-pointer"
+                            title="Remover família"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleAddFamilia}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-lg border border-emerald-200 dark:border-emerald-800/60 transition cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Adicionar Família</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Rodapé e Botões */}
           <div className="pt-4 flex items-center justify-between border-t border-slate-200 dark:border-slate-800">

@@ -1158,11 +1158,6 @@ export default function App() {
             <AdminAnciaosView setores={setores} />
           )}
 
-          {/* ROTA 7: ADMINISTRAÇÃO -> AUXILIARES E CJM */}
-          {currentRoute === 'admin-auxiliares' && (
-            <AuxiliaresCJMView comuns={comuns} setores={setores} />
-          )}
-
           {currentRoute === 'admin-tipos-evento' && (
             <AdminTiposEventoView 
               tiposEvento={tiposEvento} 
