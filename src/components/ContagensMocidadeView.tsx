@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Users, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, 
   User, ArrowUpDown, Lock, AlertCircle, CheckCircle2, TrendingUp, 
-  Layers, ListFilter, Sparkles, Filter, ChevronRight
+  Layers, ListFilter, Sparkles, Filter, ChevronRight, Eye, EyeOff
 } from 'lucide-react';
 import { ContagemMocidade, ComumCongregacao, Usuario, Setor } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -67,6 +67,17 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+
+  // Opção de Mostrar / Ocultar Total Lançado
+  const [showTotals, setShowTotals] = useState<boolean>(() => {
+    const saved = localStorage.getItem('contagens_mocidade_show_totals') ?? localStorage.getItem('controle_apontamentos_show_totals');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('contagens_mocidade_show_totals', String(showTotals));
+  }, [showTotals]);
+
 
   useEffect(() => {
     if (propComuns) setComuns(propComuns.filter(c => c.ativo));
@@ -384,6 +395,24 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
 
         {/* Botões de Ação Topo */}
         <div className="flex items-center space-x-2 self-start md:self-auto">
+          {/* Botão Mostrar / Ocultar Total Lançado */}
+          <button
+            onClick={() => setShowTotals(prev => !prev)}
+            className={`px-3.5 py-2.5 rounded-xl border transition text-xs sm:text-sm font-semibold flex items-center space-x-1.5 cursor-pointer shadow-2xs ${
+              showTotals 
+                ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100' 
+                : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750'
+            }`}
+            title={showTotals ? "Ocultar quantidade total lançada" : "Mostrar quantidade total lançada"}
+          >
+            {showTotals ? (
+              <Eye className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <EyeOff className="w-4 h-4 text-slate-500" />
+            )}
+            <span>{showTotals ? 'Ocultar Totais' : 'Mostrar Totais'}</span>
+          </button>
+
           <button
             onClick={() => fetchContagens(true)}
             disabled={loading || refreshing}
@@ -458,7 +487,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
           </div>
           <div className="mt-2 flex items-baseline justify-between">
             <span className="text-xl sm:text-2xl font-black text-blue-700 dark:text-blue-400 font-mono">
-              {yearStats.mocidadeTotalQtd.toLocaleString()}
+              {showTotals ? yearStats.mocidadeTotalQtd.toLocaleString() : '••••'}
             </span>
             <span className="text-[10px] font-semibold text-blue-600/80 dark:text-blue-400">
               {yearStats.mocidadeRealizados}/{yearStats.totalComuns} comuns
@@ -474,7 +503,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
           </div>
           <div className="mt-2 flex items-baseline justify-between">
             <span className="text-xl sm:text-2xl font-black text-amber-800 dark:text-amber-400 font-mono">
-              {yearStats.santaCeiaTotalQtd.toLocaleString()}
+              {showTotals ? yearStats.santaCeiaTotalQtd.toLocaleString() : '••••'}
             </span>
             <span className="text-[10px] font-semibold text-amber-700/80 dark:text-amber-400">
               {yearStats.santaCeiaRealizados}/{yearStats.totalComuns} comuns
@@ -720,12 +749,20 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                             <CheckCircle2 className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                           </div>
                           <div className="w-full flex items-baseline space-x-1">
-                            <span className="text-base font-black text-blue-700 dark:text-blue-300 font-mono">
-                              {itemMoc.quantidade}
-                            </span>
-                            <span className="text-[9px] text-blue-600/80 dark:text-blue-400 font-semibold">
-                              jovens
-                            </span>
+                            {showTotals ? (
+                              <>
+                                <span className="text-base font-black text-blue-700 dark:text-blue-300 font-mono">
+                                  {itemMoc.quantidade}
+                                </span>
+                                <span className="text-[9px] text-blue-600/80 dark:text-blue-400 font-semibold">
+                                  jovens
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                                Realizado
+                              </span>
+                            )}
                           </div>
                           <div className="w-full flex items-center space-x-1 mt-1 text-[9px] font-medium text-blue-800 dark:text-blue-300 bg-blue-100/90 dark:bg-blue-900/60 px-1.5 py-0.5 rounded truncate">
                             <User className="w-2.5 h-2.5 flex-shrink-0" />
@@ -759,12 +796,20 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                             <Sparkles className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                           </div>
                           <div className="w-full flex items-baseline space-x-1">
-                            <span className="text-base font-black text-amber-800 dark:text-amber-300 font-mono">
-                              {itemSC.quantidade}
-                            </span>
-                            <span className="text-[9px] text-amber-700/80 dark:text-amber-400 font-semibold">
-                              irmãos
-                            </span>
+                            {showTotals ? (
+                              <>
+                                <span className="text-base font-black text-amber-800 dark:text-amber-300 font-mono">
+                                  {itemSC.quantidade}
+                                </span>
+                                <span className="text-[9px] text-amber-700/80 dark:text-amber-400 font-semibold">
+                                  irmãos
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                                Realizado
+                              </span>
+                            )}
                           </div>
                           <div className="w-full flex items-center space-x-1 mt-1 text-[9px] font-medium text-amber-900 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-900/60 px-1.5 py-0.5 rounded truncate">
                             <User className="w-2.5 h-2.5 flex-shrink-0" />
@@ -878,12 +923,20 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                               >
                                 <div className="flex items-center space-x-1.5">
                                   <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                                  <span className="font-mono font-black text-sm text-blue-700 dark:text-blue-300">
-                                    {itemMoc.quantidade}
-                                  </span>
-                                  <span className="text-[10px] text-blue-600/80 dark:text-blue-400 font-semibold">
-                                    jovens
-                                  </span>
+                                  {showTotals ? (
+                                    <>
+                                      <span className="font-mono font-black text-sm text-blue-700 dark:text-blue-300">
+                                        {itemMoc.quantidade}
+                                      </span>
+                                      <span className="text-[10px] text-blue-600/80 dark:text-blue-400 font-semibold">
+                                        jovens
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="font-bold text-xs text-blue-700 dark:text-blue-300">
+                                      Realizado
+                                    </span>
+                                  )}
                                 </div>
 
                                 {/* Linha Visível com o Usuário que inseriu */}
@@ -919,12 +972,20 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                               >
                                 <div className="flex items-center space-x-1.5">
                                   <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-                                  <span className="font-mono font-black text-sm text-amber-800 dark:text-amber-300">
-                                    {itemSC.quantidade}
-                                  </span>
-                                  <span className="text-[10px] text-amber-700/80 dark:text-amber-400 font-semibold">
-                                    irmãos
-                                  </span>
+                                  {showTotals ? (
+                                    <>
+                                      <span className="font-mono font-black text-sm text-amber-800 dark:text-amber-300">
+                                        {itemSC.quantidade}
+                                      </span>
+                                      <span className="text-[10px] text-amber-700/80 dark:text-amber-400 font-semibold">
+                                        irmãos
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="font-bold text-xs text-amber-800 dark:text-amber-300">
+                                      Realizado
+                                    </span>
+                                  )}
                                 </div>
 
                                 {/* Linha Visível com o Usuário que inseriu */}
@@ -985,7 +1046,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                       <td className="px-3 sm:px-4 py-3 text-center">
                         <div className="flex flex-col items-center">
                           <span className="font-mono font-black text-sm sm:text-base text-blue-700 dark:text-blue-400">
-                            {yearStats.mocidadeTotalQtd.toLocaleString()} jovens
+                            {showTotals ? `${yearStats.mocidadeTotalQtd.toLocaleString()} jovens` : '••••'}
                           </span>
                           <span className="text-[10px] text-slate-400">
                             {yearStats.mocidadeRealizados}/{yearStats.totalComuns} congregações
@@ -995,7 +1056,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                       <td className="px-3 sm:px-4 py-3 text-center">
                         <div className="flex flex-col items-center">
                           <span className="font-mono font-black text-sm sm:text-base text-amber-700 dark:text-amber-400">
-                            {yearStats.santaCeiaTotalQtd.toLocaleString()} irmãos
+                            {showTotals ? `${yearStats.santaCeiaTotalQtd.toLocaleString()} irmãos` : '••••'}
                           </span>
                           <span className="text-[10px] text-slate-400">
                             {yearStats.santaCeiaRealizados}/{yearStats.totalComuns} congregações
@@ -1058,9 +1119,15 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                               className="inline-flex flex-col items-center justify-center p-1.5 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/70 hover:bg-emerald-100/70 hover:border-emerald-400 transition cursor-pointer w-full"
                               title={`${multiAnoTipo} ${year} - ${comum.nome}\nQtd: ${item.quantidade}\nCadastrado por: ${author}`}
                             >
-                              <span className="font-mono font-extrabold text-xs text-emerald-800 dark:text-emerald-300">
-                                {item.quantidade}
-                              </span>
+                              {showTotals ? (
+                                <span className="font-mono font-extrabold text-xs text-emerald-800 dark:text-emerald-300">
+                                  {item.quantidade}
+                                </span>
+                              ) : (
+                                <span className="font-bold text-[11px] text-emerald-800 dark:text-emerald-300">
+                                  Realizado
+                                </span>
+                              )}
                               <div className="flex items-center space-x-0.5 text-[9px] text-slate-500 dark:text-slate-400 truncate max-w-[100px] mt-0.5">
                                 <User className="w-2.5 h-2.5 flex-shrink-0" />
                                 <span className="truncate">{author}</span>
@@ -1150,7 +1217,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                           </span>
                         </td>
                         <td className="px-3 sm:px-4 py-2.5 sm:py-3.5 text-center font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-500/10 text-xs sm:text-sm">
-                          {item.quantidade}
+                          {showTotals ? item.quantidade : '••••'}
                         </td>
                         <td className="hidden md:table-cell px-3 sm:px-4 py-2.5 sm:py-3.5">
                           <div className="flex items-center space-x-1.5">

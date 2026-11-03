@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Building2, ClipboardCheck, Calendar, Search, CheckCircle2, 
   AlertCircle, AlertTriangle, Clock, Sparkles, Filter, 
-  Printer, RefreshCw, Users, ShieldCheck, ArrowRight, Eye
+  Printer, RefreshCw, Users, ShieldCheck, ArrowRight, Eye, EyeOff
 } from 'lucide-react';
 import { ComumCongregacao, Recitativo, ContagemMocidade, Usuario, Setor } from '../types';
 import { apiGet, clearApiCache } from '../utils/api';
@@ -67,6 +67,17 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalParams, setModalParams] = useState<RecitativoInitialParams | null>(null);
   const [editingRecitativo, setEditingRecitativo] = useState<Recitativo | null>(null);
+
+  // Opção de Mostrar / Ocultar Total Lançado
+  const [showTotals, setShowTotals] = useState<boolean>(() => {
+    const saved = localStorage.getItem('controle_apontamentos_show_totals');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('controle_apontamentos_show_totals', String(showTotals));
+  }, [showTotals]);
+
 
   // RBAC permissions check
   const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
@@ -388,6 +399,24 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
 
         {/* Action Buttons */}
         <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+          {/* Botão Mostrar / Ocultar Total Lançado */}
+          <button
+            onClick={() => setShowTotals(prev => !prev)}
+            className={`px-3.5 py-2 rounded-xl border transition text-xs font-semibold flex items-center space-x-1.5 cursor-pointer shadow-2xs ${
+              showTotals 
+                ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100' 
+                : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750'
+            }`}
+            title={showTotals ? "Ocultar quantidade de recitativos lançados" : "Mostrar quantidade de recitativos lançados"}
+          >
+            {showTotals ? (
+              <Eye className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <EyeOff className="w-3.5 h-3.5 text-slate-500" />
+            )}
+            <span>{showTotals ? 'Ocultar Totais' : 'Mostrar Totais'}</span>
+          </button>
+
           <button
             onClick={() => fetchData(true)}
             disabled={refreshing}
@@ -474,10 +503,10 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
           </div>
           <div className="mt-3">
             <span className="text-2xl font-black text-slate-900 dark:text-white">
-              {stats.totalRecitadosNoMes.toLocaleString('pt-BR')}
+              {showTotals ? stats.totalRecitadosNoMes.toLocaleString('pt-BR') : '••••'}
             </span>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate" title={`${stats.totalMocos} moços, ${stats.totalMocas} moças, ${stats.totalCriancas} crianças`}>
-              {stats.totalMocos}M • {stats.totalMocas}F • {stats.totalCriancas} Crianças
+              {showTotals ? `${stats.totalMocos}M • ${stats.totalMocas}F • ${stats.totalCriancas} Crianças` : 'Totais ocultados'}
             </p>
           </div>
         </div>
@@ -800,13 +829,21 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                               >
                                 <div className="flex items-center space-x-1">
                                   <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                                  <span className="font-extrabold text-[11px] sm:text-xs text-emerald-700 dark:text-emerald-300">
-                                    {status.total}
-                                  </span>
+                                  {showTotals ? (
+                                    <span className="font-extrabold text-[11px] sm:text-xs text-emerald-700 dark:text-emerald-300">
+                                      {status.total}
+                                    </span>
+                                  ) : (
+                                    <span className="font-bold text-[10px] sm:text-[11px] text-emerald-700 dark:text-emerald-300">
+                                      Realizado
+                                    </span>
+                                  )}
                                 </div>
-                                <span className="hidden sm:inline text-[9px] sm:text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium leading-none mt-0.5 group-hover/cell:underline">
-                                  recitativos
-                                </span>
+                                {showTotals && (
+                                  <span className="hidden sm:inline text-[9px] sm:text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-medium leading-none mt-0.5 group-hover/cell:underline">
+                                    recitativos
+                                  </span>
+                                )}
                               </div>
                             </td>
                           );
@@ -938,7 +975,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                           <span className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white">
                             {totalRealizados}/{filteredComuns.length}
                           </span>
-                          {totalRecitadosNoDomingo > 0 && (
+                          {showTotals && totalRecitadosNoDomingo > 0 && (
                             <span className="text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate max-w-[70px]">
                               {totalRecitadosNoDomingo} <span className="hidden sm:inline">recit.</span>
                             </span>
