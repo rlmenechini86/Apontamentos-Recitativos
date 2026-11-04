@@ -56,6 +56,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
 
   // Modos de Exibição: 'anual' (Matriz do Ano) | 'multi-anual' (Histórico Anos) | 'tabela' (Lista Tradicional)
   const [viewMode, setViewMode] = useState<'anual' | 'multi-anual' | 'tabela'>('anual');
+  const [mobileLayout, setMobileLayout] = useState<'cards' | 'tabela'>('tabela');
   const [multiAnoTipo, setMultiAnoTipo] = useState<'Mocidade' | 'Santa Ceia'>('Mocidade');
 
   // Modal
@@ -676,8 +677,36 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
       {/* 4. VISÃO 1: CONTROLE ANUAL (MATRIZ DO ANO SELECIONADO - PADRÃO) */}
       {viewMode === 'anual' && (
         <div className="space-y-4">
+          {/* Seletor Mobile entre Cards e Tabela */}
+          <div className="flex md:hidden items-center justify-between p-2.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Visualização no Celular:</span>
+            <div className="flex items-center space-x-1 bg-white dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setMobileLayout('tabela')}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                  mobileLayout === 'tabela'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                Tabela
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileLayout('cards')}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition ${
+                  mobileLayout === 'cards'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                Cards
+              </button>
+            </div>
+          </div>
           {/* A. VISÃO MOBILE: CARDS DINÂMICOS PARA TELAS PEQUENAS (block md:hidden) */}
-          <div className="block md:hidden space-y-2">
+          <div className={`${mobileLayout === 'cards' ? 'block md:hidden' : 'hidden'} space-y-2`}>
             {loading ? (
               <div className="p-8 text-center text-slate-500 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
                 <RefreshCw className="w-5 h-5 animate-spin text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
@@ -768,6 +797,16 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                             <User className="w-2.5 h-2.5 flex-shrink-0" />
                             <span className="truncate">{authorMoc}</span>
                           </div>
+                          {showTotals && (
+                            <div className="w-full mt-1.5 pt-1.5 border-t border-blue-200/60 dark:border-blue-800/50 flex flex-wrap gap-1 text-[9px] font-semibold">
+                              <span className="px-1.5 py-0.5 rounded bg-blue-100/90 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200">
+                                Aux: {(Number(itemMoc.auxiliares_mocos) || 0) + (Number(itemMoc.auxiliares_mocas) || 0)}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-purple-100/90 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200">
+                                Músicos: {itemMoc.total_musicos || (Array.isArray(itemMoc.detalhes_musicos) ? itemMoc.detalhes_musicos.reduce((s, m) => s + (Number(m.quantidade) || 0), 0) : 0)}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div
@@ -839,7 +878,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
           </div>
 
           {/* B. VISÃO DESKTOP / TABLET (hidden md:block): TABELA MATRIZ COMPLETA COM COLUNA FIXA */}
-          <div className="hidden md:block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
+          <div className={`${mobileLayout === 'tabela' ? 'block' : 'hidden md:block'} bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs`}>
             <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-600">
               <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
                 <thead className="bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 text-xs uppercase tracking-wider sticky top-0 z-10 shadow-sm border-b border-slate-200 dark:border-slate-800">
@@ -877,7 +916,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                 <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800/60">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-12 text-slate-500">
+                      <td colSpan={8} className="text-center py-12 text-slate-500">
                         <div className="flex items-center justify-center space-x-2">
                           <RefreshCw className="w-5 h-5 animate-spin text-emerald-600 dark:text-emerald-400" />
                           <span>Carregando dados anuais...</span>
@@ -1238,11 +1277,11 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                   <th className="px-3 sm:px-4 py-3 text-center font-bold cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800" onClick={() => handleSort('quantidade')}>
                     <div className="flex items-center justify-center space-x-1"><span>Presença</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                   </th>
-                  <th className="hidden sm:table-cell px-3 sm:px-4 py-3 text-center font-bold">
+                  <th className="px-2 sm:px-4 py-3 text-center font-bold text-blue-700 dark:text-blue-400">
                     <span>Auxiliares</span>
                   </th>
-                  <th className="hidden sm:table-cell px-3 sm:px-4 py-3 text-center font-bold">
-                    <span>Músicos</span>
+                  <th className="px-2 sm:px-4 py-3 text-center font-bold text-purple-700 dark:text-purple-400">
+                    <span>Total Músicos</span>
                   </th>
                   <th className="hidden md:table-cell px-3 sm:px-4 py-3">
                     <div className="flex items-center space-x-1"><span>Cadastrado por</span></div>
@@ -1290,6 +1329,24 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                         </td>
                         <td className="px-3 sm:px-4 py-2.5 sm:py-3.5 text-center font-mono font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-500/10 text-xs sm:text-sm">
                           {showTotals ? item.quantidade : '••••'}
+                        </td>
+                        {/* Auxiliares */}
+                        <td className="px-2 sm:px-4 py-2.5 sm:py-3.5 text-center font-mono font-bold text-blue-700 dark:text-blue-400 text-xs sm:text-sm bg-blue-50/20 dark:bg-blue-950/10">
+                          {item.tipo === 'Mocidade' ? (
+                            <span>{(Number(item.auxiliares_mocos) || 0) + (Number(item.auxiliares_mocas) || 0)}</span>
+                          ) : (
+                            <span className="text-slate-300 dark:text-slate-600 font-normal">-</span>
+                          )}
+                        </td>
+                        {/* Total Músicos */}
+                        <td className="px-2 sm:px-4 py-2.5 sm:py-3.5 text-center font-mono font-bold text-purple-700 dark:text-purple-400 text-xs sm:text-sm bg-purple-50/20 dark:bg-purple-950/10">
+                          {item.tipo === 'Mocidade' ? (
+                            <span>
+                              {item.total_musicos || (Array.isArray(item.detalhes_musicos) ? item.detalhes_musicos.reduce((s, m) => s + (Number(m.quantidade) || 0), 0) : 0)}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 dark:text-slate-600 font-normal">-</span>
+                          )}
                         </td>
                         <td className="hidden md:table-cell px-3 sm:px-4 py-2.5 sm:py-3.5">
                           <div className="flex items-center space-x-1.5">
