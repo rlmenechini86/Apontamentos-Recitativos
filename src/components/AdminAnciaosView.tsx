@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  UserPlus, 
-  Edit2, 
-  Trash2, 
-  Search, 
-  ArrowUpDown, 
-  Building2, 
-  MapPin, 
+import {
+  UserPlus,
+  Edit2,
+  Trash2,
+  Search,
+  ArrowUpDown,
+  Building2,
+  MapPin,
   Filter,
   CheckCircle2,
   XCircle,
@@ -21,16 +21,19 @@ interface AdminAnciaosViewProps {
 }
 
 export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: propSetores }) => {
+  const isSetorRestricted = Boolean(propSetores && propSetores.length === 1);
+  const singleSetor = isSetorRestricted ? propSetores![0] : null;
+
   const [anciaos, setAnciaos] = useState<Anciao[]>([]);
   const [setores, setSetores] = useState<Setor[]>(propSetores || []);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSetorFilter, setSelectedSetorFilter] = useState('');
+  const [selectedSetorFilter, setSelectedSetorFilter] = useState(singleSetor ? singleSetor.nome : '');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  
+
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
   const handleSort = (key: string) => {
@@ -40,7 +43,7 @@ export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: pro
     }
     setSortConfig({ key, direction });
   };
-  
+
   const [formData, setFormData] = useState({
     nome: '',
     setor_id: '',
@@ -82,17 +85,20 @@ export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: pro
       fetchSetores();
     } else {
       setSetores(propSetores);
+      if (propSetores.length === 1) {
+        setSelectedSetorFilter(propSetores[0].nome);
+      }
     }
   }, [propSetores]);
 
   const handleOpenNew = () => {
     setEditingId(null);
-    setFormData({ 
-      nome: '', 
-      setor_id: '',
-      setor_pertencente: '',
-      data_cadastro: new Date().toISOString().split('T')[0], 
-      ativo: true 
+    setFormData({
+      nome: '',
+      setor_id: singleSetor ? singleSetor.id : '',
+      setor_pertencente: singleSetor ? singleSetor.nome : '',
+      data_cadastro: new Date().toISOString().split('T')[0],
+      ativo: true
     });
     setIsModalOpen(true);
   };
@@ -105,12 +111,12 @@ export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: pro
       if (match) matchedSetorId = match.id;
     }
 
-    setFormData({ 
-      nome: a.nome, 
+    setFormData({
+      nome: a.nome,
       setor_id: matchedSetorId,
       setor_pertencente: a.setor_pertencente || '',
-      data_cadastro: a.data_cadastro || '', 
-      ativo: a.ativo 
+      data_cadastro: a.data_cadastro || '',
+      ativo: a.ativo
     });
     setIsModalOpen(true);
   };
@@ -181,11 +187,11 @@ export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: pro
   };
 
   const filtered = anciaos.filter(a => {
-    const matchSearch = !searchTerm || 
+    const matchSearch = !searchTerm ||
       a.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (a.setor_pertencente && a.setor_pertencente.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchSetor = !selectedSetorFilter || 
+
+    const matchSetor = !selectedSetorFilter ||
       (a.setor_pertencente && a.setor_pertencente.toLowerCase().includes(selectedSetorFilter.toLowerCase())) ||
       a.setor_id === selectedSetorFilter;
 
@@ -201,8 +207,8 @@ export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: pro
         valA = a.data_cadastro ? new Date(a.data_cadastro).getTime() : 0;
         valB = b.data_cadastro ? new Date(b.data_cadastro).getTime() : 0;
       } else if (typeof valA === 'string' && typeof valB === 'string') {
-        return sortConfig.direction === 'asc' 
-          ? valA.localeCompare(valB) 
+        return sortConfig.direction === 'asc'
+          ? valA.localeCompare(valB)
           : valB.localeCompare(valA);
       }
 
@@ -238,9 +244,10 @@ export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: pro
             <select
               value={selectedSetorFilter}
               onChange={(e) => { setSelectedSetorFilter(e.target.value); setCurrentPage(1); }}
-              className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+              disabled={isSetorRestricted}
+              className={`bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 ${isSetorRestricted ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'}`}
             >
-              <option value="">Todos os Setores</option>
+              {!isSetorRestricted && <option value="">Todos os Setores</option>}
               {setores.map(s => (
                 <option key={s.id} value={s.nome}>{s.nome}</option>
               ))}
@@ -327,15 +334,15 @@ export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: pro
                     )}
                   </td>
                   <td className="px-3 sm:px-4 py-3 text-right space-x-1 sm:space-x-2">
-                    <button 
-                      onClick={() => handleOpenEdit(a)} 
+                    <button
+                      onClick={() => handleOpenEdit(a)}
                       title="Editar ancião"
                       className="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition bg-slate-100 dark:bg-slate-800 rounded-lg cursor-pointer"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button 
-                      onClick={() => handleDelete(a.id, a.nome)} 
+                    <button
+                      onClick={() => handleDelete(a.id, a.nome)}
                       title="Excluir ancião"
                       className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition bg-slate-100 dark:bg-slate-800 rounded-lg cursor-pointer"
                     >
@@ -369,14 +376,14 @@ export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: pro
               <h3 className="font-bold text-lg text-slate-900 dark:text-white">
                 {editingId ? 'Editar Ancião' : 'Novo Ancião'}
               </h3>
-              <button 
-                onClick={() => setIsModalOpen(false)} 
+              <button
+                onClick={() => setIsModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {/* Nome Completo */}
               <div>
@@ -402,9 +409,10 @@ export const AdminAnciaosView: React.FC<AdminAnciaosViewProps> = ({ setores: pro
                   required
                   value={formData.setor_id}
                   onChange={e => handleSetorChange(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
+                  disabled={isSetorRestricted}
+                  className={`w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500 ${isSetorRestricted ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'}`}
                 >
-                  <option value="">Selecione o Setor Pertencente...</option>
+                  {!isSetorRestricted && <option value="">Selecione o Setor Pertencente...</option>}
                   {setores.map(s => (
                     <option key={s.id} value={s.id}>{s.nome}</option>
                   ))}

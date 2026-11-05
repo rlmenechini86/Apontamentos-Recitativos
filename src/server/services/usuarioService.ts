@@ -153,13 +153,16 @@ export class UsuarioService {
     const salt = await bcrypt.genSalt(10);
     const senha_hash = await bcrypt.hash('padrao123', salt);
 
-    const newRecordPayload = {
+    const newRecordPayload: Record<string, any> = {
       nome_completo: dto.nome_completo.trim(),
       email: dto.email.trim().toLowerCase(),
       celular: dto.celular.trim(),
       cargo_ministerio: dto.cargo_ministerio || null,
       data_apresentacao: dto.data_apresentacao || null,
       data_nascimento: dto.data_nascimento || null,
+      ano_casamento: dto.ano_casamento !== undefined && dto.ano_casamento !== '' && dto.ano_casamento !== null ? Number(dto.ano_casamento) : null,
+      selado_promessa: dto.selado_promessa !== undefined ? dto.selado_promessa : null,
+      ano_batismo: dto.ano_batismo !== undefined && dto.ano_batismo !== '' && dto.ano_batismo !== null ? Number(dto.ano_batismo) : null,
       perfil_id: dto.perfil_id,
       comum_congregacao_id: dto.comum_congregacao_id || null,
       ativo: dto.ativo !== undefined ? dto.ativo : true,
@@ -188,6 +191,24 @@ export class UsuarioService {
         .single();
 
       if (error) {
+        // Se a coluna ainda não existe no schema do Supabase, retentar sem as colunas novas
+        if (error.code === '42703' || error.message?.includes('ano_casamento') || error.message?.includes('ano_batismo') || error.message?.includes('selado_promessa')) {
+          console.warn('[UsuarioService] Colunas de CJM ainda não migradas no Supabase. Execute update_usuarios_cjm_campos.sql');
+          delete newRecordPayload.ano_casamento;
+          delete newRecordPayload.selado_promessa;
+          delete newRecordPayload.ano_batismo;
+          const retryRes = await supabase
+            .from('usuarios')
+            .insert([newRecordPayload])
+            .select(`
+              *,
+              perfis:perfil_id (id, nome, descricao, nivel_acesso),
+              comum_congregacao:comum_congregacao_id (id, codigo, nome)
+            `)
+            .single();
+          if (retryRes.error) throw new Error(retryRes.error.message);
+          return retryRes.data as unknown as Usuario;
+        }
         throw new Error(error.message);
       }
 
@@ -214,6 +235,9 @@ export class UsuarioService {
     if (dto.cargo_ministerio !== undefined) updatePayload.cargo_ministerio = dto.cargo_ministerio || null;
     if (dto.data_apresentacao !== undefined) updatePayload.data_apresentacao = dto.data_apresentacao || null;
     if (dto.data_nascimento !== undefined) updatePayload.data_nascimento = dto.data_nascimento || null;
+    if (dto.ano_casamento !== undefined) updatePayload.ano_casamento = dto.ano_casamento !== '' && dto.ano_casamento !== null ? Number(dto.ano_casamento) : null;
+    if (dto.selado_promessa !== undefined) updatePayload.selado_promessa = dto.selado_promessa;
+    if (dto.ano_batismo !== undefined) updatePayload.ano_batismo = dto.ano_batismo !== '' && dto.ano_batismo !== null ? Number(dto.ano_batismo) : null;
     if (dto.perfil_id !== undefined) updatePayload.perfil_id = dto.perfil_id;
     if (dto.comum_congregacao_id !== undefined) updatePayload.comum_congregacao_id = dto.comum_congregacao_id || null;
     if (dto.senha_hash !== undefined) updatePayload.senha_hash = dto.senha_hash;
@@ -242,6 +266,24 @@ export class UsuarioService {
         .single();
 
       if (error) {
+        if (error.code === '42703' || error.message?.includes('ano_casamento') || error.message?.includes('ano_batismo') || error.message?.includes('selado_promessa')) {
+          console.warn('[UsuarioService] Colunas de CJM ainda não migradas no Supabase. Execute update_usuarios_cjm_campos.sql');
+          delete updatePayload.ano_casamento;
+          delete updatePayload.selado_promessa;
+          delete updatePayload.ano_batismo;
+          const retryRes = await supabase
+            .from('usuarios')
+            .update(updatePayload)
+            .eq('id', id)
+            .select(`
+              *,
+              perfis:perfil_id (id, nome, descricao, nivel_acesso),
+              comum_congregacao:comum_congregacao_id (id, codigo, nome)
+            `)
+            .single();
+          if (retryRes.error) throw new Error(retryRes.error.message);
+          return retryRes.data as unknown as Usuario;
+        }
         throw new Error(error.message);
       }
 

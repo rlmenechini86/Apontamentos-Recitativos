@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  Users, Search, Plus, Music, RefreshCw, Trash2, Edit2, Calendar, Building2, 
-  User, ArrowUpDown, Lock, AlertCircle, CheckCircle2, TrendingUp, 
-  Layers, ListFilter, Sparkles, Filter, ChevronRight, Eye, EyeOff
+import {
+  Users, Search, Plus, Music, RefreshCw, Trash2, Edit2, Calendar, Building2,
+  User, ArrowUpDown, Lock, AlertCircle, CheckCircle2, TrendingUp,
+  Layers, ListFilter, Sparkles, Filter, ChevronRight, Eye, EyeOff, History
 } from 'lucide-react';
 import { ContagemMocidade, ComumCongregacao, Usuario, Setor, DetalheMusicoFamilia, FAMILIAS_INSTRUMENTOS } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from './Pagination';
-import { apiGet, clearApiCache } from '../utils/api';
+import { apiGet, apiPost, apiPut, clearApiCache } from '../utils/api';
+import { ApontamentoAuditLogView } from './ApontamentoAuditLogView';
+import { getUserScope, isItemInUserSector } from '../utils/permissions';
 
 export interface ContagemInitialParams {
   date?: string;
@@ -25,9 +27,9 @@ interface ContagensMocidadeViewProps {
   onClearInitialParams?: () => void;
 }
 
-export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({ 
-  comuns: propComuns, 
-  usuarios = [], 
+export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
+  comuns: propComuns,
+  usuarios = [],
   setores: propSetores,
   contagens: propContagens,
   onContagemSaved,
@@ -35,24 +37,32 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
   onClearInitialParams
 }) => {
   const { user } = useAuth();
-
-  const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
-  const isApontamento = roleName.includes('apontamento') || user?.perfis?.nivel_acesso === 'comum';
-  const isRestrictedProfile = isApontamento || (roleName !== 'administrador' && user?.perfis?.nivel_acesso !== 'global' && !!user?.comum_congregacao_id);
-  const userComumId = user?.comum_congregacao_id || user?.comum_congregacao?.id;
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
 
   const [comuns, setComuns] = useState<ComumCongregacao[]>(propComuns ? propComuns.filter(c => c.ativo) : []);
   const [contagens, setContagens] = useState<ContagemMocidade[]>(propContagens || []);
+
+  const userScope = useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
+  const isApontamento = userScope.isComum;
+  const isRestrictedProfile = userScope.isComum;
+  const userComumId = userScope.userComumId;
+
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  
+
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSetorId, setSelectedSetorId] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedSecretarioId, setSelectedSecretarioId] = useState('');
-  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
+
+  // Se o usuário for Administrador (Setor), fixa a seleção no seu setor
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId]);
 
   // Modos de Exibição: 'anual' (Matriz do Ano) | 'multi-anual' (Histórico Anos) | 'tabela' (Lista Tradicional)
   const [viewMode, setViewMode] = useState<'anual' | 'multi-anual' | 'tabela'>('anual');
@@ -183,7 +193,10 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
   const filteredComuns = useMemo(() => {
     return comuns.filter(c => {
       // Perfil restrito
-      if (isRestrictedProfile && userComumId && c.id !== userComumId) {
+      if (userScope.isComum && userComumId && c.id !== userComumId) {
+        return false;
+      }
+      if (userScope.isSetor && !isItemInUserSector(userScope, c, comuns, setores)) {
         return false;
       }
       // Filtro Setor
@@ -304,7 +317,8 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
       const itemYear = item.data?.split('T')[0]?.split('-')[0];
       if (selectedYear && itemYear !== selectedYear) return false;
 
-      if (isRestrictedProfile && userComumId && item.comum_id !== userComumId) return false;
+      if (userScope.isComum && userComumId && item.comum_id !== userComumId) return false;
+      if (userScope.isSetor && !isItemInUserSector(userScope, item, comuns, setores)) return false;
       if (selectedComumId && item.comum_id !== selectedComumId) return false;
 
       if (selectedSetorId) {
@@ -399,11 +413,10 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
           {/* Botão Mostrar / Ocultar Total Lançado */}
           <button
             onClick={() => setShowTotals(prev => !prev)}
-            className={`px-3.5 py-2.5 rounded-xl border transition text-xs sm:text-sm font-semibold flex items-center space-x-1.5 cursor-pointer shadow-2xs ${
-              showTotals 
-                ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100' 
-                : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750'
-            }`}
+            className={`px-3.5 py-2.5 rounded-xl border transition text-xs sm:text-sm font-semibold flex items-center space-x-1.5 cursor-pointer shadow-2xs ${showTotals
+              ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100'
+              : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750'
+              }`}
             title={showTotals ? "Ocultar quantidade total lançada" : "Mostrar quantidade total lançada"}
           >
             {showTotals ? (
@@ -422,7 +435,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-emerald-600' : ''}`} />
           </button>
-          
+
           <button
             onClick={() => {
               setEditingItem(null);
@@ -472,9 +485,9 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
               </span>
             </div>
             <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
-              <div 
-                className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
-                style={{ width: `${Math.min(yearStats.conformidadeRate, 100)}%` }} 
+              <div
+                className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(yearStats.conformidadeRate, 100)}%` }}
               />
             </div>
           </div>
@@ -536,33 +549,30 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
           <div className="flex items-center space-x-1 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/60 self-start overflow-x-auto max-w-full scrollbar-none">
             <button
               onClick={() => setViewMode('anual')}
-              className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                viewMode === 'anual'
-                  ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+              className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${viewMode === 'anual'
+                ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
             >
               <Users className="w-3.5 h-3.5" />
               <span>Controle Anual</span>
             </button>
             <button
               onClick={() => setViewMode('multi-anual')}
-              className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                viewMode === 'multi-anual'
-                  ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+              className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${viewMode === 'multi-anual'
+                ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
             >
               <Layers className="w-3.5 h-3.5" />
               <span>Histórico Multi-Anual</span>
             </button>
             <button
               onClick={() => setViewMode('tabela')}
-              className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                viewMode === 'tabela'
-                  ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
+              className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${viewMode === 'tabela'
+                ? 'bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
             >
               <ListFilter className="w-3.5 h-3.5" />
               <span>Lista Detalhada</span>
@@ -634,22 +644,20 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
               <button
                 type="button"
                 onClick={() => setMultiAnoTipo('Mocidade')}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition ${
-                  multiAnoTipo === 'Mocidade'
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                }`}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition ${multiAnoTipo === 'Mocidade'
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  }`}
               >
                 Mocidade
               </button>
               <button
                 type="button"
                 onClick={() => setMultiAnoTipo('Santa Ceia')}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition ${
-                  multiAnoTipo === 'Santa Ceia'
-                    ? 'bg-amber-600 text-white border-amber-600'
-                    : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                }`}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg border transition ${multiAnoTipo === 'Santa Ceia'
+                  ? 'bg-amber-600 text-white border-amber-600'
+                  : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                  }`}
               >
                 Santa Ceia
               </button>
@@ -684,22 +692,20 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
               <button
                 type="button"
                 onClick={() => setMobileLayout('tabela')}
-                className={`px-3 py-1 text-xs font-bold rounded-md transition ${
-                  mobileLayout === 'tabela'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition ${mobileLayout === 'tabela'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
               >
                 Tabela
               </button>
               <button
                 type="button"
                 onClick={() => setMobileLayout('cards')}
-                className={`px-3 py-1 text-xs font-bold rounded-md transition ${
-                  mobileLayout === 'cards'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
+                className={`px-3 py-1 text-xs font-bold rounded-md transition ${mobileLayout === 'cards'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
               >
                 Cards
               </button>
@@ -728,7 +734,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                 const completedCount = (itemMoc ? 1 : 0) + (itemSC ? 1 : 0);
 
                 return (
-                  <div 
+                  <div
                     key={`mobile-comum-${comum.id}`}
                     className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-2xs space-y-3"
                   >
@@ -754,13 +760,12 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                       </div>
 
                       {/* Badge de Conformidade Anual */}
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0 ${
-                        completedCount === 2
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                          : completedCount === 1
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full flex-shrink-0 ${completedCount === 2
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : completedCount === 1
                           ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
                           : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                      }`}>
+                        }`}>
                         {completedCount === 2 ? '100% OK' : completedCount === 1 ? '50% OK' : 'Pendente'}
                       </span>
                     </div>
@@ -1119,13 +1124,12 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                           {/* Coluna 4: Status no Ano */}
                           <td className="px-3 py-3 text-center">
                             <div className="flex flex-col items-center space-y-1">
-                              <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full ${
-                                completedCount === 2
-                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                  : completedCount === 1
+                              <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full ${completedCount === 2
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                : completedCount === 1
                                   ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
                                   : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                              }`}>
+                                }`}>
                                 {completedCount === 2 ? '100%' : completedCount === 1 ? '50%' : '0%'}
                               </span>
                               <span className="text-[9px] text-slate-400">
@@ -1300,8 +1304,8 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                   paginatedListItems.map((item) => {
                     const author = getAuthorName(item);
                     return (
-                      <tr 
-                        key={item.id} 
+                      <tr
+                        key={item.id}
                         onClick={() => {
                           setEditingItem(item);
                           setIsModalOpen(true);
@@ -1319,11 +1323,10 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                           </span>
                         </td>
                         <td className="px-3 sm:px-4 py-2.5 sm:py-3.5">
-                          <span className={`px-2 py-0.5 rounded text-[11px] sm:text-xs font-semibold ${
-                            item.tipo === 'Mocidade' 
-                              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                          }`}>
+                          <span className={`px-2 py-0.5 rounded text-[11px] sm:text-xs font-semibold ${item.tipo === 'Mocidade'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                            }`}>
                             {item.tipo}
                           </span>
                         </td>
@@ -1355,17 +1358,32 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
                           </div>
                         </td>
                         <td className="px-3 sm:px-4 py-2.5 sm:py-3.5 text-right">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingItem(item);
-                              setIsModalOpen(true);
-                            }}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                            title="Editar"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end space-x-1 sm:space-x-1.5">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingItem(item);
+                                setIsModalOpen(true);
+                              }}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                              title="Ver histórico e logs deste apontamento"
+                            >
+                              <History className="w-4 h-4" />
+                            </button>
+                            {user?.perfis?.nome !== 'Apontamento' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingItem(item);
+                                  setIsModalOpen(true);
+                                }}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                title="Editar"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1428,15 +1446,19 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
   isOpen, onClose, initialData, initialParams, comuns, setores = [], usuarios = [], onSuccess
 }) => {
   const { user } = useAuth();
-
-  const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
-  const isApontamento = roleName.includes('apontamento') || user?.perfis?.nivel_acesso === 'comum';
-  const isRestrictedUser = isApontamento || (roleName !== 'administrador' && user?.perfis?.nivel_acesso !== 'global' && !!user?.comum_congregacao_id);
-  const userComumId = user?.comum_congregacao_id || user?.comum_congregacao?.id;
+  const userScope = useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
+  const isRestrictedUser = userScope.isComum;
+  const userComumId = userScope.userComumId;
 
   const [activeItem, setActiveItem] = useState<ContagemMocidade | null>(initialData);
   const [isEditing, setIsEditing] = useState<boolean>(!initialData);
   const [modalSetorId, setModalSetorId] = useState('');
+
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setModalSetorId(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId]);
   const [formData, setFormData] = useState({
     data: '',
     quantidade: 0,
@@ -1505,13 +1527,16 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
     if (isRestrictedUser && userComumId) {
       return comuns.filter(c => c.id === userComumId);
     }
+    if (userScope.isSetor) {
+      return comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores));
+    }
     if (!modalSetorId) return comuns;
     const selectedSetor = setores.find(s => s.id === modalSetorId);
-    return comuns.filter(c => 
-      c.setor_id === modalSetorId || 
+    return comuns.filter(c =>
+      c.setor_id === modalSetorId ||
       (selectedSetor && c.setor_pertencente === selectedSetor.nome)
     );
-  }, [comuns, setores, modalSetorId, isRestrictedUser, userComumId]);
+  }, [comuns, setores, modalSetorId, isRestrictedUser, userComumId, userScope]);
 
   const canEdit = !isRestrictedUser || !userComumId || (activeItem ? activeItem.comum_id === userComumId : true);
 
@@ -1582,22 +1607,17 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
         ...formData,
         total_musicos: totalMusicos,
         comum_id: enforcedComumId,
-        cadastrado_por: user?.id || null
+        cadastrado_por: user?.id || null,
+        cadastrado_por_nome: user?.nome_completo || null
       };
 
       const targetId = activeItem?.id;
       const url = targetId ? `/api/contagens/${targetId}` : '/api/contagens';
-      const method = targetId ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const res = targetId ? await apiPut(url, payload) : await apiPost(url, payload);
 
       if (res.ok) {
         const json = await res.json().catch(() => null);
-        const savedData: ContagemMocidade = json?.data || {
+        const savedData: ContagemMocidade = json?.data || json || {
           id: targetId || `temp-${Date.now()}`,
           data: formData.data,
           comum_id: enforcedComumId,
@@ -1615,7 +1635,8 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
         onSuccess(savedData);
         onClose();
       } else {
-        alert('Erro ao salvar contagem.');
+        const errJson = await res.json().catch(() => null);
+        alert(errJson?.error || 'Erro ao salvar contagem.');
       }
     } catch (err) {
       console.error(err);
@@ -1626,7 +1647,7 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -1634,7 +1655,7 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
         }
       }}
     >
-      <div 
+      <div
         onClick={(e) => e.stopPropagation()}
         className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-sm w-full overflow-hidden text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800"
       >
@@ -1692,11 +1713,10 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
                   if ('showPicker' in HTMLInputElement.prototype) {
                     (e.target as HTMLInputElement).showPicker();
                   }
-                } catch (err) {}
+                } catch (err) { }
               }}
-              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
-                !isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed select-none' : 'cursor-pointer'
-              }`}
+              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed select-none' : 'cursor-pointer'
+                }`}
             />
           </div>
 
@@ -1704,7 +1724,7 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
           <div className="space-y-1">
             <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Setor Pertencente</label>
             <select
-              disabled={!isEditing || (isRestrictedUser && !!userComumId)}
+              disabled={!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId)}
               value={modalSetorId}
               onChange={(e) => {
                 const newSetor = e.target.value;
@@ -1715,12 +1735,11 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
                   if (!isComumIn) setFormData(prev => ({ ...prev, comum_id: '' }));
                 }
               }}
-              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
-                !isEditing || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
-              }`}
+              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
+                }`}
             >
-              <option value="">-- Todos os Setores --</option>
-              {setores.map((s) => (
+              {!userScope.isSetor && <option value="">-- Todos os Setores --</option>}
+              {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map((s) => (
                 <option key={s.id} value={s.id}>{s.nome}</option>
               ))}
             </select>
@@ -1742,9 +1761,8 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
                   if (s) setModalSetorId(s.id);
                 }
               }}
-              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
-                !isEditing || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
-              }`}
+              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
+                }`}
             >
               <option value="">Selecione...</option>
               {modalComunsFiltradas.map((c) => (
@@ -1761,9 +1779,8 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
               disabled={!isEditing}
               value={formData.tipo}
               onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'Santa Ceia' | 'Mocidade' })}
-              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
-                !isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed' : 'cursor-pointer'
-              }`}
+              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed' : 'cursor-pointer'
+                }`}
             >
               <option value="Mocidade">Mocidade</option>
               <option value="Santa Ceia">Santa Ceia</option>
@@ -1782,9 +1799,8 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
               disabled={!isEditing}
               value={formData.quantidade}
               onChange={(e) => setFormData({ ...formData, quantidade: Number(e.target.value) })}
-              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-mono font-bold text-emerald-700 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500 ${
-                !isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed' : ''
-              }`}
+              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-mono font-bold text-emerald-700 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed' : ''
+                }`}
             />
           </div>
 
@@ -1905,6 +1921,20 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
                   </button>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Histórico e Logs de Auditoria deste Apontamento */}
+          {activeItem && activeItem.id && (
+            <div className="pt-1">
+              <ApontamentoAuditLogView
+                registroId={activeItem.id}
+                tabela="contagens_mocidade"
+                initialCreatorName={(activeItem as any).usuario?.nome_completo}
+                createdAt={activeItem.created_at}
+                updatedAt={activeItem.updated_at}
+                defaultExpanded={!isEditing}
+              />
             </div>
           )}
 

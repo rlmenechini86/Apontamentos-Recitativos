@@ -4,28 +4,36 @@
     "funcionalidade": "Visualizar Dashboard Geral",
     "admin": true,
     "cjm": true,
-    "apontamento": true
+    "apontamento": true,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": true,
+    "administrador (setor)": true
   },
   {
     "id": "lancar_apontamento",
     "funcionalidade": "Lançar Apontamento da Comum",
     "admin": true,
     "cjm": true,
-    "apontamento": true
+    "apontamento": true,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": true,
+    "administrador (setor)": true
   },
   {
     "id": "editar_apontamento",
     "funcionalidade": "Editar Apontamentos do Setor",
     "admin": true,
     "cjm": true,
-    "apontamento": false
+    "apontamento": false,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": true,
+    "administrador (setor)": true
   },
   {
     "id": "agenda_visitas",
     "funcionalidade": "Visualizar e Gerenciar Agenda de Visitas",
     "admin": true,
     "cjm": true,
-    "apontamento": true
+    "apontamento": true,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": true,
+    "administrador (setor)": true
   },
   {
     "id": "visualizar_calendario",
@@ -33,62 +41,80 @@
     "admin": true,
     "cjm": true,
     "apontamento": false,
-    "33333333-3333-3333-3333-333333333333": false
+    "33333333-3333-3333-3333-333333333333": false,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": true,
+    "administrador (setor)": true
   },
   {
     "id": "gerenciar_reunioes",
     "funcionalidade": "Gerenciar Reuniões e Eventos (CRUD)",
     "admin": true,
     "cjm": true,
-    "apontamento": false
+    "apontamento": false,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": true,
+    "administrador (setor)": true
   },
   {
     "id": "gerenciar_tipos_evento",
     "funcionalidade": "Gerenciar Tipos de Eventos (CRUD)",
     "admin": true,
     "cjm": false,
-    "apontamento": false
+    "apontamento": false,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": false,
+    "administrador (setor)": false
   },
   {
     "id": "exportar_relatorios",
     "funcionalidade": "Relatórios / Gestão e Controle",
     "admin": true,
     "cjm": true,
-    "apontamento": false
+    "apontamento": false,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": true,
+    "administrador (setor)": true
   },
   {
     "id": "visualizar_setores",
     "funcionalidade": "Visualizar Dados de Outros Setores",
     "admin": true,
     "cjm": false,
-    "apontamento": false
+    "apontamento": false,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": false,
+    "administrador (setor)": false
   },
   {
     "id": "gerenciar_auxiliares",
     "funcionalidade": "Gerenciar Cadastro de Auxiliares e CJM",
-    "admin": true,
+    "admin": false,
     "cjm": true,
-    "apontamento": false
+    "apontamento": false,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": false,
+    "administrador (setor)": false
   },
   {
     "id": "gerenciar_comuns",
     "funcionalidade": "Gerenciar Comuns Congregações (CRUD)",
     "admin": true,
     "cjm": false,
-    "apontamento": false
+    "apontamento": false,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": true,
+    "administrador (setor)": true
   },
   {
     "id": "gerenciar_usuarios",
     "funcionalidade": "Gerenciar Usuários e Atribuir Perfis",
     "admin": true,
     "cjm": false,
-    "apontamento": false
+    "apontamento": false,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": true,
+    "administrador (setor)": true
   },
   {
     "id": "gerenciar_perfis",
     "funcionalidade": "Gerenciar Perfis de Acesso e Permissões",
     "admin": true,
     "cjm": false,
-    "apontamento": false
+    "apontamento": false,
+    "74c60d03-55b3-4770-8d1a-b091e7e02368": false,
+    "administrador (setor)": false
   }
 ]

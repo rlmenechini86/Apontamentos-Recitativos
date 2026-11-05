@@ -1,4 +1,4 @@
-﻿import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'app_jwt_secret_change_in_production_2026';
@@ -8,6 +8,7 @@ export interface JwtPayload {
   email: string;
   perfilId: string;
   perfilNome: string;
+  nome?: string;
   iat?: number;
   exp?: number;
 }
@@ -47,6 +48,8 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
     '/api/auth/set-password',
     '/api/auth/validate-password',
     '/api/health',
+    '/api/pre-cadastros/public-meta',
+    '/api/pre-cadastros/public',
   ];
 
   if (publicPaths.some(p => req.path === p || req.path.startsWith(p + '?'))) {

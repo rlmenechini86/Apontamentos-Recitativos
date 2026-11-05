@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Building2, ClipboardCheck, Calendar, Search, CheckCircle2, 
-  AlertCircle, AlertTriangle, Clock, Sparkles, Filter, 
-  Printer, RefreshCw, Users, ShieldCheck, ArrowRight, Eye, EyeOff
+import {
+  Building2, ClipboardCheck, Calendar, Search, CheckCircle2,
+  AlertCircle, AlertTriangle, Clock, Sparkles, Filter,
+  Printer, RefreshCw, Users, ShieldCheck, ArrowRight, Eye, EyeOff,
+  X, History, Layers
 } from 'lucide-react';
 import { ComumCongregacao, Recitativo, ContagemMocidade, Usuario, Setor } from '../types';
 import { apiGet, clearApiCache } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { NavRoute } from './Sidebar';
 import { RecitativoFormModal, RecitativoInitialParams } from './RecitativosView';
+import { getUserScope, isItemInUserSector } from '../utils/permissions';
 
 interface ControleApontamentosViewProps {
   usuarios?: Usuario[];
@@ -22,7 +24,7 @@ interface ControleApontamentosViewProps {
   onClearInitialParams?: () => void;
 }
 
-export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> = ({ 
+export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> = ({
   usuarios = [],
   comuns: propComuns,
   setores: propSetores,
@@ -38,7 +40,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
   const [refreshing, setRefreshing] = useState(false);
   const [setores, setSetores] = useState<Setor[]>(propSetores || []);
   const [selectedSetorId, setSelectedSetorId] = useState<string>('');
-  
+
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   // Default to current month (01 to 12)
   const currentMonth = (new Date().getMonth() + 1).toString().padStart(2, '0');
@@ -78,19 +80,73 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
     localStorage.setItem('controle_apontamentos_show_totals', String(showTotals));
   }, [showTotals]);
 
+  // Modal de Histórico e Logs de Apontamentos
+  const [isLogsModalOpen, setIsLogsModalOpen] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [searchLogs, setSearchLogs] = useState('');
 
-  // RBAC permissions check
-  const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
-  const isRestrictedProfile = roleName === 'cjm' || roleName.includes('apontamento') || user?.perfis?.nivel_acesso === 'comum';
-  const userComumId = user?.comum_congregacao_id || user?.comum_congregacao?.id;
+  const fetchLogs = async () => {
+    try {
+      setLoadingLogs(true);
+      const res = await apiGet('/api/recitativos/logs');
+      if (res.ok) {
+        const json = await res.json();
+        setLogs(json.data || []);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar logs:', err);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isLogsModalOpen) {
+      fetchLogs();
+    }
+  }, [isLogsModalOpen]);
+
+  const filteredLogs = useMemo(() => {
+    if (!searchLogs.trim()) return logs;
+    const q = searchLogs.toLowerCase().trim();
+    return logs.filter(log => {
+      let parsed: any = {};
+      try {
+        parsed = typeof log.detalhes === 'string' ? JSON.parse(log.detalhes) : (log.detalhes || {});
+      } catch {
+        parsed = { descricao: log.detalhes };
+      }
+      return (
+        log.usuario_email?.toLowerCase().includes(q) ||
+        parsed.nome_usuario?.toLowerCase().includes(q) ||
+        parsed.comum_nome?.toLowerCase().includes(q) ||
+        parsed.data_apontamento?.includes(q) ||
+        log.created_at?.includes(q)
+      );
+    });
+  }, [logs, searchLogs]);
+
+
+  // RBAC permissions & scope check
+  const userScope = useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
+  const isRestrictedProfile = userScope.isComum;
+  const userComumId = userScope.userComumId;
+
+  // Se o usuário for Administrador (Setor), fixa a seleção no seu setor
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId]);
 
   // Se vier com parâmetros iniciais de lançamento (ex: do Dashboard), abre o modal diretamente
   useEffect(() => {
     if (initialParams && (initialParams.date || initialParams.comumId)) {
       setModalParams(initialParams);
       if (initialParams.date && initialParams.comumId) {
-        const found = recitativos.find(r => 
-          (r.data ? r.data.split('T')[0] : '') === initialParams.date && 
+        const found = recitativos.find(r =>
+          (r.data ? r.data.split('T')[0] : '') === initialParams.date &&
           r.comum_id === initialParams.comumId
         );
         setEditingRecitativo(found || null);
@@ -127,7 +183,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
         apiGet('/api/recitativos', isManualRefresh),
         apiGet('/api/contagens', isManualRefresh)
       ]);
-      
+
       const [jsonComuns, jsonRecitativos, jsonContagens] = await Promise.all([
         resComuns.ok ? resComuns.json() : { data: [] },
         resRecitativos.ok ? resRecitativos.json() : { data: [] },
@@ -175,10 +231,10 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
   const sundays = useMemo(() => {
     const year = parseInt(selectedYear);
     const month = parseInt(selectedMonth) - 1; // 0-indexed
-    
+
     const date = new Date(year, month, 1);
     const days: string[] = [];
-    
+
     while (date.getMonth() === month) {
       if (date.getDay() === 0) { // 0 = Sunday
         const yyyy = date.getFullYear();
@@ -260,8 +316,12 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
   // Filtro de Comuns
   const filteredComuns = useMemo(() => {
     return comuns.filter(c => {
-      if (isRestrictedProfile && userComumId) {
+      if (userScope.isComum && userComumId) {
         if (c.id !== userComumId) return false;
+      }
+
+      if (userScope.isSetor && !isItemInUserSector(userScope, c, comuns, setores)) {
+        return false;
       }
 
       const matchesSetor = !selectedSetorId || (() => {
@@ -332,8 +392,8 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
       }
     });
 
-    const conformidadeRate = totalEsperado > 0 
-      ? Math.round(((totalRealizado + totalSantaCeia) / totalEsperado) * 100) 
+    const conformidadeRate = totalEsperado > 0
+      ? Math.round(((totalRealizado + totalSantaCeia) / totalEsperado) * 100)
       : 100;
 
     return {
@@ -373,7 +433,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
 
   return (
     <div className="flex-1 flex flex-col space-y-3 sm:space-y-6 animate-in fade-in duration-300 pb-6 sm:pb-12">
-      
+
       {/* Top Banner & Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2.5 sm:gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 sm:p-6 rounded-xl sm:rounded-2xl shadow-xs">
         <div>
@@ -402,11 +462,10 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
           {/* Botão Mostrar / Ocultar Total Lançado */}
           <button
             onClick={() => setShowTotals(prev => !prev)}
-            className={`px-3.5 py-2 rounded-xl border transition text-xs font-semibold flex items-center space-x-1.5 cursor-pointer shadow-2xs ${
-              showTotals 
-                ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100' 
+            className={`px-3.5 py-2 rounded-xl border transition text-xs font-semibold flex items-center space-x-1.5 cursor-pointer shadow-2xs ${showTotals
+                ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100'
                 : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750'
-            }`}
+              }`}
             title={showTotals ? "Ocultar quantidade de recitativos lançados" : "Mostrar quantidade de recitativos lançados"}
           >
             {showTotals ? (
@@ -418,6 +477,15 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
           </button>
 
           <button
+            onClick={() => setIsLogsModalOpen(true)}
+            className="px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition text-xs font-semibold flex items-center space-x-1.5 cursor-pointer shadow-2xs"
+            title="Visualizar histórico e logs de apontamentos"
+          >
+            <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Logs de Apontamentos</span>
+          </button>
+
+          <button
             onClick={() => fetchData(true)}
             disabled={refreshing}
             className="px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition text-xs font-semibold flex items-center space-x-1.5 cursor-pointer shadow-2xs"
@@ -426,7 +494,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-emerald-600' : 'text-slate-500'}`} />
             <span>{refreshing ? 'Atualizando...' : 'Atualizar'}</span>
           </button>
-          
+
           <button
             onClick={handlePrint}
             className="px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition text-xs font-semibold flex items-center space-x-1.5 cursor-pointer shadow-2xs"
@@ -461,10 +529,9 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
             </div>
             {/* Progress bar */}
             <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-2.5 overflow-hidden">
-              <div 
-                className={`h-full transition-all duration-500 rounded-full ${
-                  stats.conformidadeRate >= 90 ? 'bg-emerald-500' : stats.conformidadeRate >= 70 ? 'bg-amber-500' : 'bg-rose-500'
-                }`}
+              <div
+                className={`h-full transition-all duration-500 rounded-full ${stats.conformidadeRate >= 90 ? 'bg-emerald-500' : stats.conformidadeRate >= 70 ? 'bg-amber-500' : 'bg-rose-500'
+                  }`}
                 style={{ width: `${stats.conformidadeRate}%` }}
               ></div>
             </div>
@@ -517,11 +584,10 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
             <span className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Pendências no Mês
             </span>
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${
-              stats.totalFaltas > 0 
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${stats.totalFaltas > 0
                 ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800/60'
                 : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/60'
-            }`}>
+              }`}>
               {stats.totalFaltas > 0 ? <AlertTriangle className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
             </div>
           </div>
@@ -530,17 +596,16 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
               <span className={`text-2xl font-black ${stats.totalFaltas > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 {stats.totalFaltas}
               </span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${
-                stats.totalFaltas > 0 
-                  ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300' 
+              <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase ${stats.totalFaltas > 0
+                  ? 'bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300'
                   : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-              }`}>
+                }`}>
                 {stats.totalFaltas > 0 ? 'Atenção' : '100% em dia'}
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {stats.comunsComPendencia > 0 
-                ? `${stats.comunsComPendencia} congregações c/ faltas` 
+              {stats.comunsComPendencia > 0
+                ? `${stats.comunsComPendencia} congregações c/ faltas`
                 : 'Nenhuma pendência pendente'}
             </p>
           </div>
@@ -550,7 +615,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
       {/* Barra de Filtros e Status Tabs */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl p-2.5 sm:p-5 shadow-xs space-y-2 sm:space-y-4">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-          
+
           {/* Busca por comum */}
           <div className="relative flex-1 min-w-[220px]">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -565,7 +630,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Setor */}
-            {!isRestrictedProfile ? (
+            {userScope.isGlobal ? (
               <select
                 value={selectedSetorId}
                 onChange={(e) => setSelectedSetorId(e.target.value)}
@@ -576,6 +641,11 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                   <option key={s.id} value={s.id}>{s.nome}</option>
                 ))}
               </select>
+            ) : userScope.isSetor ? (
+              <div className="px-3 py-2 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-center space-x-1.5 shadow-xs">
+                <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>{userScope.userSetorNome || 'Seu Setor'}</span>
+              </div>
             ) : (
               <div className="px-3 py-2 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center space-x-1.5">
                 <Building2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -584,7 +654,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
             )}
 
             {/* Mês */}
-            <select 
+            <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
@@ -595,7 +665,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
             </select>
 
             {/* Ano */}
-            <select 
+            <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
               className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
@@ -606,7 +676,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
             </select>
 
             {/* Secretário */}
-            <select 
+            <select
               value={selectedSecretarioId}
               onChange={(e) => setSelectedSecretarioId(e.target.value)}
               className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer max-w-[180px] truncate"
@@ -620,10 +690,10 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
             </select>
 
             {/* Limpar Filtros */}
-            {(selectedSetorId || searchTerm || selectedSecretarioId || statusFilter !== 'todos') && (
+            {((!userScope.isSetor && selectedSetorId) || searchTerm || selectedSecretarioId || statusFilter !== 'todos') && (
               <button
                 onClick={() => {
-                  setSelectedSetorId('');
+                  setSelectedSetorId(userScope.isSetor && userScope.userSetorId ? userScope.userSetorId : '');
                   setSearchTerm('');
                   setSelectedSecretarioId('');
                   setStatusFilter('todos');
@@ -642,32 +712,29 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
           <div className="flex items-center space-x-1.5 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl">
             <button
               onClick={() => setStatusFilter('todos')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-                statusFilter === 'todos'
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${statusFilter === 'todos'
                   ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
+                }`}
             >
               Todas ({filteredComuns.length})
             </button>
             <button
               onClick={() => setStatusFilter('pendentes')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center space-x-1 ${
-                statusFilter === 'pendentes'
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center space-x-1 ${statusFilter === 'pendentes'
                   ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-rose-600'
-              }`}
+                }`}
             >
               <span>Com Pendência</span>
               <span className="w-2 h-2 rounded-full bg-rose-500"></span>
             </button>
             <button
               onClick={() => setStatusFilter('completos')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center space-x-1 ${
-                statusFilter === 'completos'
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center space-x-1 ${statusFilter === 'completos'
                   ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shadow-xs'
                   : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600'
-              }`}
+                }`}
             >
               <span>100% Conforme</span>
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -700,7 +767,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700">
           <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300 border-collapse">
-            
+
             {/* Cabeçalho da Tabela */}
             <thead className="bg-slate-100/90 dark:bg-slate-950/90 backdrop-blur-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
               <tr>
@@ -708,7 +775,7 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                 <th className="py-2.5 sm:py-4 px-2.5 sm:px-5 font-extrabold text-slate-900 dark:text-slate-100 min-w-[130px] sm:min-w-[180px] md:min-w-[220px] sticky left-0 z-20 bg-slate-100/95 dark:bg-slate-950/95 shadow-[1px_0_0_rgba(0,0,0,0.06)] dark:shadow-[1px_0_0_rgba(255,255,255,0.06)]">
                   Comum
                 </th>
-                
+
                 {/* Colunas de Domingos */}
                 {sundays.map((sunday) => {
                   const dObj = formatHeaderDate(sunday);
@@ -716,11 +783,10 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                   return (
                     <th key={sunday} className="py-2 sm:py-3 px-1 sm:px-2.5 text-center min-w-[75px] sm:min-w-[105px] md:min-w-[125px] border-l border-slate-200/80 dark:border-slate-800">
                       <div className="flex flex-col items-center justify-center space-y-0.5 sm:space-y-1">
-                        <div className={`px-1.5 sm:px-2.5 py-0.5 rounded-md font-extrabold text-[10px] sm:text-xs inline-flex items-center space-x-1 ${
-                          isPast 
-                            ? 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200' 
+                        <div className={`px-1.5 sm:px-2.5 py-0.5 rounded-md font-extrabold text-[10px] sm:text-xs inline-flex items-center space-x-1 ${isPast
+                            ? 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
                             : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800'
-                        }`}>
+                          }`}>
                           <Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                           <span>DOM {dObj.day}</span>
                         </div>
@@ -768,18 +834,18 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                     }
                   });
 
-                  const pctComum = totalEsperadosComum > 0 
-                    ? Math.round((realizadosComum / totalEsperadosComum) * 100) 
+                  const pctComum = totalEsperadosComum > 0
+                    ? Math.round((realizadosComum / totalEsperadosComum) * 100)
                     : 100;
 
-                  const responsavel = usuarios.find(u => 
-                    u.id === comum.secretario_id || 
+                  const responsavel = usuarios.find(u =>
+                    u.id === comum.secretario_id ||
                     (u.comum_congregacao_id === comum.id && (u.cargo_ministerio?.toLowerCase().includes('cjm') || u.cargo_ministerio?.toLowerCase().includes('secretário')))
                   );
 
                   return (
-                    <tr 
-                      key={comum.id} 
+                    <tr
+                      key={comum.id}
                       className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors group"
                     >
                       {/* Coluna Comum Fixa */}
@@ -812,11 +878,11 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                         if (status.type === 'realizado') {
                           const r = status.recitativo;
                           return (
-                            <td 
-                              key={sunday} 
+                            <td
+                              key={sunday}
                               className="py-1.5 sm:py-2.5 px-1 sm:px-2.5 text-center border-l border-slate-200/60 dark:border-slate-800/60"
                             >
-                              <div 
+                              <div
                                 onClick={() => {
                                   if (r) {
                                     setEditingRecitativo(r);
@@ -852,11 +918,11 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                         // 2. REUNIÃO SUSPENSA
                         if (status.type === 'santaceia' || status.type === 'especial') {
                           return (
-                            <td 
-                              key={sunday} 
+                            <td
+                              key={sunday}
                               className="py-1.5 sm:py-2.5 px-1 sm:px-2.5 text-center border-l border-slate-200/60 dark:border-slate-800/60"
                             >
-                              <div 
+                              <div
                                 className="inline-flex flex-col items-center justify-center px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg sm:rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/70 text-sky-800 dark:text-sky-200 shadow-2xs w-full"
                                 title="Reunião Suspensa para esta congregação (Ex: Santa Ceia)"
                               >
@@ -877,11 +943,11 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                         // 3. FALTA / PENDÊNCIA
                         if (status.type === 'falta') {
                           return (
-                            <td 
-                              key={sunday} 
+                            <td
+                              key={sunday}
                               className="py-1.5 sm:py-2.5 px-1 sm:px-2.5 text-center border-l border-slate-200/60 dark:border-slate-800/60"
                             >
-                              <div 
+                              <div
                                 onClick={() => {
                                   setEditingRecitativo(null);
                                   setModalParams({ date: sunday, comumId: comum.id });
@@ -906,11 +972,11 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
 
                         // 4. AGUARDANDO (DATA FUTURA)
                         return (
-                          <td 
-                            key={sunday} 
+                          <td
+                            key={sunday}
                             className="py-1.5 sm:py-2.5 px-1 sm:px-2.5 text-center border-l border-slate-200/60 dark:border-slate-800/60"
                           >
-                            <div 
+                            <div
                               className="inline-flex items-center justify-center px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg bg-slate-100/70 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] sm:text-[11px] font-medium space-x-1 w-full"
                               title="Data futura no calendário mensal"
                             >
@@ -925,13 +991,12 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
                       {/* Coluna Desempenho / Resumo */}
                       <td className="py-2 sm:py-3 px-2 sm:px-4 text-center border-l border-slate-200/80 dark:border-slate-800">
                         <div className="flex flex-col items-center space-y-0.5 sm:space-y-1">
-                          <span className={`text-[11px] sm:text-xs font-black px-1.5 sm:px-2 py-0.5 rounded-full ${
-                            pctComum === 100 
-                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' 
-                              : pctComum >= 70 
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' 
-                              : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                          }`}>
+                          <span className={`text-[11px] sm:text-xs font-black px-1.5 sm:px-2 py-0.5 rounded-full ${pctComum === 100
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                              : pctComum >= 70
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                                : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                            }`}>
                             {pctComum}%
                           </span>
                           <span className="text-[9px] sm:text-[10px] text-slate-400">
@@ -1033,6 +1098,226 @@ export const ControleApontamentosView: React.FC<ControleApontamentosViewProps> =
             fetchData(true);
           }}
         />
+      )}
+
+      {/* Modal de Logs de Apontamentos */}
+      {isLogsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold">
+                    Trilha de Logs de Apontamentos
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Histórico detalhado com data, autor do lançamento e valores inseridos ou alterados.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={fetchLogs}
+                  disabled={loadingLogs}
+                  className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  title="Recarregar Logs"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loadingLogs ? 'animate-spin text-emerald-600' : ''}`} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLogsModalOpen(false)}
+                  className="p-2 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  title="Fechar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Filtro de Logs */}
+            <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-950/30">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filtrar por usuário, congregação ou data..."
+                  value={searchLogs}
+                  onChange={(e) => setSearchLogs(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Total de {filteredLogs.length} registros
+              </span>
+            </div>
+
+            {/* Lista de Logs */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3">
+              {loadingLogs ? (
+                <div className="py-12 flex flex-col items-center justify-center text-slate-400 space-y-2">
+                  <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-xs">Carregando histórico de apontamentos...</span>
+                </div>
+              ) : filteredLogs.length === 0 ? (
+                <div className="py-12 text-center text-slate-400 text-xs">
+                  Nenhum log de lançamento ou alteração encontrado.
+                </div>
+              ) : (
+                filteredLogs.map((log) => {
+                  let parsed: any = {};
+                  try {
+                    parsed = typeof log.detalhes === 'string' ? JSON.parse(log.detalhes) : (log.detalhes || {});
+                  } catch {
+                    parsed = { descricao: log.detalhes };
+                  }
+
+                  const isCreate = log.acao === 'CREATE';
+                  const dateStr = log.created_at ? new Date(log.created_at).toLocaleString('pt-BR') : '-';
+                  const userName = parsed.nome_usuario || log.usuario_email || 'Usuário do Sistema';
+
+                  return (
+                    <div 
+                      key={log.id}
+                      className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850/90 shadow-2xs space-y-2.5 transition hover:border-slate-300 dark:hover:border-slate-700"
+                    >
+                      {/* Top linha do log */}
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center space-x-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            isCreate 
+                              ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                              : 'bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800'
+                          }`}>
+                            {isCreate ? '✓ Lançamento' : '✎ Alteração'}
+                          </span>
+                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            {userName}
+                          </span>
+                          {log.usuario_email && (
+                            <span className="text-[11px] text-slate-400 hidden sm:inline">
+                              ({log.usuario_email})
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center space-x-2 text-[11px] text-slate-500 dark:text-slate-400">
+                          <Clock className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{dateStr}</span>
+                        </div>
+                      </div>
+
+                      {/* Informações de contexto */}
+                      <div className="text-xs flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-600 dark:text-slate-300">
+                        {parsed.comum_nome && (
+                          <div className="flex items-center space-x-1">
+                            <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                            <span className="font-semibold">{parsed.comum_nome}</span>
+                          </div>
+                        )}
+                        {parsed.data_apontamento && (
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="w-3.5 h-3.5 text-sky-500" />
+                            <span>Data da Reunião: <strong>{new Date(parsed.data_apontamento + 'T12:00:00').toLocaleDateString('pt-BR')}</strong></span>
+                          </div>
+                        )}
+                        <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
+                          Tabela: {log.tabela_afetada}
+                        </span>
+                      </div>
+
+                      {/* Detalhes de Valores */}
+                      {isCreate && parsed.valores_inseridos && (
+                        <div className="p-2.5 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 text-xs">
+                          <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 block mb-1">
+                            Valores Inseridos:
+                          </span>
+                          <div className="flex flex-wrap gap-2 text-slate-700 dark:text-slate-300 font-mono text-[11px]">
+                            {parsed.valores_inseridos.mocos !== undefined && (
+                              <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                Moços: <strong>{parsed.valores_inseridos.mocos}</strong>
+                              </span>
+                            )}
+                            {parsed.valores_inseridos.mocas !== undefined && (
+                              <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                Moças: <strong>{parsed.valores_inseridos.mocas}</strong>
+                              </span>
+                            )}
+                            {parsed.valores_inseridos.meninos !== undefined && (
+                              <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                Meninos: <strong>{parsed.valores_inseridos.meninos}</strong>
+                              </span>
+                            )}
+                            {parsed.valores_inseridos.meninas !== undefined && (
+                              <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                Meninas: <strong>{parsed.valores_inseridos.meninas}</strong>
+                              </span>
+                            )}
+                            {parsed.valores_inseridos.total !== undefined && (
+                              <span className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-700">
+                                Total: {parsed.valores_inseridos.total}
+                              </span>
+                            )}
+                            {parsed.valores_inseridos.quantidade !== undefined && (
+                              <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                                {parsed.valores_inseridos.tipo || 'Qtd'}: <strong>{parsed.valores_inseridos.quantidade}</strong>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {!isCreate && (
+                        <div className="p-2.5 rounded-lg bg-sky-50/50 dark:bg-sky-950/20 border border-sky-200/60 dark:border-sky-800/40 text-xs space-y-1.5">
+                          <span className="text-[11px] font-bold text-sky-800 dark:text-sky-300 block">
+                            Valores Alterados:
+                          </span>
+                          {parsed.valores_alterados && Object.keys(parsed.valores_alterados).length > 0 ? (
+                            <div className="flex flex-wrap gap-2 text-slate-700 dark:text-slate-300 font-mono text-[11px]">
+                              {Object.entries(parsed.valores_alterados).map(([k, diff]: [string, any]) => (
+                                <span key={k} className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-sky-200 dark:border-sky-800 text-sky-900 dark:text-sky-200">
+                                  {k}: <span className="line-through text-rose-500 mr-1">{diff.de}</span> ➔ <strong className="text-emerald-600 dark:text-emerald-400 ml-1">{diff.para}</strong>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-[11px] text-slate-500 italic">
+                              Registro atualizado (sem alteração nos campos numéricos).
+                            </div>
+                          )}
+                          {parsed.valores_novos && (
+                            <div className="flex flex-wrap gap-2 text-slate-600 dark:text-slate-400 font-mono text-[10px] pt-1">
+                              <span>Novos valores:</span>
+                              {Object.entries(parsed.valores_novos).map(([k, v]) => (
+                                <span key={k}>{k}: <strong>{String(v)}</strong></span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end bg-slate-50 dark:bg-slate-900/50">
+              <button
+                type="button"
+                onClick={() => setIsLogsModalOpen(false)}
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700 transition cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

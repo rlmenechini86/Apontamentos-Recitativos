@@ -72,7 +72,20 @@ export class UsuarioController {
    */
   async create(req: Request, res: Response): Promise<void> {
     try {
-      const { nome_completo, email, celular, perfil_id, comum_congregacao_id, ativo } = req.body;
+      const {
+        nome_completo,
+        email,
+        celular,
+        cargo_ministerio,
+        data_apresentacao,
+        data_nascimento,
+        ano_casamento,
+        selado_promessa,
+        ano_batismo,
+        perfil_id,
+        comum_congregacao_id,
+        ativo,
+      } = req.body;
 
       if (!nome_completo || !email || !celular || !perfil_id) {
         res.status(400).json({
@@ -86,6 +99,12 @@ export class UsuarioController {
         nome_completo,
         email,
         celular,
+        cargo_ministerio: cargo_ministerio || null,
+        data_apresentacao: data_apresentacao || null,
+        data_nascimento: data_nascimento || null,
+        ano_casamento: ano_casamento !== undefined && ano_casamento !== '' && ano_casamento !== null ? Number(ano_casamento) : null,
+        selado_promessa: selado_promessa !== undefined ? selado_promessa : null,
+        ano_batismo: ano_batismo !== undefined && ano_batismo !== '' && ano_batismo !== null ? Number(ano_batismo) : null,
         perfil_id,
         comum_congregacao_id: comum_congregacao_id || null,
         ativo: ativo !== undefined ? ativo : true,

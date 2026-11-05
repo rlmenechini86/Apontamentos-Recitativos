@@ -13,6 +13,10 @@ import {
   Search,
   Layers,
   KeyRound,
+  Heart,
+  Droplets,
+  Sparkles,
+  Clock,
 } from 'lucide-react';
 import { Usuario, Perfil, ComumCongregacao, Setor } from '../types';
 
@@ -44,6 +48,9 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
     cargo_ministerio: '',
     data_apresentacao: '',
     data_nascimento: '',
+    ano_casamento: '',
+    selado_promessa: '',
+    ano_batismo: '',
     perfil_id: '',
     comum_congregacao_id: null as string | null,
     ativo: true,
@@ -67,9 +74,9 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
       if (initialData?.comum_congregacao_id) {
         const userComum = comuns.find(c => c.id === initialData.comum_congregacao_id);
         const userSetor = setores.find(s => s.id === userComum?.setor_id || (userComum?.setor_pertencente && s.nome === userComum.setor_pertencente));
-        setFiltroSetorId(userSetor?.id || userComum?.setor_id || '');
+        setFiltroSetorId(userSetor?.id || userComum?.setor_id || (setores.length === 1 ? setores[0].id : ''));
       } else {
-        setFiltroSetorId('');
+        setFiltroSetorId(setores.length === 1 ? setores[0].id : '');
       }
 
       if (initialData) {
@@ -80,6 +87,9 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
           cargo_ministerio: initialData.cargo_ministerio || '',
           data_apresentacao: initialData.data_apresentacao ? initialData.data_apresentacao.substring(0, 10) : '',
           data_nascimento: initialData.data_nascimento ? initialData.data_nascimento.substring(0, 10) : '',
+          ano_casamento: initialData.ano_casamento !== undefined && initialData.ano_casamento !== null ? String(initialData.ano_casamento) : '',
+          selado_promessa: initialData.selado_promessa !== undefined && initialData.selado_promessa !== null ? (initialData.selado_promessa ? 'Sim' : 'Não') : '',
+          ano_batismo: initialData.ano_batismo !== undefined && initialData.ano_batismo !== null ? String(initialData.ano_batismo) : '',
           perfil_id: initialData.perfil_id || defaultPerfilId,
           comum_congregacao_id: initialData.comum_congregacao_id || null,
           ativo: initialData.ativo !== undefined ? initialData.ativo : true,
@@ -92,6 +102,9 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
           cargo_ministerio: '',
           data_apresentacao: '',
           data_nascimento: '',
+          ano_casamento: '',
+          selado_promessa: '',
+          ano_batismo: '',
           perfil_id: defaultPerfilId,
           comum_congregacao_id: null,
           ativo: true,
@@ -128,6 +141,87 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
     return filteredComuns;
   }, [filteredComuns, formData.comum_congregacao_id, comuns]);
 
+  const isCjmOrSecretario = formData.cargo_ministerio === 'CJM' || formData.cargo_ministerio === 'Secretário / CJM' || formData.cargo_ministerio === 'Secretário/CJM';
+  const currentYear = new Date().getFullYear();
+
+  const anosCasado = useMemo(() => {
+    if (!formData.ano_casamento) return null;
+    const ano = parseInt(formData.ano_casamento, 10);
+    if (isNaN(ano) || ano < 1900 || ano > currentYear) return null;
+    return currentYear - ano;
+  }, [formData.ano_casamento, currentYear]);
+
+  const anosBatismo = useMemo(() => {
+    if (!formData.ano_batismo) return null;
+    const ano = parseInt(formData.ano_batismo, 10);
+    if (isNaN(ano) || ano < 1900 || ano > currentYear) return null;
+    return currentYear - ano;
+  }, [formData.ano_batismo, currentYear]);
+
+  const tempoMinisterio = useMemo(() => {
+    if (!formData.data_apresentacao) return null;
+    const parts = formData.data_apresentacao.split('-');
+    if (parts.length < 3) return null;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+
+    const startDate = new Date(y, m, d);
+    const today = new Date();
+    if (startDate > today) return { texto: 'Data futura', valido: false };
+
+    let years = today.getFullYear() - startDate.getFullYear();
+    let months = today.getMonth() - startDate.getMonth();
+    let days = today.getDate() - startDate.getDate();
+
+    if (days < 0) {
+      months--;
+    }
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+
+    if (years <= 0 && months <= 0) {
+      return { texto: 'Apresentado este mês', valido: true };
+    }
+    if (years <= 0) {
+      return { texto: `${months} ${months === 1 ? 'mês' : 'meses'}`, valido: true };
+    }
+    if (months === 0) {
+      return { texto: `${years} ${years === 1 ? 'ano' : 'anos'}`, valido: true };
+    }
+    return { 
+      texto: `${years} ${years === 1 ? 'ano' : 'anos'} e ${months} ${months === 1 ? 'mês' : 'meses'}`, 
+      valido: true 
+    };
+  }, [formData.data_apresentacao]);
+
+  const idade = useMemo(() => {
+    if (!formData.data_nascimento) return null;
+    const parts = formData.data_nascimento.split('-');
+    if (parts.length < 3) return null;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+
+    const birthDate = new Date(y, m, d);
+    const today = new Date();
+    if (birthDate > today) return { texto: 'Data futura', valido: false };
+
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const mDiff = today.getMonth() - birthDate.getMonth();
+    if (mDiff < 0 || (mDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
+    if (age < 0) return null;
+    if (age === 0) return { texto: 'Recém-nascido (< 1 ano)', valido: true };
+    return { texto: `${age} ${age === 1 ? 'ano' : 'anos'}`, valido: true };
+  }, [formData.data_nascimento]);
+
   if (!isOpen) return null;
 
   const selectedPerfil = perfis.find((p) => p.id === formData.perfil_id);
@@ -161,14 +255,17 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
       return;
     }
 
-    // Regra 3: Se perfil for "Apontamento", a comum é estritamente obrigatória
-    if (selectedPerfil?.nome === 'Apontamento' && !formData.comum_congregacao_id) {
-      setErrorMsg('Para o perfil "Apontamento", a Comum Congregação de vínculo é obrigatória.');
+    // Regra 3: Se perfil for Apontamento, CJM ou Administrador (Setor), o vínculo é obrigatório
+    const perfilNomeLower = (selectedPerfil?.nome || '').toLowerCase();
+    const isPerfilRestritoSetorOuComum = perfilNomeLower.includes('apontamento') || perfilNomeLower.includes('setor') || perfilNomeLower.includes('cjm') || selectedPerfil?.nivel_acesso === 'setor' || selectedPerfil?.nivel_acesso === 'comum';
+    if (isPerfilRestritoSetorOuComum && !formData.comum_congregacao_id) {
+      setErrorMsg(`Para o perfil "${selectedPerfil?.nome}", a Comum Congregação de vínculo é obrigatória para vincular ao setor.`);
       return;
     }
 
     try {
       setLoading(true);
+      const isCjmOrSec = formData.cargo_ministerio === 'CJM' || formData.cargo_ministerio === 'Secretário / CJM' || formData.cargo_ministerio === 'Secretário/CJM';
       await onSubmit({
         nome_completo: formData.nome_completo.trim(),
         email: formData.email.trim(),
@@ -176,6 +273,9 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
         cargo_ministerio: formData.cargo_ministerio || null,
         data_apresentacao: formData.data_apresentacao || null,
         data_nascimento: formData.data_nascimento || null,
+        ano_casamento: isCjmOrSec && formData.ano_casamento.trim() ? parseInt(formData.ano_casamento.trim(), 10) : null,
+        selado_promessa: isCjmOrSec && formData.selado_promessa ? (formData.selado_promessa === 'Sim') : null,
+        ano_batismo: isCjmOrSec && formData.ano_batismo.trim() ? parseInt(formData.ano_batismo.trim(), 10) : null,
         perfil_id: formData.perfil_id,
         comum_congregacao_id: formData.comum_congregacao_id || null,
         ativo: formData.ativo,
@@ -190,7 +290,7 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
           <div className="flex items-center space-x-2">
@@ -277,14 +377,100 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
               className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent cursor-pointer"
             >
               <option value="Nenhum">Nenhum</option>
-              <option value="Cooperador de Jovens">Cooperador de Jovens</option>
-              <option value="Cooperador de Jovens e Menores">Cooperador de Jovens e Menores</option>
               <option value="Secretário / CJM">Secretário / CJM</option>
               <option value="Auxiliar de Jovens">Auxiliar de Jovens</option>
               <option value="CJM">CJM</option>
               <option value="Ancião">Ancião</option>
             </select>
           </div>
+
+          {/* Campos Complementares para CJM e Secretário / CJM */}
+          {isCjmOrSecretario && (
+            <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/60 space-y-2.5 animate-in fade-in duration-200">
+              <div className="flex items-center space-x-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>Dados Complementares do Ministério ({formData.cargo_ministerio})</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-start">
+                {/* 1. Ano do Casamento */}
+                <div className="flex flex-col min-w-0">
+                  <label className="text-[10px] sm:text-[11px] font-bold uppercase text-slate-700 dark:text-slate-300 flex items-center gap-1 h-5 whitespace-nowrap mb-1 overflow-hidden">
+                    <Heart className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span className="truncate">Ano Casamento</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1940"
+                    max={currentYear}
+                    placeholder="Ex: 2016"
+                    value={formData.ano_casamento}
+                    onChange={(e) => setFormData({ ...formData, ano_casamento: e.target.value })}
+                    className="w-full h-8 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <div className="min-h-[20px] flex items-center mt-1">
+                    {anosCasado !== null && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 truncate">
+                        {anosCasado === 0 ? 'Casou este ano' : `${anosCasado} ${anosCasado === 1 ? 'ano' : 'anos'}`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Selado com a promessa? (Sim ou Não) */}
+                <div className="flex flex-col min-w-0">
+                  <label className="text-[10px] sm:text-[11px] font-bold uppercase text-slate-700 dark:text-slate-300 flex items-center gap-1 h-5 whitespace-nowrap mb-1 overflow-hidden">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span className="truncate">Selado Promessa?</span>
+                  </label>
+                  <select
+                    value={formData.selado_promessa}
+                    onChange={(e) => setFormData({ ...formData, selado_promessa: e.target.value })}
+                    className="w-full h-8 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="Sim">Sim</option>
+                    <option value="Não">Não</option>
+                  </select>
+                  <div className="min-h-[20px] flex items-center mt-1">
+                    {formData.selado_promessa && (
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        formData.selado_promessa === 'Sim'
+                          ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+                      }`}>
+                        {formData.selado_promessa === 'Sim' ? '✓ Selado' : 'Não selado'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Ano de Batismo */}
+                <div className="flex flex-col min-w-0">
+                  <label className="text-[10px] sm:text-[11px] font-bold uppercase text-slate-700 dark:text-slate-300 flex items-center gap-1 h-5 whitespace-nowrap mb-1 overflow-hidden">
+                    <Droplets className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                    <span className="truncate">Ano Batismo</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1940"
+                    max={currentYear}
+                    placeholder="Ex: 2011"
+                    value={formData.ano_batismo}
+                    onChange={(e) => setFormData({ ...formData, ano_batismo: e.target.value })}
+                    className="w-full h-8 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <div className="min-h-[20px] flex items-center mt-1">
+                    {anosBatismo !== null && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 truncate">
+                        {anosBatismo === 0 ? 'Batizado este ano' : `${anosBatismo} ${anosBatismo === 1 ? 'ano' : 'anos'}`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -298,6 +484,19 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, data_apresentacao: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
+              <div className="min-h-[22px] flex items-center mt-1">
+                {tempoMinisterio && (
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold ${
+                    tempoMinisterio.valido
+                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                      : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                  }`}>
+                    <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Tempo de Ministério:</span>
+                    <strong className="text-emerald-900 dark:text-emerald-200 font-bold">{tempoMinisterio.texto}</strong>
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="space-y-1">
@@ -311,6 +510,19 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
                 className="w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
+              <div className="min-h-[22px] flex items-center mt-1">
+                {idade && (
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold ${
+                    idade.valido
+                      ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
+                      : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                  }`}>
+                    <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span>Idade:</span>
+                    <strong className="text-blue-900 dark:text-blue-200 font-bold">{idade.texto}</strong>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -393,9 +605,10 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                   <select
                     value={filtroSetorId}
                     onChange={(e) => setFiltroSetorId(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                    disabled={setores.length === 1}
+                    className={`w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${setores.length === 1 ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'}`}
                   >
-                    <option value="">-- Todos os Setores --</option>
+                    {setores.length > 1 && <option value="">-- Todos os Setores --</option>}
                     {setores.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.nome}

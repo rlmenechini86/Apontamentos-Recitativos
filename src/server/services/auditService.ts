@@ -1,4 +1,4 @@
-﻿import { supabase } from '../config/supabase.js';
+import { supabase } from '../config/supabase.js';
 
 export interface AuditLogEntry {
   usuario_id: string | null;
@@ -104,6 +104,110 @@ export class AuditService {
       detalhes,
       ip_address: ip,
     });
+  }
+
+  /**
+   * Registra log específico de Lançamento ou Alteração de Apontamento
+   * Contendo: data/hora, nome do usuário, congregação e os valores inseridos ou alterados
+   */
+  async logApontamentoAction(payload: {
+    acao: 'CREATE' | 'UPDATE';
+    tabela: 'recitativos' | 'contagens_mocidade';
+    registroId: string;
+    usuarioId: string | null;
+    usuarioEmail: string | null;
+    usuarioNome: string | null;
+    comumNome?: string | null;
+    dataApontamento?: string | null;
+    valoresInseridos?: Record<string, any> | null;
+    valoresAnteriores?: Record<string, any> | null;
+    valoresAlterados?: Record<string, any> | null;
+    valoresNovos?: Record<string, any> | null;
+    ip?: string;
+    userAgent?: string;
+  }): Promise<void> {
+    const detalhesObj = {
+      tipo_operacao: payload.acao === 'CREATE' ? 'Lançamento de Apontamento' : 'Alteração de Apontamento',
+      nome_usuario: payload.usuarioNome || 'Usuário Não Identificado',
+      email_usuario: payload.usuarioEmail || null,
+      tabela: payload.tabela,
+      registro_id: payload.registroId,
+      comum_nome: payload.comumNome || null,
+      data_apontamento: payload.dataApontamento || null,
+      valores_inseridos: payload.valoresInseridos || null,
+      valores_anteriores: payload.valoresAnteriores || null,
+      valores_alterados: payload.valoresAlterados || null,
+      valores_novos: payload.valoresNovos || null,
+      data_registro: new Date().toISOString(),
+    };
+
+    await this.log({
+      usuario_id: payload.usuarioId,
+      usuario_email: payload.usuarioEmail,
+      acao: payload.acao,
+      tabela_afetada: payload.tabela,
+      registro_id: payload.registroId,
+      detalhes: JSON.stringify(detalhesObj),
+      ip_address: payload.ip,
+      user_agent: payload.userAgent,
+    });
+  }
+
+  /**
+   * Consulta os logs de apontamentos gravados na trilha de auditoria
+   */
+  async getApontamentoLogs(limit = 100): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .in('tabela_afetada', ['recitativos', 'contagens_mocidade'])
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) throw new Error(error.message);
+      return data || [];
+    } catch (err: any) {
+      console.error('[AuditService] Erro ao buscar logs de apontamentos:', err);
+      return [];
+    }
+  }
+
+  /**
+   * Consulta os logs de auditoria de um apontamento específico pelo seu registro_id
+   */
+  async getApontamentoLogsByRegistroId(registroId: string): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .eq('registro_id', registroId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('[AuditService] Erro ao buscar por registro_id, tentando fallback em detalhes:', error.message);
+        const fallback = await supabase
+          .from('audit_logs')
+          .select('*')
+          .ilike('detalhes', `%"registro_id":"${registroId}"%`)
+          .order('created_at', { ascending: false });
+        return fallback.data || [];
+      }
+
+      if (!data || data.length === 0) {
+        const fallback = await supabase
+          .from('audit_logs')
+          .select('*')
+          .ilike('detalhes', `%"registro_id":"${registroId}"%`)
+          .order('created_at', { ascending: false });
+        return fallback.data || [];
+      }
+
+      return data || [];
+    } catch (err: any) {
+      console.error('[AuditService] Erro ao buscar logs por registro_id:', err);
+      return [];
+    }
   }
 }
 

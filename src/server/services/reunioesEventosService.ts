@@ -28,8 +28,8 @@ export class ReunioesEventosService {
   async update(id: string, payload: any) {
     const { data, error } = await supabase.from('reunioes_eventos').update({
       data: payload.data,
-      tipo_evento_id: payload.tipo_evento_id,
-      comum_id: payload.comum_id,
+      tipo_evento_id: payload.tipo_evento_id || null,
+      comum_id: payload.comum_id || null,
       nome: payload.nome,
       status: payload.status
     }).eq('id', id).select().single();

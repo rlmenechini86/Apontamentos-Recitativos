@@ -1,4 +1,4 @@
-﻿import bcrypt from 'bcryptjs';
+import bcrypt from 'bcryptjs';
 import { usuarioService } from './usuarioService.js';
 import { perfilService } from './perfilService.js';
 import { validatePassword } from '../../utils/passwordValidator.js';
@@ -89,6 +89,7 @@ export class AuthService {
       email: user.email,
       perfilId: user.perfil_id,
       perfilNome: user.perfis?.nome || '',
+      nome: user.nome_completo,
     });
 
     // Log de login bem-sucedido (LGPD: trilha de auditoria)
@@ -157,6 +158,7 @@ export class AuthService {
       email: createdUser.email,
       perfilId: createdUser.perfil_id,
       perfilNome: createdUser.perfis?.nome || '',
+      nome: createdUser.nome_completo,
     });
 
     // Log de registro (LGPD: trilha de auditoria)

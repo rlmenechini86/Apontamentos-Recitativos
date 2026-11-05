@@ -10,10 +10,12 @@ import reunioesEventosRoutes from './reunioesEventosRoutes.js';
 import agendaVisitasRoutes from './agendaVisitasRoutes.js';
 import perfilRoutes from './perfilRoutes.js';
 import { authRouter } from './authRoutes.js';
+import preCadastroRoutes from './preCadastroRoutes.js';
 
 const apiRouter = Router();
 
 apiRouter.use('/auth', authRouter);
+apiRouter.use('/pre-cadastros', preCadastroRoutes);
 apiRouter.use('/comuns', comumCongregacaoRoutes);
 apiRouter.use('/usuarios', usuarioRoutes);
 apiRouter.use('/perfis', perfilRoutes);

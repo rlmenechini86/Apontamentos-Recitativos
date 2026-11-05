@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CheckCircle2, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, User, AlertCircle, ArrowUpDown, Lock } from 'lucide-react';
+import { CheckCircle2, Search, Plus, RefreshCw, Trash2, Edit2, Calendar, Building2, User, AlertCircle, ArrowUpDown, Lock, History } from 'lucide-react';
 import { Recitativo, ComumCongregacao, Usuario, Setor } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from './Pagination';
-import { apiGet, clearApiCache } from '../utils/api';
+import { apiGet, apiPost, apiPut, clearApiCache } from '../utils/api';
+import { ApontamentoAuditLogView } from './ApontamentoAuditLogView';
+import { getUserScope, isItemInUserSector } from '../utils/permissions';
 
 export interface RecitativoInitialParams {
   date?: string;
@@ -20,11 +22,11 @@ interface RecitativosViewProps {
 
 export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuarios = [], setores: propSetores, initialParams, onClearInitialParams }) => {
   const { user } = useAuth();
+  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
 
-  const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
-  const isApontamento = roleName.includes('apontamento') || user?.perfis?.nivel_acesso === 'comum';
-  const isRestrictedProfile = isApontamento || (roleName !== 'administrador' && user?.perfis?.nivel_acesso !== 'global' && !!user?.comum_congregacao_id);
-  const userComumId = user?.comum_congregacao_id || user?.comum_congregacao?.id;
+  const userScope = React.useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
+  const isRestrictedProfile = userScope.isComum;
+  const userComumId = userScope.userComumId;
 
   const [recitativos, setRecitativos] = useState<Recitativo[]>([]);
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,13 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
   const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString().padStart(2, '0'));
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedSecretarioId, setSelectedSecretarioId] = useState('');
-  const [setores, setSetores] = useState<Setor[]>(propSetores || []);
+
+  // Se o usuário for Administrador (Setor), fixa a seleção no seu setor
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId]);
 
   useEffect(() => {
     if (initialParams && (initialParams.date || initialParams.comumId)) {
@@ -81,8 +89,8 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
   const comunsDoSetor = React.useMemo(() => {
     if (!selectedSetorId) return comuns;
     const selectedSetor = setores.find(s => s.id === selectedSetorId);
-    return comuns.filter(c => 
-      c.setor_id === selectedSetorId || 
+    return comuns.filter(c =>
+      c.setor_id === selectedSetorId ||
       (selectedSetor && c.setor_pertencente === selectedSetor.nome)
     );
   }, [comuns, setores, selectedSetorId]);
@@ -92,13 +100,13 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
     setSelectedComumId('');
     setCurrentPage(1);
   };
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Recitativo | null>(null);
-  
+
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
   const handleSort = (key: string) => {
@@ -152,13 +160,16 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
 
     const matchesSearch = item.comum_congregacao?.nome?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesComum = selectedComumId ? item.comum_id === selectedComumId : true;
-    const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
-    const matchesUserComum = isRestrictedProfile ? item.comum_id === user?.comum_congregacao_id : true;
+    const matchesUserComum = userScope.isComum ? item.comum_id === userComumId : true;
+
+    if (userScope.isSetor && !isItemInUserSector(userScope, item, comuns, setores)) {
+      return false;
+    }
 
     const itemComum = comuns.find(c => c.id === item.comum_id);
     const selectedSetorObj = setores.find(s => s.id === selectedSetorId);
-    const matchesSetor = !selectedSetorId || 
-      itemComum?.setor_id === selectedSetorId || 
+    const matchesSetor = !selectedSetorId ||
+      itemComum?.setor_id === selectedSetorId ||
       (selectedSetorObj && (itemComum?.setor_pertencente === selectedSetorObj.nome || item.comum_congregacao?.setor_pertencente === selectedSetorObj.nome));
 
     const matchesSecretario = !selectedSecretarioId || itemComum?.secretario_id === selectedSecretarioId;
@@ -199,7 +210,7 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
 
   return (
     <div className="space-y-6">
-      
+
       {/* Filtros e Busca */}
       <div className="flex flex-col lg:flex-row gap-4 items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
         <div className="flex-1 flex flex-wrap lg:flex-nowrap gap-3 w-full">
@@ -248,15 +259,14 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
           </div>
           <div className="w-full sm:w-48">
             <select
-              disabled={isRestrictedProfile && !!userComumId}
+              disabled={userScope.isSetor || (isRestrictedProfile && !!userComumId)}
               value={selectedSetorId}
               onChange={(e) => handleSetorFilterChange(e.target.value)}
-              className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                isRestrictedProfile && !!userComumId ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'
-              }`}
+              className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor || (isRestrictedProfile && !!userComumId) ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'
+                }`}
             >
-              <option value="">Setor (Todos)</option>
-              {setores.map((s) => (
+              {!userScope.isSetor && <option value="">Setor (Todos)</option>}
+              {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map((s) => (
                 <option key={s.id} value={s.id}>{s.nome}</option>
               ))}
             </select>
@@ -266,9 +276,8 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
               disabled={isRestrictedProfile && !!userComumId}
               value={selectedComumId}
               onChange={(e) => { setSelectedComumId(e.target.value); setCurrentPage(1); }}
-              className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                isRestrictedProfile && !!userComumId ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'
-              }`}
+              className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isRestrictedProfile && !!userComumId ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'
+                }`}
             >
               <option value="">
                 {selectedSetorId ? 'Comuns do Setor' : 'Todas as Comuns'}
@@ -366,8 +375,8 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
                 </tr>
               ) : (
                 paginatedItems.map((item) => (
-                  <tr 
-                    key={item.id} 
+                  <tr
+                    key={item.id}
                     onClick={() => {
                       setEditingItem(item);
                       setIsModalOpen(true);
@@ -409,21 +418,32 @@ export const RecitativosView: React.FC<RecitativosViewProps> = ({ comuns, usuari
                       </div>
                     </td>
                     <td className="px-3 sm:px-4 py-2.5 sm:py-3.5 text-right">
-                      {user?.perfis?.nome !== 'Apontamento' && (
-                      <div className="flex items-center justify-end space-x-1 sm:space-x-2">
+                      <div className="flex items-center justify-end space-x-1 sm:space-x-1.5">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingItem(item);
                             setIsModalOpen(true);
                           }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                          title="Editar"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                          title="Ver histórico e logs deste apontamento"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <History className="w-4 h-4" />
                         </button>
+                        {user?.perfis?.nome !== 'Apontamento' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingItem(item);
+                              setIsModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                            title="Editar"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
-                      )}
                     </td>
                   </tr>
                 ))
@@ -478,11 +498,9 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
   isOpen, onClose, initialData, initialParams, comuns, onSuccess, setores = [], recitativos = []
 }) => {
   const { user } = useAuth();
-
-  const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
-  const isApontamento = roleName.includes('apontamento') || user?.perfis?.nivel_acesso === 'comum';
-  const isRestrictedUser = isApontamento || (roleName !== 'administrador' && user?.perfis?.nivel_acesso !== 'global' && !!user?.comum_congregacao_id);
-  const userComumId = user?.comum_congregacao_id || user?.comum_congregacao?.id;
+  const userScope = React.useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
+  const isRestrictedUser = userScope.isComum;
+  const userComumId = userScope.userComumId;
 
   const [activeRecitativo, setActiveRecitativo] = useState<Recitativo | null>(initialData);
   const [isEditing, setIsEditing] = useState<boolean>(!initialData);
@@ -531,8 +549,8 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
       : (initialParams?.comumId || '');
     const targetDate = initialParams?.date || new Date().toISOString().split('T')[0];
 
-    const existingMatch = recitativos?.find(r => 
-      r.comum_id === targetComumId && 
+    const existingMatch = recitativos?.find(r =>
+      r.comum_id === targetComumId &&
       (r.data ? r.data.split('T')[0] : '') === targetDate
     );
 
@@ -579,13 +597,16 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
     if (isRestrictedUser && userComumId) {
       return comuns.filter(c => c.id === userComumId);
     }
+    if (userScope.isSetor) {
+      return comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores));
+    }
     if (!modalSetorId) return comuns;
     const selectedSetor = setores.find(s => s.id === modalSetorId);
-    return comuns.filter(c => 
-      c.setor_id === modalSetorId || 
+    return comuns.filter(c =>
+      c.setor_id === modalSetorId ||
       (selectedSetor && c.setor_pertencente === selectedSetor.nome)
     );
-  }, [comuns, setores, modalSetorId, isRestrictedUser, userComumId]);
+  }, [comuns, setores, modalSetorId, isRestrictedUser, userComumId, userScope]);
 
   const canEdit = !isRestrictedUser || !userComumId || (activeRecitativo ? activeRecitativo.comum_id === userComumId : true);
 
@@ -607,7 +628,7 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.data) {
       const [y, m, d] = formData.data.split('-');
       const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
@@ -628,22 +649,17 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
       const payload = {
         ...formData,
         comum_id: enforcedComumId,
-        cadastrado_por: user?.id || null
+        cadastrado_por: user?.id || null,
+        cadastrado_por_nome: user?.nome_completo || null
       };
 
       const targetId = activeRecitativo?.id;
       const url = targetId ? `/api/recitativos/${targetId}` : '/api/recitativos';
-      const method = targetId ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const res = targetId ? await apiPut(url, payload) : await apiPost(url, payload);
 
       if (res.ok) {
         const json = await res.json().catch(() => null);
-        const savedData: Recitativo = json?.data || {
+        const savedData: Recitativo = json?.data || json || {
           id: targetId || `temp-${Date.now()}`,
           data: formData.data,
           comum_id: enforcedComumId,
@@ -660,7 +676,8 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
         onSuccess(savedData);
         onClose();
       } else {
-        alert('Erro ao salvar apontamento.');
+        const errJson = await res.json().catch(() => null);
+        alert(errJson?.error || 'Erro ao salvar apontamento.');
       }
     } catch (err) {
       console.error(err);
@@ -671,7 +688,7 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -679,7 +696,7 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
         }
       }}
     >
-      <div 
+      <div
         onClick={(e) => e.stopPropagation()}
         className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full overflow-hidden text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800"
       >
@@ -703,9 +720,9 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
               </span>
             )}
           </div>
-          <button 
+          <button
             type="button"
-            onClick={onClose} 
+            onClick={onClose}
             className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
           >
             ✕
@@ -729,18 +746,16 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
                     if ('showPicker' in HTMLInputElement.prototype) {
                       (e.target as HTMLInputElement).showPicker();
                     }
-                  } catch (err) {}
+                  } catch (err) { }
                 }}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
-                  !isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed select-none' : 'cursor-pointer'
-                }`}
+                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed select-none' : 'cursor-pointer'
+                  }`}
               />
               {formData.data && (
-                <div className={`text-[11px] mt-1 font-semibold ${
-                  new Date(Number(formData.data.split('-')[0]), Number(formData.data.split('-')[1]) - 1, Number(formData.data.split('-')[2])).getDay() === 0
+                <div className={`text-[11px] mt-1 font-semibold ${new Date(Number(formData.data.split('-')[0]), Number(formData.data.split('-')[1]) - 1, Number(formData.data.split('-')[2])).getDay() === 0
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'text-amber-600 dark:text-amber-500'
-                }`}>
+                  }`}>
                   {['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'][new Date(Number(formData.data.split('-')[0]), Number(formData.data.split('-')[1]) - 1, Number(formData.data.split('-')[2])).getDay()]}
                 </div>
               )}
@@ -749,7 +764,7 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
             <div className="space-y-1">
               <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Setor Pertencente</label>
               <select
-                disabled={!isEditing || (isRestrictedUser && !!userComumId)}
+                disabled={!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId)}
                 value={modalSetorId}
                 onChange={(e) => {
                   const newSetor = e.target.value;
@@ -760,12 +775,11 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
                     if (!isComumIn) setFormData(prev => ({ ...prev, comum_id: '' }));
                   }
                 }}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
-                  !isEditing || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
-                }`}
+                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
+                  }`}
               >
-                <option value="">-- Todos os Setores --</option>
-                {setores.map(s => (
+                {!userScope.isSetor && <option value="">-- Todos os Setores --</option>}
+                {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
                   <option key={s.id} value={s.id}>{s.nome}</option>
                 ))}
               </select>
@@ -786,9 +800,8 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
                     if (s) setModalSetorId(s.id);
                   }
                 }}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
-                  !isEditing || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
-                }`}
+                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
+                  }`}
               >
                 <option value="">Selecione...</option>
                 {modalComunsFiltradas.map((c) => (
@@ -813,9 +826,8 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
                 disabled={!isEditing}
                 value={formData.mocos}
                 onChange={(e) => setFormData({ ...formData, mocos: Number(e.target.value) })}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
-                  !isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
-                }`}
+                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
+                  }`}
               />
             </div>
             <div className="space-y-1">
@@ -826,9 +838,8 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
                 disabled={!isEditing}
                 value={formData.mocas}
                 onChange={(e) => setFormData({ ...formData, mocas: Number(e.target.value) })}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
-                  !isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
-                }`}
+                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
+                  }`}
               />
             </div>
             <div className="space-y-1">
@@ -839,9 +850,8 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
                 disabled={!isEditing}
                 value={formData.meninos}
                 onChange={(e) => setFormData({ ...formData, meninos: Number(e.target.value) })}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
-                  !isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
-                }`}
+                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
+                  }`}
               />
             </div>
             <div className="space-y-1">
@@ -852,19 +862,32 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
                 disabled={!isEditing}
                 value={formData.meninas}
                 onChange={(e) => setFormData({ ...formData, meninas: Number(e.target.value) })}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${
-                  !isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
-                }`}
+                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
+                  }`}
               />
             </div>
           </div>
-          
+
           <div className="pt-2 bg-emerald-50 dark:bg-emerald-500/10 p-3 rounded-lg border border-emerald-200 dark:border-emerald-500/20 text-center">
             <span className="text-sm text-slate-600 dark:text-slate-400 font-semibold uppercase">Total: </span>
             <span className="font-mono font-bold text-xl text-emerald-700 dark:text-emerald-400">
               {formData.mocos + formData.mocas + formData.meninos + formData.meninas}
             </span>
           </div>
+
+          {/* Histórico e Logs de Auditoria deste Apontamento */}
+          {activeRecitativo && activeRecitativo.id && (
+            <div className="pt-1">
+              <ApontamentoAuditLogView
+                registroId={activeRecitativo.id}
+                tabela="recitativos"
+                initialCreatorName={activeRecitativo.usuario?.nome_completo}
+                createdAt={activeRecitativo.created_at}
+                updatedAt={activeRecitativo.updated_at}
+                defaultExpanded={!isEditing}
+              />
+            </div>
+          )}
 
           <div className="pt-4 flex items-center justify-between border-t border-slate-200 dark:border-slate-800">
             {activeRecitativo && !isEditing ? (

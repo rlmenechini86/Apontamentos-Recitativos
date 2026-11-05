@@ -19,7 +19,7 @@ import { ComumCongregacao, Setor, Usuario, ContagemMocidade, Anciao, AuxiliarJov
 import { NavRoute } from './Sidebar';
 import { apiGet } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { hasPermission } from '../utils/permissions';
+import { hasPermission, getUserScope, isItemInUserSector } from '../utils/permissions';
 
 interface DashboardViewProps {
   comuns: ComumCongregacao[];
@@ -49,39 +49,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenNovoUsuario,
 }) => {
   const { user } = useAuth();
+  const userScope = useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
 
-  const roleName = (user?.perfis?.nome || '').toLowerCase().trim();
-  const cargoMinisterio = (user?.cargo_ministerio || '').toLowerCase().trim();
-  const nivelAcesso = user?.perfis?.nivel_acesso;
-
-  // Se for Auxiliar ou CJM (ou Apontamento/comum), restringe a visualização à sua comum congregação
-  const isRestrictedComum = useMemo(() => {
-    if (!user) return false;
-    if (roleName === 'administrador' || nivelAcesso === 'global') return false;
-
-    const isAuxiliar = roleName.includes('auxiliar') || cargoMinisterio.includes('auxiliar');
-    const isCjm = roleName.includes('cjm') || cargoMinisterio.includes('cjm');
-    const isApontamento = roleName.includes('apontamento');
-    const isNivelComum = nivelAcesso === 'comum';
-
-    return isAuxiliar || isCjm || isApontamento || isNivelComum || !!user.comum_congregacao_id;
-  }, [user, roleName, cargoMinisterio, nivelAcesso]);
-
-  const userComumId = user?.comum_congregacao_id || user?.comum_congregacao?.id;
+  // Se o usuário for perfil local (Comum), restringe a visualização à sua congregação
+  const isRestrictedComum = userScope.isComum;
+  const userComumId = userScope.userComumId;
 
   const scopedComuns = useMemo(() => {
-    if (isRestrictedComum && userComumId) {
+    if (userScope.isComum && userComumId) {
       const match = comuns.filter((c) => c.id === userComumId);
       if (match.length > 0) return match;
-      if (user?.comum_congregacao?.nome) {
+      if (userScope.userComumNome) {
         const matchByName = comuns.filter(
-          (c) => c.nome.toLowerCase() === user.comum_congregacao?.nome?.toLowerCase()
+          (c) => c.nome.toLowerCase() === userScope.userComumNome?.toLowerCase()
         );
         if (matchByName.length > 0) return matchByName;
       }
     }
+    if (userScope.isSetor) {
+      return comuns.filter((c) => isItemInUserSector(userScope, c, comuns, setores));
+    }
     return comuns;
-  }, [comuns, isRestrictedComum, userComumId, user?.comum_congregacao?.nome]);
+  }, [comuns, userScope, userComumId, setores]);
 
   const scopedComumIds = useMemo(() => new Set(scopedComuns.map((c) => c.id)), [scopedComuns]);
 
@@ -104,6 +93,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Filtros da seção de Apontamentos Faltantes
   const [selectedSetorId, setSelectedSetorId] = useState<string>('');
   const [selectedPeriodo, setSelectedPeriodo] = useState<'mes_atual' | 'mes_anterior' | 'ultimos_30' | 'ano_atual'>('mes_atual');
+
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId]);
 
   useEffect(() => {
     if (propRecitativos !== undefined) return;
@@ -171,31 +166,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalCJM = useMemo(() => {
     return usuarios.filter(u => {
       if (!u.ativo) return false;
-      if (isRestrictedComum && userComumId) {
-        if (u.comum_congregacao_id !== userComumId) return false;
-      }
+      if (userScope.isSetor && !isItemInUserSector(userScope, u, comuns, setores)) return false;
+      if (userScope.isComum && userComumId && u.comum_congregacao_id !== userComumId) return false;
       const c = (u.cargo_ministerio || '').trim().toLowerCase();
       return c === 'cjm' || c === 'secretário / cjm' || c === 'secretario / cjm';
     }).length;
-  }, [usuarios, isRestrictedComum, userComumId]);
+  }, [usuarios, userScope, userComumId, comuns, setores]);
 
   const totalAnciaos = useMemo(() => {
-    if (isRestrictedComum) {
+    if (userScope.isComum || userScope.isSetor) {
       const anciaoIds = new Set(scopedComuns.map(c => c.anciao_id).filter(Boolean));
       return anciaos.filter(a => a.ativo && anciaoIds.has(a.id)).length;
     }
     return anciaos.filter(a => a.ativo).length;
-  }, [anciaos, isRestrictedComum, scopedComuns]);
+  }, [anciaos, userScope, scopedComuns]);
 
   const totalAuxiliares = useMemo(() => {
     return auxiliares.filter(a => {
       if (!a.ativo || !a.is_auxiliar) return false;
-      if (isRestrictedComum && userComumId) {
+      if (userScope.isComum && userComumId) {
         return a.comum_id === userComumId;
+      }
+      if (userScope.isSetor) {
+        return isItemInUserSector(userScope, a, comuns, setores);
       }
       return true;
     }).length;
-  }, [auxiliares, isRestrictedComum, userComumId]);
+  }, [auxiliares, userScope, userComumId, comuns, setores]);
 
   // =========================================================================
   // CÁLCULO DOS APONTAMENTOS FALTANTES / PENDENTES COM IDENTIFICAÇÃO DAS DATAS
@@ -348,11 +345,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             quadro de auxiliares, membros da CJM e monitoramento de preenchimento.
           </p>
 
-          {/* Destaque para perfil restrito à comum */}
-          {isRestrictedComum && scopedComuns[0] && (
+          {/* Destaque para perfil restrito à comum ou setor */}
+          {userScope.isComum && scopedComuns[0] && (
             <div className="mt-3 inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-emerald-100/90 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-semibold border border-emerald-300 dark:border-emerald-500/40 shadow-xs">
               <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>Visão restrita à sua congregação: <strong>{scopedComuns[0].nome}</strong> ({scopedComuns[0].setor_pertencente || 'Setor'})</span>
+            </div>
+          )}
+          {userScope.isSetor && (
+            <div className="mt-3 inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-amber-100/90 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-semibold border border-amber-300 dark:border-amber-500/40 shadow-xs">
+              <Layers className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span>Visão consolidada do seu setor: <strong>{userScope.userSetorNome || 'Setor'}</strong> ({scopedComuns.length} congregações)</span>
             </div>
           )}
 
@@ -590,7 +593,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Barra de Filtros e Alternância de Visualização */}
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Filtro Setor */}
-            {!isRestrictedComum ? (
+            {userScope.isGlobal ? (
               <select
                 value={selectedSetorId}
                 onChange={(e) => setSelectedSetorId(e.target.value)}
@@ -601,6 +604,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <option key={s.id} value={s.id}>{s.nome}</option>
                 ))}
               </select>
+            ) : userScope.isSetor ? (
+              <div className="px-3 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-center space-x-1.5 shadow-xs">
+                <Layers className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>{userScope.userSetorNome || 'Seu Setor'}</span>
+              </div>
             ) : (
               <div className="px-3 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/70 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center space-x-1.5">
                 <Building2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />

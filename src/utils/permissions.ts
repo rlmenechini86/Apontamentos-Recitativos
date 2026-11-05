@@ -1,4 +1,4 @@
-import { Usuario } from '../types';
+import { Usuario, ComumCongregacao, Setor } from '../types';
 
 export interface PermissaoRegra {
   id: string;
@@ -81,11 +81,11 @@ export const hasPermission = (user: Usuario | null, actionId: string): boolean =
   }
 
   // 3. Fallbacks para perfis clássicos do sistema
-  if (roleName.includes('admin') || roleName === 'administrador') {
+  if ((roleName === 'administrador' || roleName.includes('admin')) && !roleName.includes('setor') && user.perfis.nivel_acesso !== 'setor') {
     if (rule.admin !== undefined) return !!rule.admin;
     return true;
   }
-  if (roleName.includes('cjm')) {
+  if (roleName.includes('cjm') || roleName.includes('setor')) {
     if (rule.cjm !== undefined) return !!rule.cjm;
   }
   if (roleName.includes('apontamento')) {
@@ -97,6 +97,122 @@ export const hasPermission = (user: Usuario | null, actionId: string): boolean =
 
   return false;
 };
+
+export interface UserScope {
+  isGlobal: boolean;            // Administrador Geral (vê e cadastra em todos os setores)
+  isSetor: boolean;             // Administrador (Setor) ou CJM (somente do seu setor pertencente)
+  isComum: boolean;             // Apontamento (somente da sua congregação)
+  userSetorId: string | null;   // ID do setor do usuário
+  userSetorNome: string | null; // Nome do setor do usuário
+  userComumId: string | null;   // ID da comum do usuário
+  userComumNome: string | null; // Nome da comum do usuário
+  userComum?: ComumCongregacao | Partial<ComumCongregacao> | null;
+  userSetor?: Setor | null;
+}
+
+/**
+ * Retorna o escopo de atuação do usuário no sistema (Global, Setorial ou Comum)
+ * e os identificadores do seu setor e comum pertencentes.
+ */
+export function getUserScope(
+  user: Usuario | null, 
+  comuns: ComumCongregacao[] = [], 
+  setores: Setor[] = []
+): UserScope {
+  if (!user) {
+    return {
+      isGlobal: false,
+      isSetor: false,
+      isComum: false,
+      userSetorId: null,
+      userSetorNome: null,
+      userComumId: null,
+      userComumNome: null,
+      userComum: null,
+      userSetor: null
+    };
+  }
+
+  const roleName = (user.perfis?.nome || '').toLowerCase().trim();
+  const nivelAcesso = user.perfis?.nivel_acesso;
+  const canViewAllSectors = hasPermission(user, 'visualizar_setores');
+
+  // Identifica a comum e o setor do usuário
+  const userComum = comuns.find(c => c.id === user.comum_congregacao_id) || user.comum_congregacao || null;
+  const userSetor = setores.find(s => 
+    (userComum?.setor_id && s.id === userComum.setor_id) || 
+    (userComum?.setor_pertencente && s.nome.toLowerCase() === userComum.setor_pertencente.toLowerCase()) ||
+    (s.id && (userComum as any)?.setores?.id === s.id)
+  ) || null;
+
+  const userSetorId = userSetor?.id || userComum?.setor_id || (userComum as any)?.setores?.id || null;
+  const userSetorNome = userSetor?.nome || userComum?.setor_pertencente || (userComum as any)?.setores?.nome || null;
+  const userComumId = user.comum_congregacao_id || user.comum_congregacao?.id || null;
+  const userComumNome = userComum?.nome || null;
+
+  // 1. Perfil Comum (Apontamento)
+  const isComum = nivelAcesso === 'comum' || roleName.includes('apontamento');
+
+  // 2. Perfil Global (Administrador Geral com visão global de todos os setores)
+  const isGlobal = !isComum && (
+    (nivelAcesso === 'global' && canViewAllSectors) || 
+    (roleName === 'administrador' && !roleName.includes('setor') && canViewAllSectors)
+  );
+
+  // 3. Perfil Setorial: Administrador (Setor), CJM ou qualquer usuário restrito ao seu setor
+  const isSetor = !isGlobal && !isComum && (
+    nivelAcesso === 'setor' || 
+    roleName.includes('setor') || 
+    roleName.includes('cjm') || 
+    !canViewAllSectors
+  );
+
+  const resolvedSetor = userSetor || (userSetorId ? setores.find(s => s.id === userSetorId) : null) || null;
+
+  return {
+    isGlobal,
+    isSetor,
+    isComum,
+    userSetorId,
+    userSetorNome,
+    userComumId,
+    userComumNome,
+    userComum,
+    userSetor: resolvedSetor
+  };
+}
+
+/**
+ * Verifica se um registro pertence ao setor do usuário corrente
+ */
+export function isItemInUserSector(
+  scope: UserScope, 
+  item: { setor_id?: string | null; setor_pertencente?: string | null; comum_congregacao_id?: string | null; comum_id?: string | null }, 
+  comuns: ComumCongregacao[] = [],
+  setores: Setor[] = []
+): boolean {
+  if (scope.isGlobal) return true;
+  if (!scope.isSetor) return true;
+  if (!scope.userSetorId && !scope.userSetorNome) return true;
+
+  // Verificação direta por setor_id ou setor_pertencente
+  if (item.setor_id && scope.userSetorId && item.setor_id === scope.userSetorId) return true;
+  if (item.setor_pertencente && scope.userSetorNome && item.setor_pertencente.toLowerCase() === scope.userSetorNome.toLowerCase()) return true;
+
+  // Verificação indireta através da comum de congregação
+  const targetComumId = item.comum_congregacao_id || item.comum_id;
+  if (targetComumId) {
+    const c = comuns.find(x => x.id === targetComumId);
+    if (c) {
+      if (scope.userSetorId && c.setor_id === scope.userSetorId) return true;
+      if (scope.userSetorNome && c.setor_pertencente && c.setor_pertencente.toLowerCase() === scope.userSetorNome.toLowerCase()) return true;
+      const s = setores.find(st => st.id === scope.userSetorId);
+      if (s && c.setor_pertencente && c.setor_pertencente.toLowerCase() === s.nome.toLowerCase()) return true;
+    }
+  }
+
+  return false;
+}
 
 export const initPermissoesSync = async () => {
   try {

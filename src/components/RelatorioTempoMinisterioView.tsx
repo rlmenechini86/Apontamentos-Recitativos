@@ -6,6 +6,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell, LabelList
 } from 'recharts';
 import { ComumCongregacao, Usuario, Setor } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { getUserScope, isItemInUserSector } from '../utils/permissions';
 
 interface RelatorioTempoMinisterioViewProps {
   comuns: ComumCongregacao[];
@@ -20,11 +22,20 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
   usuarios,
   setores: propSetores
 }) => {
+  const { user } = useAuth();
   const [setores, setSetores] = useState<Setor[]>(propSetores || []);
   const [selectedSetorId, setSelectedSetorId] = useState<string>('');
   const [selectedComumId, setSelectedComumId] = useState<string>('');
   const [selectedCargo, setSelectedCargo] = useState<string>('');
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+
+  const userScope = useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
+
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId]);
 
   useEffect(() => {
     if (propSetores && propSetores.length > 0) {
@@ -60,6 +71,9 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
 
   const filteredUsuarios = useMemo(() => {
     let data = usuariosValidos;
+    if (userScope.isSetor) {
+      data = data.filter(u => isItemInUserSector(userScope, u, comuns, setores));
+    }
     if (selectedSetorId) {
       const selectedSetor = setores.find(s => s.id === selectedSetorId);
       data = data.filter(u => {
@@ -194,15 +208,16 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
           </div>
           
           <select
+            disabled={userScope.isSetor}
             value={selectedSetorId}
             onChange={(e) => {
               setSelectedSetorId(e.target.value);
               setSelectedComumId('');
             }}
-            className="w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            className={`w-full sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
           >
-            <option value="">Todos os Setores</option>
-            {setores.map((s) => (
+            {!userScope.isSetor && <option value="">Todos os Setores</option>}
+            {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map((s) => (
               <option key={s.id} value={s.id}>{s.nome}</option>
             ))}
           </select>
@@ -229,10 +244,10 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
             ))}
           </select>
 
-          {(selectedSetorId || selectedComumId || selectedCargo) && (
+          {((!userScope.isSetor && selectedSetorId) || selectedComumId || selectedCargo) && (
             <button
               onClick={() => {
-                setSelectedSetorId('');
+                setSelectedSetorId(userScope.isSetor && userScope.userSetorId ? userScope.userSetorId : '');
                 setSelectedComumId('');
                 setSelectedCargo('');
               }}

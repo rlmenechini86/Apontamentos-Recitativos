@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Building2,
   Users,
+  UserPlus,
   KeyRound,
   Clock,
   UserCheck,
@@ -38,6 +39,7 @@ export type NavRoute =
   | 'relatorio-auxiliares'
   | 'admin-comuns'
   | 'admin-usuarios'
+  | 'admin-pre-cadastros'
   | 'admin-anciaos'
   | 'admin-perfis'
   | 'admin-auxiliares'
@@ -54,10 +56,13 @@ interface SidebarProps {
   status: DbStatus | null;
   comunsCount: number;
   usuariosCount: number;
+  preCadastrosCount?: number;
   isOpenMobile: boolean;
   onCloseMobile: () => void;
   reunioesHojeCount?: number;
   visitasHojeCount?: number;
+  reunioesAmanhaCount?: number;
+  visitasAmanhaCount?: number;
   perfisCount?: number;
   onOpenLgpdModal?: () => void;
 }
@@ -68,10 +73,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   status,
   comunsCount,
   usuariosCount,
+  preCadastrosCount = 0,
   isOpenMobile,
   onCloseMobile,
   reunioesHojeCount = 0,
   visitasHojeCount = 0,
+  reunioesAmanhaCount = 0,
+  visitasAmanhaCount = 0,
   perfisCount = 3,
   onOpenLgpdModal,
 }) => {
@@ -91,6 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isAdminRouteActive = [
     'admin-comuns',
     'admin-usuarios',
+    'admin-pre-cadastros',
     'admin-anciaos',
     'admin-perfis',
     'admin-auxiliares',
@@ -196,14 +205,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Clock className={`w-4 h-4 ${currentRoute === 'calendario' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
                 <span>Calendário de Reuniões</span>
               </div>
-              {reunioesHojeCount > 0 && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs ${
-                  currentRoute === 'calendario' 
-                    ? 'bg-white text-emerald-700' 
-                    : 'bg-amber-500 text-white animate-pulse'
-                }`}>
-                  Hoje ({reunioesHojeCount})
-                </span>
+              {(reunioesHojeCount > 0 || reunioesAmanhaCount > 0) && (
+                <div className="flex items-center gap-1 flex-wrap justify-end">
+                  {reunioesHojeCount > 0 && (
+                    <span 
+                      title={`${reunioesHojeCount} evento(s) hoje`}
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs ${
+                        currentRoute === 'calendario' 
+                          ? 'bg-white text-emerald-700' 
+                          : 'bg-amber-500 text-white animate-pulse'
+                      }`}
+                    >
+                      Hoje ({reunioesHojeCount})
+                    </span>
+                  )}
+                  {reunioesAmanhaCount > 0 && (
+                    <span 
+                      title={`${reunioesAmanhaCount} evento(s) amanhã (1 dia antes)`}
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs ${
+                        currentRoute === 'calendario' 
+                          ? 'bg-white/80 text-emerald-800' 
+                          : 'bg-sky-500 text-white'
+                      }`}
+                    >
+                      Amanhã ({reunioesAmanhaCount})
+                    </span>
+                  )}
+                </div>
               )}
             </button>
           )}
@@ -222,14 +250,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Calendar className={`w-4 h-4 ${currentRoute === 'agenda-visitas' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
                 <span>Agenda de Visitas</span>
               </div>
-              {visitasHojeCount > 0 && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs ${
-                  currentRoute === 'agenda-visitas' 
-                    ? 'bg-white text-emerald-700' 
-                    : 'bg-teal-500 text-white animate-pulse'
-                }`}>
-                  Hoje ({visitasHojeCount})
-                </span>
+              {(visitasHojeCount > 0 || visitasAmanhaCount > 0) && (
+                <div className="flex items-center gap-1 flex-wrap justify-end">
+                  {visitasHojeCount > 0 && (
+                    <span 
+                      title={`${visitasHojeCount} visita(s) hoje`}
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs ${
+                        currentRoute === 'agenda-visitas' 
+                          ? 'bg-white text-emerald-700' 
+                          : 'bg-teal-500 text-white animate-pulse'
+                      }`}
+                    >
+                      Hoje ({visitasHojeCount})
+                    </span>
+                  )}
+                  {visitasAmanhaCount > 0 && (
+                    <span 
+                      title={`${visitasAmanhaCount} visita(s) amanhã (1 dia antes)`}
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs ${
+                        currentRoute === 'agenda-visitas' 
+                          ? 'bg-white/80 text-teal-800' 
+                          : 'bg-sky-500 text-white'
+                      }`}
+                    >
+                      Amanhã ({visitasAmanhaCount})
+                    </span>
+                  )}
+                </div>
               )}
             </button>
           )}
@@ -456,6 +503,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
                     {usuariosCount}
                   </span>
+                </button>
+                )}
+
+                {/* 3.3 Pré-Cadastros */}
+                {hasPermission(user, 'gerenciar_usuarios') && (
+                <button
+                  onClick={() => handleNavClick('admin-pre-cadastros')}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    currentRoute === 'admin-pre-cadastros'
+                      ? 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-500/30'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <UserPlus className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Pré-Cadastros</span>
+                  </div>
+                  {preCadastrosCount > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-mono font-bold">
+                      {preCadastrosCount}
+                    </span>
+                  )}
                 </button>
                 )}
 

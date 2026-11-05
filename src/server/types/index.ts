@@ -51,6 +51,9 @@ export interface Usuario {
   cargo_ministerio?: string | null;
   data_apresentacao?: string | null;
   data_nascimento?: string | null;
+  ano_casamento?: number | string | null;
+  selado_promessa?: boolean | null;
+  ano_batismo?: number | string | null;
   perfil_id: string;
   comum_congregacao_id?: string | null;
   senha_hash?: string;
@@ -107,6 +110,9 @@ export interface CreateUsuarioDTO {
   cargo_ministerio?: string | null;
   data_apresentacao?: string | null;
   data_nascimento?: string | null;
+  ano_casamento?: number | string | null;
+  selado_promessa?: boolean | null;
+  ano_batismo?: number | string | null;
   perfil_id: string;
   comum_congregacao_id?: string | null;
   senha?: string;
@@ -120,6 +126,9 @@ export interface UpdateUsuarioDTO {
   cargo_ministerio?: string | null;
   data_apresentacao?: string | null;
   data_nascimento?: string | null;
+  ano_casamento?: number | string | null;
+  selado_promessa?: boolean | null;
+  ano_batismo?: number | string | null;
   perfil_id?: string;
   comum_congregacao_id?: string | null;
   senha?: string;
@@ -147,6 +156,8 @@ export interface Recitativo {
   cadastrado_por: string | null;
   created_at?: string;
   updated_at?: string;
+  comum_congregacao?: Partial<ComumCongregacao>;
+  usuario?: Partial<Usuario>;
 }
 
 export interface CreateRecitativoDTO {
@@ -166,6 +177,7 @@ export interface UpdateRecitativoDTO {
   mocas?: number;
   meninos?: number;
   meninas?: number;
+  cadastrado_por?: string | null;
 }
 
 export interface DetalheMusicoFamilia {
@@ -186,6 +198,8 @@ export interface ContagemMocidade {
   cadastrado_por: string | null;
   created_at?: string;
   updated_at?: string;
+  comum_congregacao?: Partial<ComumCongregacao>;
+  usuario?: Partial<Usuario>;
 }
 
 export interface CreateContagemMocidadeDTO {
@@ -209,6 +223,7 @@ export interface UpdateContagemMocidadeDTO {
   auxiliares_mocos?: number;
   total_musicos?: number;
   detalhes_musicos?: DetalheMusicoFamilia[];
+  cadastrado_por?: string | null;
 }
 
 export interface Anciao {
@@ -220,5 +235,58 @@ export interface Anciao {
   ativo: boolean;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface PreCadastro {
+  id: string;
+  nome_completo: string;
+  email: string;
+  celular: string;
+  cargo: string;
+  data_apresentacao?: string | null;
+  data_nascimento?: string | null;
+  ano_casamento?: number | null;
+  selado_promessa?: boolean | null;
+  ano_batismo?: number | null;
+  setor_id?: string | null;
+  setor_pertencente?: string | null;
+  comum_congregacao_id?: string | null;
+  status: 'pendente' | 'aprovado' | 'recusado';
+  motivo_recusa?: string | null;
+  perfil_id?: string | null;
+  usuario_id?: string | null;
+  aprovado_por?: string | null;
+  aprovado_em?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  comum_congregacao?: {
+    id: string;
+    nome: string;
+    codigo?: string;
+    setor_pertencente?: string;
+  };
+  setores?: {
+    id: string;
+    nome: string;
+  };
+  perfis?: {
+    id: string;
+    nome: string;
+  };
+}
+
+export interface CreatePreCadastroDTO {
+  nome_completo: string;
+  email: string;
+  celular: string;
+  cargo: string;
+  data_apresentacao?: string | null;
+  data_nascimento?: string | null;
+  ano_casamento?: number | string | null;
+  selado_promessa?: boolean | null;
+  ano_batismo?: number | string | null;
+  setor_id?: string | null;
+  setor_pertencente?: string | null;
+  comum_congregacao_id?: string | null;
 }
 

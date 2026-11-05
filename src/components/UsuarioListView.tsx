@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { Usuario, Perfil, ComumCongregacao, Setor } from '../types';
 import { Pagination } from './Pagination';
+import { useAuth } from '../context/AuthContext';
+import { getUserScope, isItemInUserSector } from '../utils/permissions';
 
 interface UsuarioListViewProps {
   usuarios: Usuario[];
@@ -43,6 +45,7 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
   onResetPassword,
   dataSource,
 }) => {
+  const { user } = useAuth();
   const [setores, setSetores] = useState<Setor[]>(propSetores || []);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSetorId, setSelectedSetorId] = useState('');
@@ -51,6 +54,8 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
   
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 10;
+
+  const userScope = React.useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
 
   React.useEffect(() => {
     if (propSetores && propSetores.length > 0) {
@@ -62,6 +67,13 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
         .catch(err => console.error('Erro ao buscar setores:', err));
     }
   }, [propSetores]);
+
+  // Se o usuário for Administrador (Setor), fixa a seleção no seu setor
+  React.useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId]);
 
   const comunsDoSetor = React.useMemo(() => {
     if (!selectedSetorId) return comuns;
@@ -77,18 +89,23 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
     setSelectedComumId('');
   };
 
-  const filteredUsuarios = usuarios.filter((user) => {
+  const filteredUsuarios = usuarios.filter((userItem) => {
+    // Escopo setorial obrigatório: usuário precisa pertencer ao setor
+    if (userScope.isSetor && !isItemInUserSector(userScope, userItem, comuns, setores)) {
+      return false;
+    }
+
     const matchesSearch =
       !searchTerm ||
-      user.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.celular.includes(searchTerm);
+      userItem.nome_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      userItem.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      userItem.celular.includes(searchTerm);
 
-    const matchesPerfil = !selectedPerfilId || user.perfil_id === selectedPerfilId;
-    const matchesComum = !selectedComumId || user.comum_congregacao_id === selectedComumId;
+    const matchesPerfil = !selectedPerfilId || userItem.perfil_id === selectedPerfilId;
+    const matchesComum = !selectedComumId || userItem.comum_congregacao_id === selectedComumId;
 
     const matchesSetor = !selectedSetorId || (() => {
-      const userComum = comuns.find(c => c.id === user.comum_congregacao_id) || user.comum_congregacao;
+      const userComum = comuns.find(c => c.id === userItem.comum_congregacao_id) || userItem.comum_congregacao;
       const s = setores.find(st => st.id === selectedSetorId);
       return userComum?.setor_id === selectedSetorId || (s && (userComum?.setor_pertencente === s.nome || (userComum as any)?.setores?.nome === s.nome));
     })();
@@ -103,10 +120,17 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
   const totalPages = Math.ceil(filteredUsuarios.length / itemsPerPage);
   const paginatedUsuarios = filteredUsuarios.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const totalUsuarios = usuarios.length;
-  const totalAdmins = usuarios.filter((u) => u.perfis?.nome === 'Administrador').length;
-  const totalCJMs = usuarios.filter((u) => u.perfis?.nome === 'CJM').length;
-  const totalApontamentos = usuarios.filter((u) => u.perfis?.nome === 'Apontamento').length;
+  const scopedUsuariosList = React.useMemo(() => {
+    if (userScope.isSetor) {
+      return usuarios.filter(u => isItemInUserSector(userScope, u, comuns, setores));
+    }
+    return usuarios;
+  }, [usuarios, userScope, comuns, setores]);
+
+  const totalUsuarios = scopedUsuariosList.length;
+  const totalAdmins = scopedUsuariosList.filter((u) => u.perfis?.nome === 'Administrador').length;
+  const totalCJMs = scopedUsuariosList.filter((u) => u.perfis?.nome === 'CJM' || u.perfis?.nome?.toLowerCase().includes('setor')).length;
+  const totalApontamentos = scopedUsuariosList.filter((u) => u.perfis?.nome === 'Apontamento').length;
 
   const getPerfilBadge = (perfil?: Partial<Perfil>) => {
     if (!perfil || !perfil.nome) {
@@ -122,6 +146,15 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-50 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/20">
           <ShieldCheck className="w-3 h-3 mr-1 text-purple-600 dark:text-purple-400" />
           Administrador
+        </span>
+      );
+    }
+
+    if (perfil.nome === 'Administrador (Setor)') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/20">
+          <ShieldCheck className="w-3 h-3 mr-1 text-indigo-600 dark:text-indigo-400" />
+          Administrador (Setor)
         </span>
       );
     }
@@ -216,10 +249,11 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
             <select
               value={selectedSetorId}
               onChange={(e) => handleSetorChange(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+              disabled={userScope.isSetor}
+              className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'}`}
             >
-              <option value="">Todos os Setores</option>
-              {setores.map((s) => (
+              {!userScope.isSetor && <option value="">Todos os Setores</option>}
+              {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.nome}
                 </option>
@@ -261,10 +295,10 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
             </select>
           </div>
 
-          {(selectedSetorId || selectedComumId || selectedPerfilId || searchTerm) && (
+          {((!userScope.isSetor && selectedSetorId) || selectedComumId || selectedPerfilId || searchTerm) && (
             <button
               onClick={() => {
-                setSelectedSetorId('');
+                setSelectedSetorId(userScope.isSetor && userScope.userSetorId ? userScope.userSetorId : '');
                 setSelectedComumId('');
                 setSelectedPerfilId('');
                 setSearchTerm('');
@@ -347,6 +381,25 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
                             {user.cargo_ministerio && (
                               <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded font-medium text-[10px]">
                                 {user.cargo_ministerio}
+                              </span>
+                            )}
+                            {user.ano_casamento && (
+                              <span className="bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60 px-1.5 py-0.2 rounded font-medium text-[10px]" title={`Casado em ${user.ano_casamento}`}>
+                                💍 {new Date().getFullYear() - Number(user.ano_casamento)}a casado
+                              </span>
+                            )}
+                            {user.selado_promessa !== undefined && user.selado_promessa !== null && (
+                              <span className={`px-1.5 py-0.2 rounded font-medium text-[10px] border ${
+                                user.selado_promessa 
+                                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
+                                  : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+                              }`}>
+                                {user.selado_promessa ? '✨ Selado' : 'Não selado'}
+                              </span>
+                            )}
+                            {user.ano_batismo && (
+                              <span className="bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60 px-1.5 py-0.2 rounded font-medium text-[10px]" title={`Batizado em ${user.ano_batismo}`}>
+                                💧 {new Date().getFullYear() - Number(user.ano_batismo)}a batismo
                               </span>
                             )}
                             <span className="hidden sm:inline text-slate-400 dark:text-slate-500 font-mono text-[10px]">

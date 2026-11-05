@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
+import {
   Building2, Users, FileText, CheckCircle2, TrendingUp, Search, BarChart as BarChartIcon, List
 } from 'lucide-react';
 import {
@@ -7,8 +7,8 @@ import {
 } from 'recharts';
 import { ComumCongregacao, Recitativo, ContagemMocidade, Anciao, Setor } from '../types';
 import { apiGet } from '../utils/api';
-
 import { useAuth } from '../context/AuthContext';
+import { getUserScope, isItemInUserSector } from '../utils/permissions';
 
 interface Props {
   comuns: ComumCongregacao[];
@@ -48,7 +48,7 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
           apiGet('/api/recitativos'),
           apiGet('/api/contagens')
         ]);
-        
+
         const [jsonRecitativos, jsonContagens] = await Promise.all([
           resRecitativos.ok ? resRecitativos.json() : { data: [] },
           resContagens.ok ? resContagens.json() : { data: [] }
@@ -66,16 +66,35 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
     fetchData();
   }, []);
 
-  const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
-  const comuns = propComuns.filter((c: any) => isRestrictedProfile ? c.id === user?.comum_congregacao_id : true);
+  const userScope = useMemo(() => getUserScope(user, propComuns, setores), [user, propComuns, setores]);
+  const isRestrictedProfile = userScope.isComum;
+  const userComumId = userScope.userComumId;
+
+  // Se o usuário for Administrador (Setor), fixa a seleção no seu setor
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId]);
+
+  const comuns = useMemo(() => {
+    if (userScope.isComum && userComumId) {
+      return propComuns.filter((c: any) => c.id === userComumId);
+    }
+    if (userScope.isSetor) {
+      return propComuns.filter((c: any) => isItemInUserSector(userScope, c, propComuns, setores));
+    }
+    return propComuns;
+  }, [propComuns, userScope, userComumId, setores]);
+
   const anciaos = propAnciaos.filter((a: any) => !a.nome.includes('/'));
 
   // Comuns filtradas pelo setor selecionado
   const comunsFiltradas = useMemo(() => {
     if (!selectedSetorId) return comuns;
     const selectedSetor = setores.find(s => s.id === selectedSetorId);
-    return comuns.filter(c => 
-      c.setor_id === selectedSetorId || 
+    return comuns.filter(c =>
+      c.setor_id === selectedSetorId ||
       (selectedSetor && c.setor_pertencente === selectedSetor.nome)
     );
   }, [comuns, selectedSetorId, setores]);
@@ -84,8 +103,8 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
   const anciaosDoSetor = useMemo(() => {
     if (!selectedSetorId) return anciaos;
     const selectedSetor = setores.find(s => s.id === selectedSetorId);
-    return anciaos.filter(a => 
-      a.setor_id === selectedSetorId || 
+    return anciaos.filter(a =>
+      a.setor_id === selectedSetorId ||
       (selectedSetor && a.setor_pertencente === selectedSetor.nome) ||
       comuns.some(c => c.anciao_id === a.id && (c.setor_id === selectedSetorId || (selectedSetor && c.setor_pertencente === selectedSetor.nome)))
     );
@@ -121,26 +140,26 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
   }, [anciaosDoSetor]);
 
   const selectedAnciao = anciaos.find(a => a.id === selectedAnciaoId);
-  
+
   const comunsDoAnciao = comunsFiltradas.filter(c => {
     // 1. Igreja que o ancião é o responsável principal
     if (c.anciao_id === selectedAnciaoId) return true;
-    
+
     // 2. Lógica de compartilhamento de igrejas
     if (selectedAnciao) {
       const nome = selectedAnciao.nome || '';
-      
+
       // Rafael Júnior e Clayton Barbosa atendem "Jd. Novo Portugal"
       if ((nome.includes('Rafael') || nome.includes('Clayton')) && c.nome.includes('Novo Portugal')) {
         return true;
       }
-      
+
       // Silvio Mesquita, Marcos do Carmo e Paulo Sérgio atendem "Vila Nova Bonsucesso"
       if ((nome.includes('Silvio') || nome.includes('Marcos') || nome.includes('Paulo')) && c.nome.includes('Bonsucesso')) {
         return true;
       }
     }
-    
+
     return false;
   }).sort((a, b) => a.nome.localeCompare(b.nome));
 
@@ -149,19 +168,19 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
     return comunsDoAnciao.map(comum => {
       // 1. Mocidade (Filtra por Ano - Pega a contagem mais recente do ano para todos os meses)
       const mocidadeRegistros = contagens
-        .filter(c => c.comum_id === comum.id && c.tipo === 'Mocidade' && 
-                     c.data.startsWith(selectedYear))
+        .filter(c => c.comum_id === comum.id && c.tipo === 'Mocidade' &&
+          c.data.startsWith(selectedYear))
         .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-        
+
       const mocidadeTotal = mocidadeRegistros.length > 0 ? mocidadeRegistros[0].quantidade : 0;
 
       // 2. Expectativa
       const expectativa = Math.round(mocidadeTotal * 0.70);
 
       // 3. Total de Recitativos (Média individual por categoria, ignorando zeros)
-      const recsPeriodo = recitativos.filter(r => r.comum_id === comum.id && 
-                                               r.data.startsWith(selectedMonth ? `${selectedYear}-${selectedMonth}` : selectedYear));
-      
+      const recsPeriodo = recitativos.filter(r => r.comum_id === comum.id &&
+        r.data.startsWith(selectedMonth ? `${selectedYear}-${selectedMonth}` : selectedYear));
+
       const meninas = recsPeriodo.map(r => r.meninas).filter(v => v > 0);
       const meninos = recsPeriodo.map(r => r.meninos).filter(v => v > 0);
       const mocas = recsPeriodo.map(r => r.mocas).filter(v => v > 0);
@@ -200,18 +219,18 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
 
   return (
     <div className="flex-1 flex flex-col space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
+
       {/* Top Header - Dark Blue like mockup */}
       <div className="bg-[#2a3449] text-white rounded-xl shadow-lg flex flex-col md:flex-row overflow-hidden border border-slate-700">
         <div className="flex-1 px-8 py-4 flex items-center border-b md:border-b-0 md:border-r border-slate-600/50 relative overflow-hidden">
           {/* Subtle background pattern/image effect could go here */}
           <div className="absolute inset-0 opacity-10 bg-[url('https://images.unsplash.com/photo-1548625361-ec4a572db0f8?auto=format&fit=crop&q=80')] bg-cover bg-center mix-blend-overlay"></div>
-          
+
           <h1 className="text-3xl font-bold tracking-tight relative z-10 drop-shadow-md">
             {selectedAnciao ? selectedAnciao.nome : 'Selecione um Ancião'}
           </h1>
         </div>
-        
+
         <div className="px-8 py-4 flex items-center justify-center bg-[#242b3d]">
           <div className="text-center">
             <span className="text-4xl font-bold block leading-none">{comunsDoAnciao.length}</span>
@@ -225,12 +244,13 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Setor:</span>
           <select
+            disabled={userScope.isSetor}
             value={selectedSetorId}
             onChange={(e) => setSelectedSetorId(e.target.value)}
-            className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium cursor-pointer"
+            className={`flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'}`}
           >
-            <option value="">Todos os Setores</option>
-            {setores.map(s => (
+            {!userScope.isSetor && <option value="">Todos os Setores</option>}
+            {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
               <option key={s.id} value={s.id}>{s.nome}</option>
             ))}
           </select>
@@ -253,7 +273,7 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
         <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
           <div className="flex items-center space-x-2">
             <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Mês:</span>
-            <select 
+            <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium cursor-pointer"
@@ -265,7 +285,7 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Ano:</span>
-            <select 
+            <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
               className="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium cursor-pointer"
@@ -292,7 +312,7 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
 
       {/* Content Area (Chart + Table) */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-        
+
         {/* Left Side: Chart */}
         <div className="xl:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col">
           <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex items-center">
@@ -304,23 +324,23 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={tableData} margin={{ top: 25, right: 30, left: 0, bottom: 80 }} barGap={4} barCategoryGap="20%">
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#cbd5e1" opacity={0.5} />
-                <XAxis 
-                  dataKey="comumNome" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#475569', fontSize: 11, fontWeight: 'bold' }} 
+                <XAxis
+                  dataKey="comumNome"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#475569', fontSize: 11, fontWeight: 'bold' }}
                   interval={0}
                   tickMargin={10}
                   angle={-45}
                   textAnchor="end"
                 />
                 <YAxis hide />
-                <RechartsTooltip 
+                <RechartsTooltip
                   cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
                 <Legend verticalAlign="top" align="right" layout="horizontal" iconType="circle" wrapperStyle={{ top: -10 }} />
-                
+
                 <Bar dataKey="totalRecitativos" name="Recitativos" fill="#1890ff" maxBarSize={30}>
                   <LabelList dataKey="totalRecitativos" position="top" fill="#1e293b" fontSize={11} fontWeight="bold" />
                 </Bar>

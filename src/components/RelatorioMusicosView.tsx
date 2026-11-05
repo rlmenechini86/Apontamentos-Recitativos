@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Music, ArrowUpDown, BarChart as BarChartIcon, Users, Calendar, Filter, Sparkles
 } from 'lucide-react';
@@ -10,6 +10,7 @@ import { apiGet } from '../utils/api';
 import { Pagination } from './Pagination';
 import { FAMILIAS_INSTRUMENTOS } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { getUserScope, isItemInUserSector } from '../utils/permissions';
 
 interface Props {
   comuns: ComumCongregacao[];
@@ -29,7 +30,7 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
   const [loading, setLoading] = useState(true);
   const [setores, setSetores] = useState<Setor[]>(propSetores || []);
   const [selectedSetorId, setSelectedSetorId] = useState('');
-  const [selectedComumId, setSelectedComumId] = useState(user?.comum_congregacao_id || '');
+  const [selectedComumId, setSelectedComumId] = useState('');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedFamilia, setSelectedFamilia] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>({ key: 'data', direction: 'desc' });
@@ -37,6 +38,27 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
   const itemsPerPage = 12;
 
   const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
+
+  const userScope = useMemo(() => getUserScope(user, propComuns, setores), [user, propComuns, setores]);
+
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+      setSelectedComumId('');
+    } else if (userScope.isComum && userScope.userComumId) {
+      setSelectedComumId(userScope.userComumId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId, userScope.isComum, userScope.userComumId]);
+
+  const comuns = useMemo(() => {
+    if (userScope.isComum && userScope.userComumId) {
+      return propComuns.filter(c => c.id === userScope.userComumId);
+    }
+    if (userScope.isSetor) {
+      return propComuns.filter(c => isItemInUserSector(userScope, c, propComuns, setores));
+    }
+    return propComuns;
+  }, [propComuns, userScope, setores]);
 
   useEffect(() => {
     if (propSetores && propSetores.length > 0) {
@@ -65,8 +87,6 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
 
     fetchData();
   }, []);
-
-  const comuns = propComuns;
 
   const comunsDoSetor = useMemo(() => {
     if (!selectedSetorId) return comuns;
@@ -274,12 +294,13 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
 
           {/* Setor */}
           <select
+            disabled={userScope.isSetor}
             value={selectedSetorId}
             onChange={(e) => { setSelectedSetorId(e.target.value); setSelectedComumId(''); setCurrentPage(1); }}
-            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            className={`px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
           >
-            <option value="">Setores (Todos)</option>
-            {setores.map(s => (
+            {!userScope.isSetor && <option value="">Setores (Todos)</option>}
+            {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
               <option key={s.id} value={s.id}>{s.nome}</option>
             ))}
           </select>
@@ -308,9 +329,9 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
             ))}
           </select>
 
-          {(selectedSetorId || selectedComumId || selectedFamilia) && (
+          {((!userScope.isSetor && selectedSetorId) || selectedComumId || selectedFamilia) && (
             <button
-              onClick={() => { setSelectedSetorId(''); setSelectedComumId(''); setSelectedFamilia(''); setCurrentPage(1); }}
+              onClick={() => { setSelectedSetorId(userScope.isSetor && userScope.userSetorId ? userScope.userSetorId : ''); setSelectedComumId(''); setSelectedFamilia(''); setCurrentPage(1); }}
               className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2 py-1 cursor-pointer"
             >
               Limpar

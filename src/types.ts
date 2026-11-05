@@ -43,6 +43,9 @@ export interface Usuario {
   cargo_ministerio?: string | null;
   data_apresentacao?: string | null;
   data_nascimento?: string | null;
+  ano_casamento?: number | string | null;
+  selado_promessa?: boolean | null;
+  ano_batismo?: number | string | null;
   perfil_id: string;
   comum_congregacao_id?: string | null;
   senha_hash?: string;
@@ -166,3 +169,41 @@ export const FAMILIAS_INSTRUMENTOS = [
   'Teclas',
   'Outros'
 ];
+
+export interface PreCadastro {
+  id: string;
+  nome_completo: string;
+  email: string;
+  celular: string;
+  cargo: string;
+  data_apresentacao?: string | null;
+  data_nascimento?: string | null;
+  ano_casamento?: number | string | null;
+  selado_promessa?: boolean | null;
+  ano_batismo?: number | string | null;
+  setor_id?: string | null;
+  setor_pertencente?: string | null;
+  comum_congregacao_id?: string | null;
+  status: 'pendente' | 'aprovado' | 'recusado';
+  motivo_recusa?: string | null;
+  perfil_id?: string | null;
+  usuario_id?: string | null;
+  aprovado_por?: string | null;
+  aprovado_em?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  comum_congregacao?: {
+    id: string;
+    nome: string;
+    codigo?: string;
+    setor_pertencente?: string;
+  };
+  setores?: {
+    id: string;
+    nome: string;
+  };
+  perfis?: {
+    id: string;
+    nome: string;
+  };
+}

@@ -1,23 +1,25 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ReuniaoEvento, TipoEvento, ComumCongregacao, Setor } from '../types';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Calendar as CalendarIcon, 
-  X, 
-  MapPin, 
-  Clock, 
-  Tag, 
-  Plus, 
-  Pencil, 
-  Trash2, 
-  Check, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Calendar as CalendarIcon,
+  X,
+  MapPin,
+  Clock,
+  Tag,
+  Plus,
+  Pencil,
+  Trash2,
+  Check,
   AlertCircle,
   Search,
-  Layers
+  Layers,
+  Globe,
+  Building2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { hasPermission } from '../utils/permissions';
+import { hasPermission, getUserScope, isItemInUserSector } from '../utils/permissions';
 
 interface CalendarioViewProps {
   reunioes: ReuniaoEvento[];
@@ -27,10 +29,10 @@ interface CalendarioViewProps {
   setores?: Setor[];
 }
 
-export const CalendarioView: React.FC<CalendarioViewProps> = ({ 
-  reunioes, 
-  tiposEvento: propTiposEvento, 
-  comuns: propComuns, 
+export const CalendarioView: React.FC<CalendarioViewProps> = ({
+  reunioes,
+  tiposEvento: propTiposEvento,
+  comuns: propComuns,
   onUpdate,
   setores: propSetores
 }) => {
@@ -78,6 +80,8 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
     }
   }, [propComuns]);
 
+  const userScope = useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
+
   // Estados de Filtro da Agenda do Calendário
   const [selectedSetorId, setSelectedSetorId] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
@@ -89,6 +93,14 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [filtroSetorId, setFiltroSetorId] = useState('');
   const [searchComum, setSearchComum] = useState('');
+
+  // Auto-lock de setor para Administrador (Setor)
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+      setFiltroSetorId(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId]);
 
   const [formData, setFormData] = useState({
     data: new Date().toISOString().split('T')[0],
@@ -112,15 +124,17 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
 
   // Comuns disponíveis conforme o setor selecionado no filtro principal
   const comunsDoSetor = useMemo(() => {
-    if (!selectedSetorId) return comuns;
+    const baseList = userScope.isSetor ? comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores)) : comuns;
+    if (!selectedSetorId) return baseList;
     const selectedSetor = setores.find(s => s.id === selectedSetorId);
-    return comuns.filter(c => 
-      c.setor_id === selectedSetorId || 
+    return baseList.filter(c =>
+      c.setor_id === selectedSetorId ||
       (selectedSetor && c.setor_pertencente === selectedSetor.nome)
     );
-  }, [comuns, setores, selectedSetorId]);
+  }, [comuns, setores, selectedSetorId, userScope]);
 
   const handleSetorFilterChange = (setorId: string) => {
+    if (userScope.isSetor) return;
     setSelectedSetorId(setorId);
     setSelectedComumId('');
   };
@@ -143,7 +157,7 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
 
   const getEventsForDate = (day: number | null) => {
     if (!day) return [];
-    
+
     const year = currentDate.getFullYear();
     const month = String(currentDate.getMonth() + 1).padStart(2, '0');
     const dayStr = String(day).padStart(2, '0');
@@ -152,17 +166,26 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
     return reunioes.filter(r => {
       if (r.data !== dateStr || !r.status) return false;
 
+      // Restrição de setor: se for Administrador (Setor), não deve visualizar eventos específicos de outros setores
+      if (userScope.isSetor && r.comum_id) {
+        const c = comuns.find(item => item.id === r.comum_id);
+        if (c && !isItemInUserSector(userScope, c, comuns, setores)) return false;
+      }
+
       // Filtro por Setor Pertencente
       if (selectedSetorId) {
-        const c = comuns.find(item => item.id === r.comum_id);
-        const s = setores.find(st => st.id === selectedSetorId);
-        const matchesSetor = c?.setor_id === selectedSetorId || (s && (c?.setor_pertencente === s.nome || r.comum_congregacao?.setor_pertencente === s.nome));
-        if (!matchesSetor) return false;
+        // Se o evento for para "Todos os Setores" (!r.comum_id), ele deve aparecer em qualquer setor!
+        if (r.comum_id) {
+          const c = comuns.find(item => item.id === r.comum_id);
+          const s = setores.find(st => st.id === selectedSetorId);
+          const matchesSetor = c?.setor_id === selectedSetorId || (s && (c?.setor_pertencente === s.nome || r.comum_congregacao?.setor_pertencente === s.nome));
+          if (!matchesSetor) return false;
+        }
       }
 
       // Filtro por Comum Congregação
       if (selectedComumId) {
-        if (r.comum_id !== selectedComumId) return false;
+        if (r.comum_id && r.comum_id !== selectedComumId) return false;
       }
 
       return true;
@@ -180,12 +203,15 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
 
     setEditingItem(null);
     setFormError(null);
-    setFiltroSetorId(selectedSetorId || '');
+    const defaultSetorId = userScope.isSetor && userScope.userSetorId ? userScope.userSetorId : (selectedSetorId || '');
+    setFiltroSetorId(defaultSetorId);
     setSearchComum('');
+
+    const defaultComumId = selectedComumId || (userScope.isSetor ? (comuns.find(c => isItemInUserSector(userScope, c, comuns, setores))?.id || '') : '');
     setFormData({
       data: formattedDate,
       tipo_evento_id: tiposEvento[0]?.id || '',
-      comum_id: selectedComumId || '',
+      comum_id: defaultComumId,
       nome: '',
       status: true
     });
@@ -200,12 +226,15 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
 
     setEditingItem(null);
     setFormError(null);
-    setFiltroSetorId(selectedSetorId || '');
+    const defaultSetorId = userScope.isSetor && userScope.userSetorId ? userScope.userSetorId : (selectedSetorId || '');
+    setFiltroSetorId(defaultSetorId);
     setSearchComum('');
+
+    const defaultComumId = selectedComumId || (userScope.isSetor ? (comuns.find(c => isItemInUserSector(userScope, c, comuns, setores))?.id || '') : '');
     setFormData({
       data: defaultDate,
       tipo_evento_id: tiposEvento[0]?.id || '',
-      comum_id: selectedComumId || '',
+      comum_id: defaultComumId,
       nome: '',
       status: true
     });
@@ -219,7 +248,7 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
     setSearchComum('');
     const c = comuns.find(x => x.id === item.comum_id);
     const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
-    setFiltroSetorId(s?.id || c?.setor_id || '');
+    setFiltroSetorId(userScope.isSetor && userScope.userSetorId ? userScope.userSetorId : (s?.id || c?.setor_id || ''));
     setFormData({
       data: item.data,
       tipo_evento_id: item.tipo_evento_id || tiposEvento[0]?.id || '',
@@ -232,6 +261,9 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
 
   const filteredComuns = useMemo(() => {
     return comuns.filter((c) => {
+      if (userScope.isSetor && !isItemInUserSector(userScope, c, comuns, setores)) {
+        return false;
+      }
       if (filtroSetorId) {
         const selectedSetor = setores.find(s => s.id === filtroSetorId);
         const matchesSetor = c.setor_id === filtroSetorId || (selectedSetor && c.setor_pertencente === selectedSetor.nome);
@@ -246,7 +278,7 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
       }
       return true;
     });
-  }, [comuns, setores, filtroSetorId, searchComum]);
+  }, [comuns, setores, filtroSetorId, searchComum, userScope]);
 
   const displayComuns = useMemo(() => {
     if (formData.comum_id && !filteredComuns.some(c => c.id === formData.comum_id)) {
@@ -257,6 +289,17 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
     }
     return filteredComuns;
   }, [filteredComuns, formData.comum_id, comuns]);
+
+  const canEditOrDeleteSelected = useMemo(() => {
+    if (!canManage) return false;
+    if (!selectedEvent) return false;
+    if (userScope.isSetor) {
+      if (!selectedEvent.comum_id) return false;
+      const c = comuns.find(x => x.id === selectedEvent.comum_id);
+      return c ? isItemInUserSector(userScope, c, comuns, setores) : false;
+    }
+    return true;
+  }, [canManage, selectedEvent, userScope, comuns, setores]);
 
   const handleDeleteEvent = async (id: string) => {
     if (!confirm('Deseja realmente excluir este evento/reunião?')) return;
@@ -286,16 +329,27 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
       setFormError('Selecione o tipo de evento.');
       return;
     }
+    if (userScope.isSetor && !formData.comum_id) {
+      setFormError('Como administrador de setor, selecione uma congregação pertencente ao seu setor.');
+      return;
+    }
 
     setIsSaving(true);
     try {
       const url = editingItem ? `/api/reunioes-eventos/${editingItem.id}` : '/api/reunioes-eventos';
       const method = editingItem ? 'PUT' : 'POST';
 
+      const tipoObj = tiposEvento.find(t => t.id === formData.tipo_evento_id);
+      const payload = {
+        ...formData,
+        nome: formData.nome.trim() || tipoObj?.nome || 'Reunião/Evento',
+        comum_id: formData.comum_id ? formData.comum_id : null
+      };
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       const json = await res.json();
@@ -324,7 +378,7 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
           <div>
             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Calendário de Reuniões e Eventos</h2>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-              {canManage 
+              {canManage
                 ? 'Clique em qualquer dia para cadastrar um novo compromisso.'
                 : 'Visualização dos eventos e reuniões programadas.'
               }
@@ -335,8 +389,8 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
         <div className="flex items-center space-x-3 flex-wrap">
           {/* Navegação entre meses */}
           <div className="flex items-center space-x-2 bg-slate-50 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-            <button 
-              onClick={prevMonth} 
+            <button
+              onClick={prevMonth}
               className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition cursor-pointer"
               title="Mês anterior"
             >
@@ -345,8 +399,8 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
             <span className="text-sm font-bold text-slate-800 dark:text-slate-100 min-w-[130px] text-center">
               {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
             </span>
-            <button 
-              onClick={nextMonth} 
+            <button
+              onClick={nextMonth}
               className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition cursor-pointer"
               title="Próximo mês"
             >
@@ -379,10 +433,11 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
           <select
             value={selectedSetorId}
             onChange={(e) => handleSetorFilterChange(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            disabled={userScope.isSetor}
+            className={`w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'}`}
           >
-            <option value="">Todos os Setores</option>
-            {setores.map(s => (
+            {!userScope.isSetor && <option value="">Todos os Setores</option>}
+            {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
               <option key={s.id} value={s.id}>{s.nome}</option>
             ))}
           </select>
@@ -404,10 +459,10 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
           </select>
         </div>
 
-        {(selectedSetorId || selectedComumId) && (
+        {((!userScope.isSetor && selectedSetorId) || selectedComumId) && (
           <button
             onClick={() => {
-              setSelectedSetorId('');
+              setSelectedSetorId(userScope.isSetor && userScope.userSetorId ? userScope.userSetorId : '');
               setSelectedComumId('');
             }}
             className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
@@ -434,37 +489,35 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
             <div className="grid grid-cols-7 auto-rows-fr">
               {calendarDays.map((day, idx) => {
                 const events = getEventsForDate(day);
-                const isToday = 
-                  day === new Date().getDate() && 
-                  currentDate.getMonth() === new Date().getMonth() && 
+                const isToday =
+                  day === new Date().getDate() &&
+                  currentDate.getMonth() === new Date().getMonth() &&
                   currentDate.getFullYear() === new Date().getFullYear();
 
                 return (
-                  <div 
-                    key={idx} 
+                  <div
+                    key={idx}
                     onClick={() => day && handleDayClick(day)}
-                    className={`min-h-[125px] p-2 border-r border-b border-slate-100 dark:border-slate-800/60 transition-all ${
-                      !day 
-                        ? 'bg-slate-50/40 dark:bg-slate-900/30' 
+                    className={`min-h-[125px] p-2 border-r border-b border-slate-100 dark:border-slate-800/60 transition-all ${!day
+                        ? 'bg-slate-50/40 dark:bg-slate-900/30'
                         : canManage
-                        ? 'bg-white dark:bg-slate-900 hover:bg-emerald-50/40 dark:hover:bg-slate-800/60 cursor-pointer group'
-                        : 'bg-white dark:bg-slate-900'
-                    }`}
+                          ? 'bg-white dark:bg-slate-900 hover:bg-emerald-50/40 dark:hover:bg-slate-800/60 cursor-pointer group'
+                          : 'bg-white dark:bg-slate-900'
+                      }`}
                   >
                     {day && (
                       <div className="h-full flex flex-col">
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full transition-transform ${
-                            isToday 
-                              ? 'bg-emerald-600 text-white shadow-xs' 
+                          <span className={`text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full transition-transform ${isToday
+                              ? 'bg-emerald-600 text-white shadow-xs'
                               : 'text-slate-700 dark:text-slate-300 group-hover:scale-110'
-                          }`}>
+                            }`}>
                             {day}
                           </span>
 
                           {/* Ícone sutil de '+' no hover para indicar que o dia é clicável */}
                           {canManage && (
-                            <span 
+                            <span
                               className="opacity-0 group-hover:opacity-100 p-1 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-md transition"
                               title="Adicionar evento neste dia"
                             >
@@ -476,7 +529,7 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
                         {/* Lista de eventos do dia */}
                         <div className="flex-1 flex flex-col gap-1 overflow-y-auto pr-0.5 custom-scrollbar">
                           {events.map(event => (
-                            <div 
+                            <div
                               key={event.id}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -484,11 +537,11 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
                               }}
                               className="px-2 py-1.5 text-[11px] font-medium text-white rounded-lg shadow-2xs flex flex-col leading-tight cursor-pointer hover:opacity-90 hover:scale-[1.01] transition-all"
                               style={{ backgroundColor: event.tipos_evento?.cor || '#059669' }}
-                              title={`${event.tipos_evento?.nome} - ${event.comum_congregacao?.nome || 'Regional/Geral'}`}
+                              title={`${event.tipos_evento?.nome} - ${event.comum_congregacao?.nome || 'Todos os Setores (Geral)'}`}
                             >
                               <span className="font-bold truncate">{event.tipos_evento?.nome}</span>
-                              <span className="text-[10px] opacity-90 truncate mt-0.5">
-                                {event.comum_congregacao?.nome || 'Regional/Geral'}
+                              <span className="text-[10px] opacity-90 truncate mt-0.5 flex items-center gap-0.5">
+                                {event.comum_congregacao?.nome || '🌐 Todos os Setores'}
                               </span>
                             </div>
                           ))}
@@ -507,7 +560,7 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
       {selectedEvent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
-            <div 
+            <div
               className="p-5 flex items-center justify-between text-white"
               style={{ backgroundColor: selectedEvent.tipos_evento?.cor || '#059669' }}
             >
@@ -515,14 +568,14 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
                 <span className="text-[11px] font-semibold uppercase tracking-wider opacity-90">Detalhes do Evento</span>
                 <h3 className="font-bold text-lg leading-tight mt-0.5">{selectedEvent.tipos_evento?.nome}</h3>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedEvent(null)}
                 className="p-1.5 hover:bg-white/20 rounded-lg transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-5 space-y-4">
               <div className="flex items-start space-x-3">
                 <Tag className="w-5 h-5 text-slate-400 mt-0.5 flex-shrink-0" />
@@ -531,13 +584,20 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{selectedEvent.tipos_evento?.nome}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-start space-x-3">
                 <MapPin className="w-5 h-5 text-slate-400 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Local / Congregação</p>
-                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                    {selectedEvent.comum_congregacao?.nome || 'Regional / Geral (Todas as congregações)'}
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                    {selectedEvent.comum_congregacao?.nome ? (
+                      selectedEvent.comum_congregacao.nome
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                        <Globe className="w-4 h-4" />
+                        Todos os Setores (Regional / Geral)
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -554,7 +614,7 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
                   </p>
                 </div>
               </div>
-              
+
               {selectedEvent.nome && (
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-2">
                   <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase mb-1">Descrição Adicional</p>
@@ -562,10 +622,10 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
                 </div>
               )}
             </div>
-            
+
             <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
               <div>
-                {canManage && (
+                {canEditOrDeleteSelected && (
                   <button
                     onClick={() => handleDeleteEvent(selectedEvent.id)}
                     className="px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition flex items-center gap-1 cursor-pointer"
@@ -577,7 +637,7 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
               </div>
 
               <div className="flex items-center space-x-2">
-                {canManage && (
+                {canEditOrDeleteSelected && (
                   <button
                     onClick={() => handleEditEvent(selectedEvent)}
                     className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs transition flex items-center gap-1.5 cursor-pointer"
@@ -586,7 +646,7 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
                     Editar
                   </button>
                 )}
-                <button 
+                <button
                   onClick={() => setSelectedEvent(null)}
                   className="px-3.5 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 text-xs font-semibold rounded-lg transition cursor-pointer"
                 >
@@ -617,8 +677,8 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsFormModalOpen(false)} 
+              <button
+                onClick={() => setIsFormModalOpen(false)}
                 className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -666,96 +726,151 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
                 </select>
               </div>
 
-              {/* Painel de Facilitação: Setor Pertencente e Pesquisa de Comum */}
-              <div className="bg-slate-50 dark:bg-slate-950/80 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
-                <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1">
-                  <Layers className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Localizar Comum Congregação</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {/* Filtro Setor Pertencente */}
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400">
-                      Setor Pertencente
-                    </label>
-                    <select
-                      value={filtroSetorId}
-                      onChange={(e) => setFiltroSetorId(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                    >
-                      <option value="">-- Todos os Setores --</option>
-                      {setores.map(s => (
-                        <option key={s.id} value={s.id}>{s.nome}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Pesquisar Comum */}
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400">
-                      Pesquisar Congregação
-                    </label>
-                    <div className="relative">
-                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Nome ou código..."
-                        value={searchComum}
-                        onChange={(e) => setSearchComum(e.target.value)}
-                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500"
-                      />
-                      {searchComum && (
-                        <button
-                          type="button"
-                          onClick={() => setSearchComum('')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                          title="Limpar pesquisa"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Campo Comum Congregação */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
+              {/* Abrangência do Evento: Todos os Setores vs Congregação Específica */}
+              {!userScope.isSetor ? (
+                <div className="space-y-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    Comum Congregação (Opcional)
+                    Abrangência do Evento *
                   </label>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                    {displayComuns.length} congregação(ões) disponível(is)
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, comum_id: '' })}
+                      className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-start gap-2.5 ${!formData.comum_id
+                          ? 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-500 text-emerald-950 dark:text-white ring-1 ring-emerald-500/50 shadow-xs'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                        }`}
+                    >
+                      <Globe className={`w-4 h-4 mt-0.5 shrink-0 ${!formData.comum_id ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} />
+                      <div>
+                        <p className="text-xs font-bold">Todos os Setores</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Geral / Regional (visível em todos os setores)</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!formData.comum_id) {
+                          const firstComum = displayComuns[0]?.id || comuns[0]?.id || '';
+                          setFormData({ ...formData, comum_id: firstComum });
+                        }
+                      }}
+                      className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-start gap-2.5 ${Boolean(formData.comum_id)
+                          ? 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-500 text-emerald-950 dark:text-white ring-1 ring-emerald-500/50 shadow-xs'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                        }`}
+                    >
+                      <Building2 className={`w-4 h-4 mt-0.5 shrink-0 ${Boolean(formData.comum_id) ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} />
+                      <div>
+                        <p className="text-xs font-bold">Congregação Específica</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Vincular a uma comum de um setor</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-2.5">
+                  <Building2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>
+                    Como Administrador Setorial, os eventos cadastrados são vinculados às congregações do <strong>{userScope.userSetorNome || 'seu setor'}</strong>.
                   </span>
                 </div>
-                <select
-                  value={formData.comum_id}
-                  onChange={e => {
-                    const chosenId = e.target.value;
-                    setFormData({ ...formData, comum_id: chosenId });
-                    if (chosenId && !filtroSetorId) {
-                      const c = comuns.find(item => item.id === chosenId);
-                      const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
-                      if (s) setFiltroSetorId(s.id);
-                    }
-                  }}
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-hidden transition cursor-pointer"
-                >
-                  <option value="">Nenhuma / Regional / Geral</option>
-                  {displayComuns.map(c => {
-                    const setorNome = c.setores?.nome || c.setor_pertencente || setores.find(s => s.id === c.setor_id)?.nome;
-                    return (
-                      <option key={c.id} value={c.id}>
-                        {c.codigo ? `${c.codigo} - ` : ''}
-                        {c.nome}
-                        {setorNome ? ` (${setorNome})` : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
+              )}
+
+              {/* Se for Todos os Setores */}
+              {!userScope.isSetor && !formData.comum_id && (
+                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200 text-xs flex items-center gap-2.5">
+                  <Globe className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>
+                    Este evento será registrado para <strong>Todos os Setores</strong> e ficará visível em todas as consultas do calendário.
+                  </span>
+                </div>
+              )}
+
+              {/* Se for Congregação Específica */}
+              {(userScope.isSetor || Boolean(formData.comum_id)) && (
+                <div className="space-y-3 bg-slate-50 dark:bg-slate-950/80 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 animate-in fade-in duration-150">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Filtro Setor Pertencente */}
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400">
+                        Filtrar por Setor
+                      </label>
+                      <select
+                        value={filtroSetorId}
+                        onChange={(e) => setFiltroSetorId(e.target.value)}
+                        disabled={userScope.isSetor}
+                        className={`w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
+                      >
+                        {!userScope.isSetor && <option value="">-- Todos os Setores --</option>}
+                        {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
+                          <option key={s.id} value={s.id}>{s.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Pesquisar Comum */}
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400">
+                        Pesquisar Congregação
+                      </label>
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="text"
+                          placeholder="Nome ou código..."
+                          value={searchComum}
+                          onChange={(e) => setSearchComum(e.target.value)}
+                          className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-8 pr-7 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500"
+                        />
+                        {searchComum && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchComum('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            title="Limpar pesquisa"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Seleção da Comum */}
+                  <div>
+                    <label className="block text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-400 mb-1">
+                      Comum Congregação *
+                    </label>
+                    <select
+                      value={formData.comum_id}
+                      onChange={e => {
+                        const chosenId = e.target.value;
+                        setFormData({ ...formData, comum_id: chosenId });
+                        if (chosenId && !filtroSetorId) {
+                          const c = comuns.find(item => item.id === chosenId);
+                          const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
+                          if (s) setFiltroSetorId(s.id);
+                        }
+                      }}
+                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                    >
+                      <option value="">Selecione uma congregação...</option>
+                      {displayComuns.map(c => {
+                        const setorNome = c.setores?.nome || c.setor_pertencente || setores.find(s => s.id === c.setor_id)?.nome;
+                        return (
+                          <option key={c.id} value={c.id}>
+                            {c.codigo ? `${c.codigo} - ` : ''}
+                            {c.nome}
+                            {setorNome ? ` (${setorNome})` : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {/* Descrição Adicional */}
               <div>
@@ -779,28 +894,26 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setFormData({ ...formData, status: !formData.status })}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                    formData.status ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${formData.status ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'
+                    }`}
                 >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    formData.status ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.status ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
                 </button>
               </div>
 
               {/* Botões de Ação */}
               <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end space-x-2.5">
-                <button 
-                  type="button" 
-                  onClick={() => setIsFormModalOpen(false)} 
+                <button
+                  type="button"
+                  onClick={() => setIsFormModalOpen(false)}
                   disabled={isSaving}
                   className="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
                 >
                   Cancelar
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={isSaving}
                   className="px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer"
                 >

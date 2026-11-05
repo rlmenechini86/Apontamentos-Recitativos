@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
-import { 
+import React, { useState, useEffect, useMemo } from 'react';
+import {
   Users, User, Calendar, Building2, ArrowUpDown, TrendingUp, Filter, Sparkles
 } from 'lucide-react';
 import {
@@ -8,6 +8,8 @@ import {
 import { ComumCongregacao, ContagemMocidade, Setor } from '../types';
 import { apiGet } from '../utils/api';
 import { Pagination } from './Pagination';
+import { useAuth } from '../context/AuthContext';
+import { getUserScope, isItemInUserSector } from '../utils/permissions';
 
 interface Props {
   comuns: ComumCongregacao[];
@@ -16,6 +18,7 @@ interface Props {
 }
 
 export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, setores: propSetores }) => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [setores, setSetores] = useState<Setor[]>(propSetores || []);
   const [selectedSetorId, setSelectedSetorId] = useState('');
@@ -26,6 +29,14 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, s
   const itemsPerPage = 12;
 
   const [contagens, setContagens] = useState<ContagemMocidade[]>([]);
+
+  const userScope = useMemo(() => getUserScope(user, propComuns, setores), [user, propComuns, setores]);
+
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId]);
 
   useEffect(() => {
     if (propSetores && propSetores.length > 0) {
@@ -55,13 +66,21 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, s
     fetchData();
   }, []);
 
-  const comuns = propComuns;
+  const comuns = useMemo(() => {
+    if (userScope.isComum && userScope.userComumId) {
+      return propComuns.filter(c => c.id === userScope.userComumId);
+    }
+    if (userScope.isSetor) {
+      return propComuns.filter(c => isItemInUserSector(userScope, c, propComuns, setores));
+    }
+    return propComuns;
+  }, [propComuns, userScope, setores]);
 
   const comunsDoSetor = useMemo(() => {
     if (!selectedSetorId) return comuns;
     const selectedSetor = setores.find(s => s.id === selectedSetorId);
-    return comuns.filter(c => 
-      c.setor_id === selectedSetorId || 
+    return comuns.filter(c =>
+      c.setor_id === selectedSetorId ||
       (selectedSetor && c.setor_pertencente === selectedSetor.nome)
     );
   }, [comuns, setores, selectedSetorId]);
@@ -116,7 +135,7 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, s
 
   // Dados para o Gráfico Recharts (agrupado por congregação - todas as localidades)
   const chartData = useMemo(() => {
-    const targetComuns = selectedComumId 
+    const targetComuns = selectedComumId
       ? comunsDoSetor.filter(c => c.id === selectedComumId)
       : comunsDoSetor;
 
@@ -227,12 +246,13 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, s
 
           {/* Setor */}
           <select
+            disabled={userScope.isSetor}
             value={selectedSetorId}
             onChange={(e) => { setSelectedSetorId(e.target.value); setSelectedComumId(''); setCurrentPage(1); }}
-            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            className={`px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
           >
-            <option value="">Setores (Todos)</option>
-            {setores.map(s => (
+            {!userScope.isSetor && <option value="">Setores (Todos)</option>}
+            {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
               <option key={s.id} value={s.id}>{s.nome}</option>
             ))}
           </select>
@@ -249,9 +269,9 @@ export const RelatorioAuxiliaresView: React.FC<Props> = ({ comuns: propComuns, s
             ))}
           </select>
 
-          {(selectedSetorId || selectedComumId) && (
+          {((!userScope.isSetor && selectedSetorId) || selectedComumId) && (
             <button
-              onClick={() => { setSelectedSetorId(''); setSelectedComumId(''); setCurrentPage(1); }}
+              onClick={() => { setSelectedSetorId(userScope.isSetor && userScope.userSetorId ? userScope.userSetorId : ''); setSelectedComumId(''); setCurrentPage(1); }}
               className="text-xs text-rose-600 hover:text-rose-700 font-semibold px-2 py-1 cursor-pointer"
             >
               Limpar

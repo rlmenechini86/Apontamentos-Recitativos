@@ -21,6 +21,7 @@ import {
   ArrowUpDown,
   Clock,
   Shield,
+  UserPlus,
 } from 'lucide-react';
 import { Sidebar, NavRoute } from './components/Sidebar';
 import { LgpdTermsModal } from './components/LgpdTermsModal';
@@ -45,6 +46,8 @@ import { AdminAnciaosView } from './components/AdminAnciaosView';
 import { AdminTiposEventoView } from './components/AdminTiposEventoView';
 import { AdminReunioesEventosView } from './components/AdminReunioesEventosView';
 import { CalendarioView } from './components/CalendarioView';
+import { PreCadastroPublicoView } from './components/PreCadastroPublicoView';
+import { AdminPreCadastrosView } from './components/AdminPreCadastrosView';
 import { CompromissosHojeBanner } from './components/CompromissosHojeBanner';
 import { CompromissosNotificationMenu } from './components/CompromissosNotificationMenu';
 import { Pagination } from './components/Pagination';
@@ -53,7 +56,7 @@ import { apiGet, clearApiCache } from './utils/api';
 import { useTheme } from './context/ThemeContext';
 import { useAuth } from './context/AuthContext';
 import { filtrarCompromissosHoje } from './utils/compromissosHelper';
-import { hasPermission } from './utils/permissions';
+import { hasPermission, getUserScope, isItemInUserSector } from './utils/permissions';
 
 export default function App() {
   const { theme, toggleTheme } = useTheme();
@@ -66,6 +69,9 @@ export default function App() {
   const [comuns, setComuns] = useState<ComumCongregacao[]>([]);
   const [setores, setSetores] = useState<Setor[]>([]);
   const [anciaos, setAnciaos] = useState<Anciao[]>([]);
+
+  // Escopo de Atuação do Usuário (Global, Setor ou Comum)
+  const userScope = useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
 
   // Dados de Usuários e Perfis
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -81,6 +87,21 @@ export default function App() {
   const [tiposEvento, setTiposEvento] = useState<TipoEvento[]>([]);
   const [reunioesEventos, setReunioesEventos] = useState<ReuniaoEvento[]>([]);
   const [visitas, setVisitas] = useState<AgendaVisita[]>([]);
+
+  // Dados de Pré-Cadastros
+  const [pendingPreCadastrosCount, setPendingPreCadastrosCount] = useState(0);
+
+  const fetchPreCadastrosCount = async () => {
+    try {
+      const res = await fetch('/api/pre-cadastros?status=pendente');
+      const json = await res.json();
+      if (res.ok && json.data) {
+        setPendingPreCadastrosCount(json.data.length);
+      }
+    } catch (err) {
+      // Ignora erro se rota não responder
+    }
+  };
 
   // Permissões reativas
   const [permsVersion, setPermsVersion] = useState(0);
@@ -125,6 +146,28 @@ export default function App() {
   useEffect(() => {
     setComunsPage(1);
   }, [searchTerm, selectedSetorIdComuns, selectedAnciaoId, selectedSecretarioId]);
+
+  // Se o usuário for Administrador (Setor), fixa a seleção no seu setor
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorIdComuns(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId]);
+
+  // Contadores com escopo para o perfil do usuário
+  const scopedComunsCount = useMemo(() => {
+    if (userScope.isSetor) {
+      return comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores)).length;
+    }
+    return comuns.length;
+  }, [comuns, userScope, setores]);
+
+  const scopedUsuariosCount = useMemo(() => {
+    if (userScope.isSetor) {
+      return usuarios.filter(u => isItemInUserSector(userScope, u, comuns, setores)).length;
+    }
+    return usuarios.length;
+  }, [usuarios, userScope, comuns, setores]);
 
   // Modais Comum
   const [isComumModalOpen, setIsComumModalOpen] = useState(false);
@@ -344,6 +387,7 @@ export default function App() {
       fetchRecitativos(),
       fetchContagens(),
       fetchAuxiliares(),
+      fetchPreCadastrosCount(),
     ]).finally(() => {
       setLoadingDashboardData(false);
     });
@@ -491,6 +535,10 @@ export default function App() {
 
   // Filtragem local complementar para resposta instantânea
   const filteredComuns = comuns.filter((item) => {
+    if (userScope.isSetor && !isItemInUserSector(userScope, item, comuns, setores)) {
+      return false;
+    }
+
     const matchesSearch =
       !searchTerm ||
       item.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -568,6 +616,12 @@ export default function App() {
           category: 'Administração',
           icon: <Users className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
         };
+      case 'admin-pre-cadastros':
+        return {
+          title: 'Pré-Cadastros de Usuários',
+          category: 'Administração',
+          icon: <UserPlus className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
+        };
       case 'admin-perfis':
         return {
           title: 'Perfis de Acesso (RBAC)',
@@ -615,6 +669,17 @@ export default function App() {
 
   const routeInfo = getRouteTitle();
 
+  // Rota pública para pré-cadastro de usuário (link compartilhável sem login)
+  const isPreCadastroPublic =
+    typeof window !== 'undefined' &&
+    (window.location.pathname.startsWith('/pre-cadastro') ||
+      window.location.search.includes('pre-cadastro') ||
+      window.location.hash.includes('pre-cadastro'));
+
+  if (isPreCadastroPublic) {
+    return <PreCadastroPublicoView />;
+  }
+
   // Se não estiver autenticado, exibe a tela de Login e Cadastro de Senha Criptografada
   if (!isAuthenticated) {
     return <LoginView perfis={perfis} comuns={comuns} />;
@@ -627,13 +692,16 @@ export default function App() {
         currentRoute={currentRoute}
         onRouteChange={setCurrentRoute}
         status={status}
-        comunsCount={comuns.length}
-        usuariosCount={usuarios.length}
+        comunsCount={scopedComunsCount}
+        usuariosCount={scopedUsuariosCount}
+        preCadastrosCount={pendingPreCadastrosCount}
         perfisCount={perfis.length}
         isOpenMobile={isMobileMenuOpen}
         onCloseMobile={() => setIsMobileMenuOpen(false)}
         reunioesHojeCount={compromissosHoje.reunioesHoje.length}
         visitasHojeCount={compromissosHoje.visitasHoje.length}
+        reunioesAmanhaCount={compromissosHoje.reunioesAmanha.length}
+        visitasAmanhaCount={compromissosHoje.visitasAmanha.length}
         onOpenLgpdModal={() => setIsLgpdModalOpen(true)}
       />
 
@@ -799,7 +867,10 @@ export default function App() {
 
           {/* ROTA 1.5: AGENDA DE VISITAS */}
           {currentRoute === 'agenda-visitas' && (
-            <AgendaVisitasView comuns={comuns} setores={setores} />
+            <AgendaVisitasView
+              comuns={userScope.isSetor ? comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores)) : comuns}
+              setores={userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores}
+            />
           )}
 
           {/* ROTA 1.6: CALENDARIO DE EVENTOS E REUNIÕES */}
@@ -807,8 +878,8 @@ export default function App() {
             <CalendarioView
               reunioes={reunioesEventos}
               tiposEvento={tiposEvento}
-              comuns={comuns}
-              setores={setores}
+              comuns={userScope.isSetor ? comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores)) : comuns}
+              setores={userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores}
               onUpdate={fetchReunioesEventos}
             />
           )}
@@ -886,10 +957,11 @@ export default function App() {
                     <select
                       value={selectedSetorIdComuns}
                       onChange={(e) => setSelectedSetorIdComuns(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                      disabled={userScope.isSetor}
+                      className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'}`}
                     >
-                      <option value="">Setor (Todos)</option>
-                      {setores.map((s) => (
+                      {!userScope.isSetor && <option value="">Setor (Todos)</option>}
+                      {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.nome}
                         </option>
@@ -919,7 +991,11 @@ export default function App() {
                     >
                       <option value="">Secretário (Todos)</option>
                       {usuarios
-                        .filter(u => u.cargo_ministerio === 'Secretário / CJM' && u.ativo)
+                        .filter(u => {
+                          if (u.cargo_ministerio !== 'Secretário / CJM' || !u.ativo) return false;
+                          if (userScope.isSetor && !isItemInUserSector(userScope, u, comuns, setores)) return false;
+                          return true;
+                        })
                         .map((u) => (
                           <option key={u.id} value={u.id}>
                             {u.nome_completo}
@@ -928,10 +1004,10 @@ export default function App() {
                     </select>
                   </div>
 
-                  {(selectedSetorIdComuns || selectedAnciaoId || selectedSecretarioId || searchTerm) && (
+                  {((!userScope.isSetor && selectedSetorIdComuns) || selectedAnciaoId || selectedSecretarioId || searchTerm) && (
                     <button
                       onClick={() => {
-                        setSelectedSetorIdComuns('');
+                        setSelectedSetorIdComuns(userScope.isSetor && userScope.userSetorId ? userScope.userSetorId : '');
                         setSelectedAnciaoId('');
                         setSelectedSecretarioId('');
                         setSearchTerm('');
@@ -1124,9 +1200,9 @@ export default function App() {
           {currentRoute === 'admin-usuarios' && (
             <UsuarioListView
               usuarios={usuarios}
-              perfis={perfis}
+              perfis={userScope.isSetor ? perfis.filter(p => p.nivel_acesso !== 'global') : perfis}
               comuns={comuns}
-              setores={setores}
+              setores={userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores}
               loading={loadingUsuarios}
               onRefresh={fetchUsuarios}
               onOpenCreate={() => {
@@ -1143,6 +1219,19 @@ export default function App() {
             />
           )}
 
+          {/* ROTA: ADMINISTRAÇÃO -> PRÉ-CADASTROS */}
+          {currentRoute === 'admin-pre-cadastros' && (
+            <AdminPreCadastrosView
+              perfis={userScope.isSetor ? perfis.filter(p => p.nivel_acesso !== 'global') : perfis}
+              setores={userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores}
+              comuns={comuns}
+              onUserApproved={() => {
+                fetchUsuarios();
+                fetchPreCadastrosCount();
+              }}
+            />
+          )}
+
           {/* ROTA 5: ADMINISTRAÇÃO -> PERFIS DE ACESSO */}
           {currentRoute === 'admin-perfis' && (
             <PerfisAcessoView
@@ -1155,7 +1244,7 @@ export default function App() {
 
           {/* ROTA 6: ADMINISTRAÇÃO -> ANCIÃOS */}
           {currentRoute === 'admin-anciaos' && (
-            <AdminAnciaosView setores={setores} />
+            <AdminAnciaosView setores={userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores} />
           )}
 
           {currentRoute === 'admin-tipos-evento' && (
@@ -1169,8 +1258,8 @@ export default function App() {
             <AdminReunioesEventosView 
               reunioes={reunioesEventos} 
               tiposEvento={tiposEvento}
-              comuns={comuns}
-              setores={setores}
+              comuns={userScope.isSetor ? comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores)) : comuns}
+              setores={userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores}
               onUpdate={fetchReunioesEventos} 
             />
           )}
@@ -1196,8 +1285,8 @@ export default function App() {
         onClose={() => setIsComumModalOpen(false)}
         onSubmit={handleSaveComum}
         initialData={editingComum}
-        setores={setores}
-        usuarios={usuarios}
+        setores={userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores}
+        usuarios={userScope.isSetor ? usuarios.filter(u => isItemInUserSector(userScope, u, comuns, setores)) : usuarios}
       />
 
       <UsuarioFormModal
@@ -1206,9 +1295,9 @@ export default function App() {
         onSubmit={handleSaveUsuario}
         onResetPassword={handleResetPasswordUsuario}
         initialData={editingUsuario}
-        perfis={perfis}
-        comuns={comuns}
-        setores={setores}
+        perfis={userScope.isSetor ? perfis.filter(p => p.nivel_acesso !== 'global') : perfis}
+        comuns={userScope.isSetor ? comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores)) : comuns}
+        setores={userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores}
       />
 
       <LgpdTermsModal

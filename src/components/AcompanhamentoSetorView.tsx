@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
+import {
   Building2, Users, Users2, FileText, CheckCircle2, TrendingUp, Printer,
-  BarChart as BarChartIcon, LineChart as LineChartIcon
+  BarChart as BarChartIcon, LineChart as LineChartIcon,
+  X, Calendar, Search, ExternalLink, Sparkles, Filter, ChevronRight,
+  ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
@@ -10,6 +12,12 @@ import {
 import { ComumCongregacao, Recitativo, ContagemMocidade, Usuario, Setor } from '../types';
 import { apiGet } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import { getUserScope, isItemInUserSector } from '../utils/permissions';
+
+type ModalSortField = 'nome' | 'setor' | 'datas' | 'meninas' | 'meninos' | 'mocas' | 'mocos' | 'subtotal' | 'expectativa' | 'resultado' | 'status';
+type MonthlySortField = 'mes' | 'meninas' | 'meninos' | 'mocas' | 'mocos' | 'subtotal' | 'resultado';
+type AnnualSortField = 'ano' | 'meninas' | 'meninos' | 'mocas' | 'mocos' | 'subtotal' | 'expectativa' | 'resultado';
+type SortDirection = 'asc' | 'desc';
 
 interface Props {
   comuns: ComumCongregacao[];
@@ -24,6 +32,18 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
   const [selectedSetorId, setSelectedSetorId] = useState<string>('');
   const [selectedComumId, setSelectedComumId] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [selectedMonthModal, setSelectedMonthModal] = useState<string | null>(null);
+  const [modalSearchComum, setModalSearchComum] = useState<string>('');
+
+  // Sorting states
+  const [modalSortField, setModalSortField] = useState<ModalSortField>('subtotal');
+  const [modalSortDirection, setModalSortDirection] = useState<SortDirection>('desc');
+
+  const [monthlySortField, setMonthlySortField] = useState<MonthlySortField>('mes');
+  const [monthlySortDirection, setMonthlySortDirection] = useState<SortDirection>('asc');
+
+  const [annualSortField, setAnnualSortField] = useState<AnnualSortField>('ano');
+  const [annualSortDirection, setAnnualSortDirection] = useState<SortDirection>('asc');
 
   // Data states
   const [recitativos, setRecitativos] = useState<Recitativo[]>([]);
@@ -50,7 +70,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
           apiGet('/api/contagens'),
           apiGet('/api/auxiliares')
         ]);
-        
+
         const [jsonRecitativos, jsonContagens, jsonAuxiliares] = await Promise.all([
           resRecitativos.ok ? resRecitativos.json() : { data: [] },
           resContagens.ok ? resContagens.json() : { data: [] },
@@ -70,16 +90,34 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
     fetchData();
   }, []);
 
-  const isRestrictedProfile = user?.perfis?.nome === 'Apontamento' || user?.perfis?.nome === 'CJM';
-  const comuns = propComuns.filter(c => isRestrictedProfile ? c.id === user?.comum_congregacao_id : true);
+  const userScope = useMemo(() => getUserScope(user, propComuns, setores), [user, propComuns, setores]);
+  const isRestrictedProfile = userScope.isComum;
+
+  // Se o usuário for Administrador (Setor), fixa a seleção no seu setor
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId]);
+
+  const comuns = useMemo(() => {
+    if (userScope.isComum && userScope.userComumId) {
+      return propComuns.filter(c => c.id === userScope.userComumId);
+    }
+    if (userScope.isSetor) {
+      return propComuns.filter(c => isItemInUserSector(userScope, c, propComuns, setores));
+    }
+    return propComuns;
+  }, [propComuns, userScope, setores]);
+
   const usuarios = propUsuarios;
 
   // Comuns disponíveis conforme o setor selecionado
   const comunsDoSetor = useMemo(() => {
     if (!selectedSetorId) return comuns;
     const selectedSetor = setores.find(s => s.id === selectedSetorId);
-    return comuns.filter(c => 
-      c.setor_id === selectedSetorId || 
+    return comuns.filter(c =>
+      c.setor_id === selectedSetorId ||
       (selectedSetor && c.setor_pertencente === selectedSetor.nome)
     );
   }, [comuns, setores, selectedSetorId]);
@@ -117,9 +155,9 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
   const totalCJM = filteredUsuarios.filter(u => u.ativo && isCjmOrSecretarioCjm(u.cargo_ministerio)).length;
 
   const totalAuxiliares = filteredAuxiliares.length;
-  
+
   const contagensAno = filteredContagens.filter(c => c.data.startsWith(selectedYear));
-  
+
   // Para Mocidade e Santa Ceia, se houver múltiplos registros no ano, pegar o mais recente de cada congregação antes de somar.
   const getLatestSum = (tipo: string) => {
     const porComum = new Map<string, any>();
@@ -153,10 +191,10 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
     let sumMeninas = 0, sumMeninos = 0, sumMocas = 0, sumMocos = 0;
 
     Object.values(porComum).forEach(c => {
-      if (c.meninas.length > 0) sumMeninas += Math.round(c.meninas.reduce((a,b) => a+b, 0) / c.meninas.length);
-      if (c.meninos.length > 0) sumMeninos += Math.round(c.meninos.reduce((a,b) => a+b, 0) / c.meninos.length);
-      if (c.mocas.length > 0) sumMocas += Math.round(c.mocas.reduce((a,b) => a+b, 0) / c.mocas.length);
-      if (c.mocos.length > 0) sumMocos += Math.round(c.mocos.reduce((a,b) => a+b, 0) / c.mocos.length);
+      if (c.meninas.length > 0) sumMeninas += Math.round(c.meninas.reduce((a, b) => a + b, 0) / c.meninas.length);
+      if (c.meninos.length > 0) sumMeninos += Math.round(c.meninos.reduce((a, b) => a + b, 0) / c.meninos.length);
+      if (c.mocas.length > 0) sumMocas += Math.round(c.mocas.reduce((a, b) => a + b, 0) / c.mocas.length);
+      if (c.mocos.length > 0) sumMocos += Math.round(c.mocos.reduce((a, b) => a + b, 0) / c.mocos.length);
     });
 
     return {
@@ -172,7 +210,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
   const annualData = useMemo(() => {
     // Agrupa todos os recitativos por Ano -> Mês
     const byYearMonth: Record<string, Record<string, Recitativo[]>> = {};
-    
+
     filteredRecitativos.forEach(r => {
       const [y, m] = r.data.split('-');
       if (!y || !m) return;
@@ -192,7 +230,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
     const result = Object.keys(byYearMonth).sort().map(year => {
       const monthsData = byYearMonth[year];
       const monthKeys = Object.keys(monthsData);
-      
+
       let yearSumMeninas = 0, yearSumMeninos = 0, yearSumMocas = 0, yearSumMocos = 0;
 
       monthKeys.forEach(m => {
@@ -209,9 +247,9 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
       const avgMocas = activeMonthsCount ? Math.round(yearSumMocas / activeMonthsCount) : 0;
       const avgMocos = activeMonthsCount ? Math.round(yearSumMocos / activeMonthsCount) : 0;
       const avgSubtotal = avgMeninas + avgMeninos + avgMocas + avgMocos;
-      
+
       const exp = Math.round((mocidadeByYear[year] || 0) * 0.70);
-      
+
       return {
         ano: year,
         meninas: avgMeninas,
@@ -231,7 +269,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
   const monthlyData = useMemo(() => {
     const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     const byMonth: Record<string, Recitativo[]> = {};
-    
+
     months.forEach((_, i) => {
       const monthStr = (i + 1).toString().padStart(2, '0');
       byMonth[monthStr] = [];
@@ -258,6 +296,111 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
     });
   }, [filteredRecitativos, selectedYear, expectativaAno]);
 
+  // Detalhes da Tabela do Mês Selecionado (ao clicar no gráfico ou tabela)
+  const monthDetailData = useMemo(() => {
+    if (!selectedMonthModal) return null;
+    const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const monthIndex = months.indexOf(selectedMonthModal) + 1;
+    if (monthIndex <= 0) return null;
+    const monthStr = monthIndex.toString().padStart(2, '0');
+
+    // Filtra recitativos pertencentes a este ano e mês específico
+    const monthRecs = filteredRecitativos.filter(r => r.data && r.data.startsWith(`${selectedYear}-${monthStr}`));
+
+    // Agrupa por comum_id
+    const recsByComum = new Map<string, Recitativo[]>();
+    monthRecs.forEach(r => {
+      const arr = recsByComum.get(r.comum_id) || [];
+      arr.push(r);
+      recsByComum.set(r.comum_id, arr);
+    });
+
+    const rows = filteredComuns.map(comum => {
+      const arr = recsByComum.get(comum.id) || [];
+      const hasLancement = arr.length > 0;
+
+      const meninasVal = arr.filter(r => r.meninas > 0);
+      const meninosVal = arr.filter(r => r.meninos > 0);
+      const mocasVal = arr.filter(r => r.mocas > 0);
+      const mocosVal = arr.filter(r => r.mocos > 0);
+
+      const avgMeninas = meninasVal.length ? Math.round(meninasVal.reduce((a, b) => a + b.meninas, 0) / meninasVal.length) : 0;
+      const avgMeninos = meninosVal.length ? Math.round(meninosVal.reduce((a, b) => a + b.meninos, 0) / meninosVal.length) : 0;
+      const avgMocas = mocasVal.length ? Math.round(mocasVal.reduce((a, b) => a + b.mocas, 0) / mocasVal.length) : 0;
+      const avgMocos = mocosVal.length ? Math.round(mocosVal.reduce((a, b) => a + b.mocos, 0) / mocosVal.length) : 0;
+      const subtotal = avgMeninas + avgMeninos + avgMocas + avgMocos;
+
+      const datas = arr.map(r => {
+        const parts = r.data.split('-');
+        return parts.length === 3 ? `${parts[2]}/${parts[1]}` : r.data;
+      }).join(', ');
+
+      const setorNome = comum.setores?.nome || comum.setor_pertencente || setores.find(s => s.id === comum.setor_id)?.nome || '-';
+
+      // 1. Mocidade mais recente da congregação no ano (ou geral se não houver no ano)
+      let mocidadeQtd = 0;
+      const mocidadeRegs = filteredContagens
+        .filter(c => c.comum_id === comum.id && c.tipo === 'Mocidade' && c.data.startsWith(selectedYear))
+        .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+
+      if (mocidadeRegs.length > 0) {
+        mocidadeQtd = mocidadeRegs[0].quantidade;
+      } else {
+        const allMocidade = filteredContagens
+          .filter(c => c.comum_id === comum.id && c.tipo === 'Mocidade')
+          .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+        if (allMocidade.length > 0) {
+          mocidadeQtd = allMocidade[0].quantidade;
+        }
+      }
+
+      // 2. Expectativa da localidade (70% da contagem de Mocidade)
+      const expectativaComum = Math.round(mocidadeQtd * 0.70);
+      const diffComum = subtotal - expectativaComum;
+      const isAcima = diffComum >= 0;
+
+      return {
+        id: comum.id,
+        codigo: comum.codigo || '-',
+        nome: comum.nome,
+        setor: setorNome,
+        datas,
+        qtdLancamentos: arr.length,
+        hasLancement,
+        meninas: avgMeninas,
+        meninos: avgMeninos,
+        mocas: avgMocas,
+        mocos: avgMocos,
+        subtotal,
+        mocidade: mocidadeQtd,
+        expectativa: expectativaComum,
+        diferenca: diffComum,
+        isAcima
+      };
+    }).sort((a, b) => {
+      // Ordena: primeiro os que têm lançamento pelo subtotal decrescente, depois os pendentes alfabeticamente
+      if (a.hasLancement && !b.hasLancement) return -1;
+      if (!a.hasLancement && b.hasLancement) return 1;
+      if (a.hasLancement && b.hasLancement) return b.subtotal - a.subtotal;
+      return a.nome.localeCompare(b.nome);
+    });
+
+    const monthTotals = calculateSetorMonthlyTotals(monthRecs);
+    const totalExpSoma = rows.reduce((acc, curr) => acc + curr.expectativa, 0);
+    const expectativaTotal = expectativaAno > 0 ? expectativaAno : totalExpSoma;
+
+    return {
+      mes: selectedMonthModal,
+      ano: selectedYear,
+      rows,
+      totals: monthTotals,
+      expectativaTotal,
+      resultado: monthTotals.subtotal - expectativaTotal,
+      comunsComLancamento: rows.filter(r => r.hasLancement).length,
+      totalComuns: rows.length
+    };
+  }, [selectedMonthModal, filteredRecitativos, filteredComuns, filteredContagens, selectedYear, expectativaAno, setores]);
+
   // Available Years
   const availableYears = useMemo(() => {
     const years = new Set<string>();
@@ -272,6 +415,128 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
     return Array.from(years).sort().reverse();
   }, [recitativos, contagens]);
 
+  const handleModalSort = (field: ModalSortField) => {
+    if (modalSortField === field) {
+      setModalSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setModalSortField(field);
+      setModalSortDirection(['nome', 'setor'].includes(field) ? 'asc' : 'desc');
+    }
+  };
+
+  const handleMonthlySort = (field: MonthlySortField) => {
+    if (monthlySortField === field) {
+      setMonthlySortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setMonthlySortField(field);
+      setMonthlySortDirection(field === 'mes' ? 'asc' : 'desc');
+    }
+  };
+
+  const handleAnnualSort = (field: AnnualSortField) => {
+    if (annualSortField === field) {
+      setAnnualSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setAnnualSortField(field);
+      setAnnualSortDirection(field === 'ano' ? 'asc' : 'desc');
+    }
+  };
+
+  const renderSortIcon = (isActive: boolean, direction: SortDirection) => {
+    if (isActive) {
+      return direction === 'asc' ? (
+        <ArrowUp className="w-3.5 h-3.5 text-sky-400 shrink-0 inline ml-1" />
+      ) : (
+        <ArrowDown className="w-3.5 h-3.5 text-sky-400 shrink-0 inline ml-1" />
+      );
+    }
+    return <ArrowUpDown className="w-3.5 h-3.5 text-slate-400/50 shrink-0 inline ml-1 opacity-60 group-hover:opacity-100 group-hover:text-white transition" />;
+  };
+
+  const sortedAnnualData = useMemo(() => {
+    return [...annualData].sort((a, b) => {
+      let comp = 0;
+      if (annualSortField === 'ano') {
+        comp = Number(a.ano) - Number(b.ano);
+      } else {
+        comp = ((a as any)[annualSortField] || 0) - ((b as any)[annualSortField] || 0);
+      }
+      return annualSortDirection === 'asc' ? comp : -comp;
+    });
+  }, [annualData, annualSortField, annualSortDirection]);
+
+  const sortedMonthlyData = useMemo(() => {
+    const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    return [...monthlyData].sort((a, b) => {
+      let comp = 0;
+      if (monthlySortField === 'mes') {
+        comp = months.indexOf(a.mes) - months.indexOf(b.mes);
+      } else {
+        comp = ((a as any)[monthlySortField] || 0) - ((b as any)[monthlySortField] || 0);
+      }
+      return monthlySortDirection === 'asc' ? comp : -comp;
+    });
+  }, [monthlyData, monthlySortField, monthlySortDirection]);
+
+  const filteredAndSortedModalRows = useMemo(() => {
+    if (!monthDetailData) return [];
+    const search = modalSearchComum.trim().toLowerCase();
+    const filtered = monthDetailData.rows.filter(r =>
+      !search ||
+      r.nome.toLowerCase().includes(search) ||
+      r.codigo.toLowerCase().includes(search) ||
+      r.setor.toLowerCase().includes(search)
+    );
+
+    return filtered.sort((a, b) => {
+      let comparison = 0;
+      switch (modalSortField) {
+        case 'nome':
+          comparison = a.nome.localeCompare(b.nome, 'pt-BR');
+          break;
+        case 'setor':
+          comparison = a.setor.localeCompare(b.setor, 'pt-BR');
+          break;
+        case 'datas':
+          comparison = a.qtdLancamentos - b.qtdLancamentos;
+          if (comparison === 0) comparison = a.datas.localeCompare(b.datas, 'pt-BR');
+          break;
+        case 'meninas':
+          comparison = a.meninas - b.meninas;
+          break;
+        case 'meninos':
+          comparison = a.meninos - b.meninos;
+          break;
+        case 'mocas':
+          comparison = a.mocas - b.mocas;
+          break;
+        case 'mocos':
+          comparison = a.mocos - b.mocos;
+          break;
+        case 'subtotal':
+          comparison = a.subtotal - b.subtotal;
+          break;
+        case 'expectativa':
+          comparison = a.expectativa - b.expectativa;
+          break;
+        case 'resultado':
+          comparison = a.diferenca - b.diferenca;
+          break;
+        case 'status':
+          comparison = (a.hasLancement ? a.qtdLancamentos : -1) - (b.hasLancement ? b.qtdLancamentos : -1);
+          break;
+        default:
+          comparison = a.subtotal - b.subtotal;
+      }
+
+      if (comparison !== 0) {
+        return modalSortDirection === 'asc' ? comparison : -comparison;
+      }
+
+      return a.nome.localeCompare(b.nome, 'pt-BR');
+    });
+  }, [monthDetailData, modalSearchComum, modalSortField, modalSortDirection]);
+
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-64">
@@ -283,7 +548,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
 
   return (
     <div className="flex-1 flex flex-col space-y-6 print:space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      
+
       {/* Header */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div>
@@ -297,15 +562,16 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           <select
+            disabled={userScope.isSetor}
             value={selectedSetorId}
             onChange={(e) => {
               setSelectedSetorId(e.target.value);
               setSelectedComumId('');
             }}
-            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold print:hidden cursor-pointer"
+            className={`bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold print:hidden ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
           >
-            <option value="">Todos os Setores</option>
-            {setores.map(s => (
+            {!userScope.isSetor && <option value="">Todos os Setores</option>}
+            {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
               <option key={s.id} value={s.id}>{s.nome}</option>
             ))}
           </select>
@@ -321,7 +587,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
             ))}
           </select>
 
-          <select 
+          <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
             className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold print:hidden cursor-pointer"
@@ -331,10 +597,10 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
             ))}
           </select>
 
-          {(selectedSetorId || selectedComumId) && (
+          {((!userScope.isSetor && selectedSetorId) || selectedComumId) && (
             <button
               onClick={() => {
-                setSelectedSetorId('');
+                setSelectedSetorId(userScope.isSetor && userScope.userSetorId ? userScope.userSetorId : '');
                 setSelectedComumId('');
               }}
               className="text-xs text-rose-600 hover:text-rose-700 font-semibold cursor-pointer px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/40 transition print:hidden"
@@ -363,7 +629,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
             Localidade
           </div>
         </div>
-        
+
         <div className="bg-slate-600 text-white rounded-xl overflow-hidden shadow-md flex flex-col print:break-inside-avoid">
           <div className="p-4 print:p-1 flex-1 flex flex-col justify-center items-center text-center">
             <span className="text-3xl print:text-xl font-bold">{totalSantaCeia.toLocaleString('pt-BR')}</span>
@@ -417,7 +683,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
             <LineChartIcon className="w-5 h-5 mr-2 text-emerald-400" />
             <h3 className="font-bold text-sm tracking-wider">MÉDIA ANUAL DE RECITATIVOS</h3>
           </div>
-          
+
           <div className="p-4 print:p-1 bg-slate-50 dark:bg-slate-950/50">
             <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -425,16 +691,16 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="ano" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
                   <YAxis hide />
-                  <RechartsTooltip 
+                  <RechartsTooltip
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                     formatter={(value: any) => [Number(value).toLocaleString('pt-BR'), 'Média Anual']}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="subtotal" 
-                    stroke="#0ea5e9" 
-                    strokeWidth={3} 
-                    dot={{ r: 6, fill: '#0ea5e9', strokeWidth: 0 }} 
+                  <Line
+                    type="monotone"
+                    dataKey="subtotal"
+                    stroke="#0ea5e9"
+                    strokeWidth={3}
+                    dot={{ r: 6, fill: '#0ea5e9', strokeWidth: 0 }}
                     activeDot={{ r: 8 }}
                     label={{ position: 'top', fill: '#1e293b', fontSize: 12, fontWeight: 'bold', formatter: (val: any) => Number(val).toLocaleString('pt-BR') }}
                   />
@@ -445,20 +711,60 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
 
           <div className="overflow-x-auto border-t border-slate-200 dark:border-slate-800">
             <table className="min-w-full text-center text-xs text-slate-700 dark:text-slate-300">
-              <thead className="bg-slate-600 text-white">
+              <thead className="bg-slate-600 text-white select-none">
                 <tr>
-                   <th className="py-2 px-2 border-r border-slate-500">Ano</th>
-                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Meninas</th>
-                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Meninos</th>
-                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Moças</th>
-                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Moços</th>
-                  <th className="py-2 px-2 border-r border-slate-500 font-bold">Subtotal</th>
-                  <th className="py-2 px-2 border-r border-slate-500 font-bold">Expectativa</th>
-                  <th className="py-2 px-2 font-bold">Resultado</th>
+                  <th onClick={() => handleAnnualSort('ano')} className="py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Ano">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Ano</span>
+                      {renderSortIcon(annualSortField === 'ano', annualSortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleAnnualSort('meninas')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Meninas">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Meninas</span>
+                      {renderSortIcon(annualSortField === 'meninas', annualSortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleAnnualSort('meninos')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Meninos">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Meninos</span>
+                      {renderSortIcon(annualSortField === 'meninos', annualSortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleAnnualSort('mocas')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Moças">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Moças</span>
+                      {renderSortIcon(annualSortField === 'mocas', annualSortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleAnnualSort('mocos')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Moços">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Moços</span>
+                      {renderSortIcon(annualSortField === 'mocos', annualSortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleAnnualSort('subtotal')} className="py-2 px-2 border-r border-slate-500 font-bold cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Subtotal">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Subtotal</span>
+                      {renderSortIcon(annualSortField === 'subtotal', annualSortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleAnnualSort('expectativa')} className="py-2 px-2 border-r border-slate-500 font-bold cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Expectativa">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Expectativa</span>
+                      {renderSortIcon(annualSortField === 'expectativa', annualSortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleAnnualSort('resultado')} className="py-2 px-2 font-bold cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Resultado">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Resultado</span>
+                      {renderSortIcon(annualSortField === 'resultado', annualSortDirection)}
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {annualData.map((row) => (
+                {sortedAnnualData.map((row) => (
                   <tr key={row.ano} className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold">{row.ano}</td>
                     <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
@@ -472,7 +778,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                     </td>
                   </tr>
                 ))}
-                {annualData.length === 0 && (
+                {sortedAnnualData.length === 0 && (
                   <tr><td colSpan={8} className="py-8 print:py-2 text-slate-500">Nenhum dado encontrado.</td></tr>
                 )}
               </tbody>
@@ -487,30 +793,57 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
               <BarChartIcon className="w-5 h-5 mr-2 text-sky-400" />
               <h3 className="font-bold text-sm tracking-wider">MÉDIA MENSAL DE RECITATIVOS</h3>
             </div>
+            <span className="text-[11px] font-medium text-sky-300 bg-sky-950/60 border border-sky-700/60 px-2 py-0.5 rounded-full hidden sm:flex items-center gap-1 cursor-default">
+              <Sparkles className="w-3 h-3 text-sky-400" /> Clique no mês para detalhar
+            </span>
           </div>
-          
+
           <div className="p-4 print:p-1 bg-slate-50 dark:bg-slate-950/50">
-            <div className="h-56 w-full">
+            <div className="h-56 w-full cursor-pointer">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyData} margin={{ top: 25, right: 0, left: 0, bottom: 40 }}>
+                <BarChart
+                  data={monthlyData}
+                  margin={{ top: 25, right: 0, left: 0, bottom: 40 }}
+                  onClick={(e: any) => {
+                    if (e && e.activePayload && e.activePayload.length > 0) {
+                      const m = e.activePayload[0].payload.mes;
+                      if (m) {
+                        setSelectedMonthModal(m);
+                        setModalSearchComum('');
+                      }
+                    }
+                  }}
+                >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, angle: -45, textAnchor: 'end' }} />
+                  <XAxis
+                    dataKey="mes"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 11, angle: -45, textAnchor: 'end' }}
+                  />
                   <YAxis hide />
-                  <RechartsTooltip 
-                    cursor={{ fill: 'transparent' }}
+                  <RechartsTooltip
+                    cursor={{ fill: 'rgba(14, 165, 233, 0.08)' }}
                     contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   />
-                  <Bar 
-                    dataKey="subtotal" 
-                    fill="#0ea5e9" 
-                    radius={[4, 4, 0, 0]} 
-                    barSize={30} 
+                  <Bar
+                    dataKey="subtotal"
+                    fill="#0ea5e9"
+                    radius={[4, 4, 0, 0]}
+                    barSize={30}
+                    className="hover:opacity-85 transition cursor-pointer"
+                    onClick={(entry: any) => {
+                      if (entry && entry.mes) {
+                        setSelectedMonthModal(entry.mes);
+                        setModalSearchComum('');
+                      }
+                    }}
                     label={{ position: 'top', fill: '#1e293b', fontSize: 12, fontWeight: 'bold', formatter: (val: any) => val > 0 ? Number(val).toLocaleString('pt-BR') : '' }}
                   />
-                  <ReferenceLine 
-                    y={expectativaAno} 
-                    stroke="#10b981" 
-                    strokeDasharray="3 3" 
+                  <ReferenceLine
+                    y={expectativaAno}
+                    stroke="#10b981"
+                    strokeDasharray="3 3"
                     strokeWidth={2}
                     label={{ position: 'top', value: 'Expectativa', fill: '#10b981', fontSize: 12, fontWeight: 'bold' }}
                   />
@@ -521,32 +854,80 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
 
           <div className="overflow-x-auto border-t border-slate-200 dark:border-slate-800">
             <table className="min-w-full text-center text-xs text-slate-700 dark:text-slate-300">
-              <thead className="bg-slate-600 text-white">
+              <thead className="bg-slate-600 text-white select-none">
                 <tr>
-                  <th className="py-2 px-2 border-r border-slate-500">Mês</th>
-                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Meninas</th>
-                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Meninos</th>
-                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Moças</th>
-                  <th className="hidden sm:table-cell py-2 px-2 border-r border-slate-500">Moços</th>
-                  <th className="py-2 px-2 border-r border-slate-500 font-bold">Subtotal</th>
-                  <th className="py-2 px-2 font-bold">Resultado</th>
+                  <th onClick={() => handleMonthlySort('mes')} className="py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Mês">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Mês</span>
+                      {renderSortIcon(monthlySortField === 'mes', monthlySortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleMonthlySort('meninas')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Meninas">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Meninas</span>
+                      {renderSortIcon(monthlySortField === 'meninas', monthlySortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleMonthlySort('meninos')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Meninos">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Meninos</span>
+                      {renderSortIcon(monthlySortField === 'meninos', monthlySortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleMonthlySort('mocas')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Moças">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Moças</span>
+                      {renderSortIcon(monthlySortField === 'mocas', monthlySortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleMonthlySort('mocos')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Moços">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Moços</span>
+                      {renderSortIcon(monthlySortField === 'mocos', monthlySortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleMonthlySort('subtotal')} className="py-2 px-2 border-r border-slate-500 font-bold cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Subtotal">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Subtotal</span>
+                      {renderSortIcon(monthlySortField === 'subtotal', monthlySortDirection)}
+                    </div>
+                  </th>
+                  <th onClick={() => handleMonthlySort('resultado')} className="py-2 px-2 font-bold cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Resultado">
+                    <div className="flex items-center justify-center space-x-1">
+                      <span>Resultado</span>
+                      {renderSortIcon(monthlySortField === 'resultado', monthlySortDirection)}
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {monthlyData.map((row) => (
-                  <tr key={row.mes} className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold">{row.mes}</td>
+                {sortedMonthlyData.map((row) => (
+                  <tr
+                    key={row.mes}
+                    onClick={() => {
+                      setSelectedMonthModal(row.mes);
+                      setModalSearchComum('');
+                    }}
+                    className="bg-white dark:bg-slate-900 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition cursor-pointer group"
+                    title={`Clique para abrir a tabela de ${row.mes}`}
+                  >
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400">
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>{row.mes}</span>
+                        <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-sky-500 inline opacity-40 group-hover:opacity-100 transition" />
+                      </div>
+                    </td>
                     <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
                     <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
                     <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
                     <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
-                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold">{row.subtotal.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold text-sky-700 dark:text-sky-300">{row.subtotal.toLocaleString('pt-BR')}</td>
                     <td className={`py-2 px-2 font-bold ${row.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {row.resultado.toLocaleString('pt-BR')}
                     </td>
                   </tr>
                 ))}
-                {monthlyData.length === 0 && (
+                {sortedMonthlyData.length === 0 && (
                   <tr><td colSpan={7} className="py-8 print:py-2 text-slate-500">Nenhum dado encontrado.</td></tr>
                 )}
               </tbody>
@@ -555,6 +936,321 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
         </div>
 
       </div>
+
+      {/* Modal de Detalhamento da Tabela do Mês Selecionado */}
+      {selectedMonthModal && monthDetailData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 print:hidden">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+            {/* Cabeçalho */}
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                  <BarChartIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold flex items-center gap-2">
+                    <span>Tabela de Recitativos - {monthDetailData.mes} de {monthDetailData.ano}</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
+                      {monthDetailData.comunsComLancamento} de {monthDetailData.totalComuns} congregações
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {selectedSetorId ? setores.find(s => s.id === selectedSetorId)?.nome : 'Setor: Visão Consolidada de Todas as Congregações'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  title="Imprimir Tabela"
+                >
+                  <Printer className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMonthModal(null)}
+                  className="p-2 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  title="Fechar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Cards de Resumo do Mês */}
+            <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+                <div className="bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Meninas</span>
+                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100">{monthDetailData.totals.meninas.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Meninos</span>
+                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100">{monthDetailData.totals.meninos.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Moças</span>
+                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100">{monthDetailData.totals.mocas.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Moços</span>
+                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100">{monthDetailData.totals.mocos.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="bg-sky-50 dark:bg-sky-950/40 p-2.5 rounded-lg border border-sky-200 dark:border-sky-800 text-center shadow-xs">
+                  <span className="text-[11px] font-semibold text-sky-700 dark:text-sky-300 block">Subtotal Mês</span>
+                  <span className="text-lg font-bold text-sky-800 dark:text-sky-200">{monthDetailData.totals.subtotal.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="bg-slate-100 dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Expectativa</span>
+                  <span className="text-lg font-bold text-slate-700 dark:text-slate-300">{monthDetailData.expectativaTotal.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className={`p-2.5 rounded-lg border text-center shadow-xs ${monthDetailData.resultado >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300'}`}>
+                  <span className="text-[11px] font-semibold block">Resultado</span>
+                  <span className="text-lg font-bold">{monthDetailData.resultado.toLocaleString('pt-BR')}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Barra de Pesquisa de Congregação */}
+            <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-900">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Buscar congregação por nome ou código..."
+                  value={modalSearchComum}
+                  onChange={(e) => setModalSearchComum(e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Mostrando {filteredAndSortedModalRows.length} congregações
+              </span>
+            </div>
+
+            {/* Tabela Detalhada por Congregação */}
+            <div className="flex-1 overflow-y-auto overflow-x-auto">
+              <table className="min-w-full text-xs text-slate-700 dark:text-slate-300 text-center">
+                <thead className="bg-slate-700 text-white sticky top-0 z-10 select-none">
+                  <tr>
+                    <th
+                      onClick={() => handleModalSort('nome')}
+                      className="py-2.5 px-3 text-left border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                      title="Clique para ordenar por Congregação"
+                    >
+                      <div className="flex items-center justify-between space-x-1">
+                        <span>Congregação</span>
+                        {renderSortIcon(modalSortField === 'nome', modalSortDirection)}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleModalSort('setor')}
+                      className="py-2.5 px-2 text-left border-r border-slate-600 hidden md:table-cell cursor-pointer hover:bg-slate-600 transition group"
+                      title="Clique para ordenar por Setor"
+                    >
+                      <div className="flex items-center justify-between space-x-1">
+                        <span>Setor</span>
+                        {renderSortIcon(modalSortField === 'setor', modalSortDirection)}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleModalSort('datas')}
+                      className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                      title="Clique para ordenar por Quantidade de Lançamentos"
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Datas Apontadas</span>
+                        {renderSortIcon(modalSortField === 'datas', modalSortDirection)}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleModalSort('meninas')}
+                      className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                      title="Clique para ordenar por Meninas"
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Meninas</span>
+                        {renderSortIcon(modalSortField === 'meninas', modalSortDirection)}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleModalSort('meninos')}
+                      className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                      title="Clique para ordenar por Meninos"
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Meninos</span>
+                        {renderSortIcon(modalSortField === 'meninos', modalSortDirection)}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleModalSort('mocas')}
+                      className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                      title="Clique para ordenar por Moças"
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Moças</span>
+                        {renderSortIcon(modalSortField === 'mocas', modalSortDirection)}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleModalSort('mocos')}
+                      className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                      title="Clique para ordenar por Moços"
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Moços</span>
+                        {renderSortIcon(modalSortField === 'mocos', modalSortDirection)}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleModalSort('subtotal')}
+                      className="py-2.5 px-2 border-r border-slate-600 font-bold bg-slate-800 cursor-pointer hover:bg-slate-750 transition group"
+                      title="Clique para ordenar por Subtotal"
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Subtotal</span>
+                        {renderSortIcon(modalSortField === 'subtotal', modalSortDirection)}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleModalSort('expectativa')}
+                      className="py-2.5 px-2 border-r border-slate-600 font-bold bg-slate-800 cursor-pointer hover:bg-slate-750 transition group"
+                      title="Clique para ordenar por Expectativa"
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Expectativa</span>
+                        {renderSortIcon(modalSortField === 'expectativa', modalSortDirection)}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleModalSort('resultado')}
+                      className="py-2.5 px-2 border-r border-slate-600 font-bold cursor-pointer hover:bg-slate-600 transition group"
+                      title="Clique para ordenar por Resultado"
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Resultado</span>
+                        {renderSortIcon(modalSortField === 'resultado', modalSortDirection)}
+                      </div>
+                    </th>
+                    <th
+                      onClick={() => handleModalSort('status')}
+                      className="py-2.5 px-2 cursor-pointer hover:bg-slate-600 transition group"
+                      title="Clique para ordenar por Status"
+                    >
+                      <div className="flex items-center justify-center space-x-1">
+                        <span>Status</span>
+                        {renderSortIcon(modalSortField === 'status', modalSortDirection)}
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                  {filteredAndSortedModalRows.map((r) => (
+                      <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                        <td className="py-2 px-3 text-left border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-900 dark:text-slate-100">
+                          {r.codigo !== '-' && <span className="text-[10px] text-slate-400 font-mono mr-1.5">{r.codigo}</span>}
+                          {r.nome}
+                        </td>
+                        <td className="py-2 px-2 text-left border-r border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 hidden md:table-cell">
+                          {r.setor}
+                        </td>
+                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 text-[11px]">
+                          {r.datas || <span className="text-slate-400 italic">Sem lançamento</span>}
+                        </td>
+                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.meninas.toLocaleString('pt-BR')}</td>
+                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.meninos.toLocaleString('pt-BR')}</td>
+                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.mocas.toLocaleString('pt-BR')}</td>
+                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.mocos.toLocaleString('pt-BR')}</td>
+                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold bg-slate-50/70 dark:bg-slate-800/60 text-sky-700 dark:text-sky-300">
+                          {r.subtotal.toLocaleString('pt-BR')}
+                        </td>
+                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-700 dark:text-slate-300 bg-slate-50/40 dark:bg-slate-800/30">
+                          {r.expectativa > 0 ? r.expectativa.toLocaleString('pt-BR') : '-'}
+                        </td>
+                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">
+                          {r.expectativa > 0 ? (
+                            r.isAcima ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs whitespace-nowrap">
+                                ▲ {r.diferenca >= 0 ? `+${r.diferenca}` : r.diferenca} (Acima)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs whitespace-nowrap">
+                                ▼ {r.diferenca} (Abaixo)
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic">Sem expectativa</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-2">
+                          {r.hasLancement ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap">
+                              ✓ Lançado ({r.qtdLancamentos})
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap">
+                              Pendente
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  {filteredAndSortedModalRows.length === 0 && (
+                    <tr>
+                      <td colSpan={11} className="py-8 text-center text-slate-400 italic">
+                        Nenhuma congregação encontrada com os filtros atuais.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                <tfoot className="bg-slate-100 dark:bg-slate-800 font-bold border-t-2 border-slate-300 dark:border-slate-700 sticky bottom-0">
+                  <tr>
+                    <td className="py-2.5 px-3 text-left border-r border-slate-300 dark:border-slate-700">TOTAL DO SETOR (MÉDIA MENSAL)</td>
+                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700 hidden md:table-cell">-</td>
+                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">-</td>
+                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">{monthDetailData.totals.meninas.toLocaleString('pt-BR')}</td>
+                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">{monthDetailData.totals.meninos.toLocaleString('pt-BR')}</td>
+                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">{monthDetailData.totals.mocas.toLocaleString('pt-BR')}</td>
+                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">{monthDetailData.totals.mocos.toLocaleString('pt-BR')}</td>
+                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700 text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50">
+                      {monthDetailData.totals.subtotal.toLocaleString('pt-BR')}
+                    </td>
+                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 bg-slate-200/50 dark:bg-slate-750">
+                      {monthDetailData.expectativaTotal.toLocaleString('pt-BR')}
+                    </td>
+                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap ${
+                        monthDetailData.resultado >= 0 
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700' 
+                          : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
+                      }`}>
+                        {monthDetailData.resultado >= 0 ? `▲ +${monthDetailData.resultado} (Acima)` : `▼ ${monthDetailData.resultado} (Abaixo)`}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-2">
+                      {monthDetailData.comunsComLancamento}/{monthDetailData.totalComuns} congregações
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Rodapé do Modal */}
+            <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end bg-slate-50 dark:bg-slate-900/50">
+              <button
+                type="button"
+                onClick={() => setSelectedMonthModal(null)}
+                className="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-700 transition cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
