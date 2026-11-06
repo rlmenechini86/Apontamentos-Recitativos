@@ -20,8 +20,8 @@ import { useAuth } from '../context/AuthContext';
 import { getUserScope } from '../utils/permissions';
 
 const INSTRUMENTOS_PADRAO = [
-  'Violino', 'Viola', 'Celo', 'Flauta', 'Clarineta', 
-  'Clarone', 'Trompete', 'Sax Alto', 'Sax Tenor', 
+  'Violino', 'Viola', 'Celo', 'Flauta', 'Clarineta',
+  'Clarone', 'Trompete', 'Sax Alto', 'Sax Tenor',
   'Sax Baritono', 'Euphonio', 'Trombone', 'Tuba'
 ];
 
@@ -37,7 +37,7 @@ export const FAMILIAS_INSTRUMENTOS = [
 export const obterFamiliaInstrumento = (instrumento: string): string => {
   if (!instrumento) return '';
   const inst = instrumento.toLowerCase();
-  
+
   if (inst.includes('violino') || inst.includes('viola') || inst.includes('celo') || inst.includes('violoncelo')) {
     return 'Cordas Friccionadas';
   }
@@ -50,7 +50,7 @@ export const obterFamiliaInstrumento = (instrumento: string): string => {
   if (inst.includes('acordeon') || inst.includes('órgão') || inst.includes('orgão') || inst.includes('orgao') || inst.includes('órgao') || inst.includes('teclado') || inst.includes('piano')) {
     return 'Teclas';
   }
-  
+
   return 'Outros / Não Classificado';
 };
 
@@ -87,7 +87,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
   const [searchTerm, setSearchTerm] = useState('');
 
   const userScope = useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
-  
+
   // Filtros em cascata da barra superior: Setor Pertencente -> Congregações
   const [selectedSetorId, setSelectedSetorId] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
@@ -138,8 +138,8 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
     }
     if (!selectedSetorId) return comuns;
     const selectedSetor = setores.find(s => s.id === selectedSetorId);
-    return comuns.filter(c => 
-      c.setor_id === selectedSetorId || 
+    return comuns.filter(c =>
+      c.setor_id === selectedSetorId ||
       (selectedSetor && c.setor_pertencente === selectedSetor.nome)
     );
   }, [comuns, setores, selectedSetorId, userScope]);
@@ -148,8 +148,8 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
   const modalComunsFiltradas = React.useMemo(() => {
     if (!formSetorId) return comuns;
     const selectedSetor = setores.find(s => s.id === formSetorId);
-    return comuns.filter(c => 
-      c.setor_id === formSetorId || 
+    return comuns.filter(c =>
+      c.setor_id === formSetorId ||
       (selectedSetor && c.setor_pertencente === selectedSetor.nome)
     );
   }, [comuns, setores, formSetorId]);
@@ -165,8 +165,8 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
     // Se a comum atualmente selecionada não pertencer ao novo setor, reseta
     if (setorId) {
       const selectedSetor = setores.find(s => s.id === setorId);
-      const isComumInSetor = comuns.some(c => 
-        c.id === formData.comum_id && 
+      const isComumInSetor = comuns.some(c =>
+        c.id === formData.comum_id &&
         (c.setor_id === setorId || (selectedSetor && c.setor_pertencente === selectedSetor.nome))
       );
       if (!isComumInSetor) {
@@ -185,7 +185,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
           setTodosInstrumentos(unique.sort());
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const instrumentosFiltradosPorFamilia = React.useMemo(() => {
@@ -471,11 +471,10 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
           <select
             value={selectedSexo}
             onChange={(e) => { setSelectedSexo(e.target.value); setCurrentPage(1); }}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
-              selectedSexo 
-                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200' 
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${selectedSexo
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200'
                 : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
-            }`}
+              }`}
           >
             <option value="">Sexo (Todos)</option>
             <option value="Masculino">Masculino (Moços)</option>
@@ -486,11 +485,10 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
           <select
             value={selectedAuxiliar}
             onChange={(e) => { setSelectedAuxiliar(e.target.value); setCurrentPage(1); }}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
-              selectedAuxiliar 
-                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200' 
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${selectedAuxiliar
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200'
                 : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
-            }`}
+              }`}
           >
             <option value="">Auxiliar (Todos)</option>
             <option value="sim">Apenas Auxiliares</option>
@@ -500,19 +498,18 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
           {/* Filtro Músico */}
           <select
             value={selectedMusico}
-            onChange={(e) => { 
-              setSelectedMusico(e.target.value); 
+            onChange={(e) => {
+              setSelectedMusico(e.target.value);
               if (e.target.value === 'nao') {
                 setSelectedFamilia('');
                 setSelectedInstrumento('');
               }
-              setCurrentPage(1); 
+              setCurrentPage(1);
             }}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
-              selectedMusico 
-                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200' 
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${selectedMusico
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200'
                 : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
-            }`}
+              }`}
           >
             <option value="">Músico (Todos)</option>
             <option value="sim">Apenas Músicos</option>
@@ -522,17 +519,16 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
           {/* Filtro Família de Instrumento */}
           <select
             value={selectedFamilia}
-            onChange={(e) => { 
-              setSelectedFamilia(e.target.value); 
+            onChange={(e) => {
+              setSelectedFamilia(e.target.value);
               setSelectedInstrumento('');
               if (e.target.value) setSelectedMusico('sim');
-              setCurrentPage(1); 
+              setCurrentPage(1);
             }}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
-              selectedFamilia 
-                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200' 
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${selectedFamilia
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200'
                 : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
-            }`}
+              }`}
           >
             <option value="">Família (Todas)</option>
             {FAMILIAS_INSTRUMENTOS.map(fam => (
@@ -543,20 +539,19 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
           {/* Filtro Instrumento */}
           <select
             value={selectedInstrumento}
-            onChange={(e) => { 
-              setSelectedInstrumento(e.target.value); 
+            onChange={(e) => {
+              setSelectedInstrumento(e.target.value);
               if (e.target.value) {
                 setSelectedMusico('sim');
                 const fam = obterFamiliaInstrumento(e.target.value);
                 if (fam && !selectedFamilia) setSelectedFamilia(fam);
               }
-              setCurrentPage(1); 
+              setCurrentPage(1);
             }}
-            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${
-              selectedInstrumento 
-                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200' 
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer ${selectedInstrumento
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200'
                 : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300'
-            }`}
+              }`}
           >
             <option value="">Instrumento (Todos)</option>
             {instrumentosFiltradosPorFamilia.map(inst => (
@@ -736,11 +731,10 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                     </td>
                     <td className="px-2 sm:px-3 py-2.5 sm:py-3 text-center">
                       <span
-                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                          aux.ativo
+                        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold ${aux.ativo
                             ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20'
                             : 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                        }`}
+                          }`}
                       >
                         {aux.ativo ? 'Ativo' : 'Inativo'}
                       </span>
@@ -810,7 +804,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                
+
                 <div className="space-y-1">
                   <label className="font-semibold uppercase text-slate-600 dark:text-slate-300">Data de Nascimento</label>
                   <input
@@ -834,7 +828,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                     <option value="Feminino">Feminino</option>
                   </select>
                 </div>
-                
+
                 <div className="space-y-1">
                   <label className="font-semibold uppercase text-slate-600 dark:text-slate-300">Celular</label>
                   <input
@@ -906,7 +900,7 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                     Cadastro ativo
                   </label>
                 </div>
-                
+
                 <div>
                   <div className="flex items-center space-x-2">
                     <input
@@ -957,13 +951,13 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                         onChange={(e) => setFormData({ ...formData, instrumento: e.target.value })}
                         className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 cursor-pointer focus:ring-1 focus:ring-emerald-500"
                       >
-                    <option value="">-- Selecione o Instrumento --</option>
-                    {instrumentosDinamicos.map(inst => (
-                      <option key={inst} value={inst}>{inst}</option>
-                    ))}
-                      {formData.instrumento && !instrumentosDinamicos.includes(formData.instrumento) && (
-                        <option value={formData.instrumento}>{formData.instrumento} (Adicionado)</option>
-                      )}
+                        <option value="">-- Selecione o Instrumento --</option>
+                        {instrumentosDinamicos.map(inst => (
+                          <option key={inst} value={inst}>{inst}</option>
+                        ))}
+                        {formData.instrumento && !instrumentosDinamicos.includes(formData.instrumento) && (
+                          <option value={formData.instrumento}>{formData.instrumento} (Adicionado)</option>
+                        )}
                       </select>
                     </div>
 
@@ -974,12 +968,12 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       id="novo_instrumento"
-                      placeholder="Outro instrumento (digite e adicione)..." 
+                      placeholder="Outro instrumento (digite e adicione)..."
                       className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded px-2 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-emerald-500"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
@@ -992,8 +986,8 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
                         }
                       }}
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => {
                         const input = document.getElementById('novo_instrumento') as HTMLInputElement;
                         const val = input.value.trim();

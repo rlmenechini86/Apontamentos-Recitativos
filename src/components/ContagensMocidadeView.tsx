@@ -1648,7 +1648,7 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -1657,12 +1657,12 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-sm w-full overflow-hidden text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800"
+        className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800"
       >
-        {/* Cabeçalho */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        {/* Cabeçalho Fixo */}
+        <div className="px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2">
-            <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">
+            <h2 className="font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100">
               {activeItem
                 ? (isEditing ? 'Editar Contagem' : 'Visualizar Contagem')
                 : 'Nova Contagem Anual'}
@@ -1685,261 +1685,269 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Identificação de quem inseriu (se já registrado) */}
-          {activeItem && (
-            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 flex items-center space-x-2">
-              <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Cadastrado por</span>
-                <span className="font-semibold text-slate-900 dark:text-slate-100">{authorName}</span>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5">
+            {/* Identificação de quem inseriu (se já registrado) */}
+            {activeItem && (
+              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 flex items-center space-x-2">
+                <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Cadastrado por</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{authorName}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Linha 1: Data de Referência e Tipo de Contagem */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Data / Ano */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Data de Referência *</label>
+                <input
+                  type="date"
+                  required
+                  disabled={!isEditing}
+                  value={formData.data}
+                  onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                  onKeyDown={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    if (!isEditing) return;
+                    try {
+                      if ('showPicker' in HTMLInputElement.prototype) {
+                        (e.target as HTMLInputElement).showPicker();
+                      }
+                    } catch (err) { }
+                  }}
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed select-none' : 'cursor-pointer'
+                    }`}
+                />
+              </div>
+
+              {/* Tipo */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Tipo de Contagem *</label>
+                <select
+                  required
+                  disabled={!isEditing}
+                  value={formData.tipo}
+                  onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'Santa Ceia' | 'Mocidade' })}
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed' : 'cursor-pointer'
+                    }`}
+                >
+                  <option value="Mocidade">Mocidade</option>
+                  <option value="Santa Ceia">Santa Ceia</option>
+                </select>
               </div>
             </div>
-          )}
 
-          {/* Data / Ano */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Data de Referência *</label>
-            <input
-              type="date"
-              required
-              disabled={!isEditing}
-              value={formData.data}
-              onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-              onKeyDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                if (!isEditing) return;
-                try {
-                  if ('showPicker' in HTMLInputElement.prototype) {
-                    (e.target as HTMLInputElement).showPicker();
-                  }
-                } catch (err) { }
-              }}
-              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed select-none' : 'cursor-pointer'
-                }`}
-            />
-          </div>
-
-          {/* Setor */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Setor Pertencente</label>
-            <select
-              disabled={!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId)}
-              value={modalSetorId}
-              onChange={(e) => {
-                const newSetor = e.target.value;
-                setModalSetorId(newSetor);
-                if (newSetor) {
-                  const selSetor = setores.find(s => s.id === newSetor);
-                  const isComumIn = comuns.some(c => c.id === formData.comum_id && (c.setor_id === newSetor || (selSetor && c.setor_pertencente === selSetor.nome)));
-                  if (!isComumIn) setFormData(prev => ({ ...prev, comum_id: '' }));
-                }
-              }}
-              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
-                }`}
-            >
-              {!userScope.isSetor && <option value="">-- Todos os Setores --</option>}
-              {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map((s) => (
-                <option key={s.id} value={s.id}>{s.nome}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Comum */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Comum Congregação *</label>
-            <select
-              required
-              disabled={!isEditing || (isRestrictedUser && !!userComumId)}
-              value={formData.comum_id}
-              onChange={(e) => {
-                const chosenId = e.target.value;
-                setFormData({ ...formData, comum_id: chosenId });
-                if (chosenId && !modalSetorId) {
-                  const c = comuns.find(item => item.id === chosenId);
-                  const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
-                  if (s) setModalSetorId(s.id);
-                }
-              }}
-              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
-                }`}
-            >
-              <option value="">Selecione...</option>
-              {modalComunsFiltradas.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Tipo */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Tipo de Contagem *</label>
-            <select
-              required
-              disabled={!isEditing}
-              value={formData.tipo}
-              onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'Santa Ceia' | 'Mocidade' })}
-              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed' : 'cursor-pointer'
-                }`}
-            >
-              <option value="Mocidade">Mocidade</option>
-              <option value="Santa Ceia">Santa Ceia</option>
-            </select>
-          </div>
-
-          {/* Quantidade Geral */}
-          <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">
-              {formData.tipo === 'Mocidade' ? 'Presença Geral da Mocidade *' : 'Participantes da Santa Ceia *'}
-            </label>
-            <input
-              type="number"
-              min="0"
-              required
-              disabled={!isEditing}
-              value={formData.quantidade}
-              onChange={(e) => setFormData({ ...formData, quantidade: Number(e.target.value) })}
-              className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-mono font-bold text-emerald-700 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed' : ''
-                }`}
-            />
-          </div>
-
-          {/* Seção Unificada: Auxiliares e Músicos (Exclusivo para Reunião da Mocidade) */}
-          {formData.tipo === 'Mocidade' && (
-            <div className="space-y-4 pt-3 border-t border-slate-200 dark:border-slate-800">
-              {/* Auxiliares de Jovens */}
-              <div className="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-                      Auxiliares de Jovens
-                    </span>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
-                    Total: {(Number(formData.auxiliares_mocos) || 0) + (Number(formData.auxiliares_mocas) || 0)}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-                      Auxiliares Moços
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      disabled={!isEditing}
-                      value={formData.auxiliares_mocos}
-                      onChange={(e) => setFormData({ ...formData, auxiliares_mocos: Math.max(0, Number(e.target.value) || 0) })}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-                      Auxiliares Moças
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      disabled={!isEditing}
-                      value={formData.auxiliares_mocas}
-                      onChange={(e) => setFormData({ ...formData, auxiliares_mocas: Math.max(0, Number(e.target.value) || 0) })}
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-                </div>
+            {/* Linha 2: Setor e Comum Congregação */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Setor */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Setor Pertencente</label>
+                <select
+                  disabled={!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId)}
+                  value={modalSetorId}
+                  onChange={(e) => {
+                    const newSetor = e.target.value;
+                    setModalSetorId(newSetor);
+                    if (newSetor) {
+                      const selSetor = setores.find(s => s.id === newSetor);
+                      const isComumIn = comuns.some(c => c.id === formData.comum_id && (c.setor_id === newSetor || (selSetor && c.setor_pertencente === selSetor.nome)));
+                      if (!isComumIn) setFormData(prev => ({ ...prev, comum_id: '' }));
+                    }
+                  }}
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
+                    }`}
+                >
+                  {!userScope.isSetor && <option value="">-- Todos os Setores --</option>}
+                  {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map((s) => (
+                    <option key={s.id} value={s.id}>{s.nome}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Músicos por Família */}
-              <div className="p-3.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Music className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-                      Músicos por Família de Instrumento
-                    </span>
-                  </div>
-                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
-                    Total: {formData.detalhes_musicos.reduce((acc, curr) => acc + (Number(curr.quantidade) || 0), 0)}
-                  </span>
-                </div>
-
-                {formData.detalhes_musicos.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic py-1">
-                    Nenhuma família de instrumento apontada.
-                  </p>
-                ) : (
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {formData.detalhes_musicos.map((item, idx) => (
-                      <div key={idx} className="flex items-center space-x-2 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
-                        <select
-                          disabled={!isEditing}
-                          value={item.familia}
-                          onChange={(e) => handleUpdateFamilia(idx, 'familia', e.target.value)}
-                          className="flex-1 bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
-                        >
-                          {FAMILIAS_INSTRUMENTOS.map(f => (
-                            <option key={f} value={f}>{f}</option>
-                          ))}
-                        </select>
-                        <div className="flex items-center space-x-1.5">
-                          <span className="text-[11px] text-slate-400">Qtd:</span>
-                          <input
-                            type="number"
-                            min="0"
-                            disabled={!isEditing}
-                            value={item.quantidade}
-                            onChange={(e) => handleUpdateFamilia(idx, 'quantidade', e.target.value)}
-                            className="w-16 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-xs font-mono font-bold text-center text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-emerald-500"
-                          />
-                        </div>
-                        {isEditing && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveFamilia(idx)}
-                            className="p-1 text-slate-400 hover:text-rose-500 transition cursor-pointer"
-                            title="Remover família"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {isEditing && (
-                  <button
-                    type="button"
-                    onClick={handleAddFamilia}
-                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-lg border border-emerald-200 dark:border-emerald-800/60 transition cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Adicionar Família</span>
-                  </button>
-                )}
+              {/* Comum */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Comum Congregação *</label>
+                <select
+                  required
+                  disabled={!isEditing || (isRestrictedUser && !!userComumId)}
+                  value={formData.comum_id}
+                  onChange={(e) => {
+                    const chosenId = e.target.value;
+                    setFormData({ ...formData, comum_id: chosenId });
+                    if (chosenId && !modalSetorId) {
+                      const c = comuns.find(item => item.id === chosenId);
+                      const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
+                      if (s) setModalSetorId(s.id);
+                    }
+                  }}
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
+                    }`}
+                >
+                  <option value="">Selecione...</option>
+                  {modalComunsFiltradas.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
               </div>
             </div>
-          )}
 
-          {/* Histórico e Logs de Auditoria deste Apontamento */}
-          {activeItem && activeItem.id && (
-            <div className="pt-1">
-              <ApontamentoAuditLogView
-                registroId={activeItem.id}
-                tabela="contagens_mocidade"
-                initialCreatorName={(activeItem as any).usuario?.nome_completo}
-                createdAt={activeItem.created_at}
-                updatedAt={activeItem.updated_at}
-                defaultExpanded={!isEditing}
+            {/* Quantidade Geral */}
+            <div className="space-y-1">
+              <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">
+                {formData.tipo === 'Mocidade' ? 'Presença Geral da Mocidade *' : 'Participantes da Santa Ceia *'}
+              </label>
+              <input
+                type="number"
+                min="0"
+                required
+                disabled={!isEditing}
+                value={formData.quantidade}
+                onChange={(e) => setFormData({ ...formData, quantidade: Number(e.target.value) })}
+                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm font-mono font-bold text-emerald-700 dark:text-emerald-400 focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed' : ''
+                  }`}
               />
             </div>
-          )}
 
-          {/* Rodapé e Botões */}
-          <div className="pt-4 flex items-center justify-between border-t border-slate-200 dark:border-slate-800">
+            {/* Seção Unificada: Auxiliares e Músicos (Exclusivo para Reunião da Mocidade) */}
+            {formData.tipo === 'Mocidade' && (
+              <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+                {/* Auxiliares de Jovens */}
+                <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Users className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+                        Auxiliares de Jovens
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                      Total: {(Number(formData.auxiliares_mocos) || 0) + (Number(formData.auxiliares_mocas) || 0)}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                        Auxiliares Moços
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        disabled={!isEditing}
+                        value={formData.auxiliares_mocos}
+                        onChange={(e) => setFormData({ ...formData, auxiliares_mocos: Math.max(0, Number(e.target.value) || 0) })}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">
+                        Auxiliares Moças
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        disabled={!isEditing}
+                        value={formData.auxiliares_mocas}
+                        onChange={(e) => setFormData({ ...formData, auxiliares_mocas: Math.max(0, Number(e.target.value) || 0) })}
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono font-bold text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Músicos por Família */}
+                <div className="p-3 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Music className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+                        Músicos por Família de Instrumento
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                      Total: {formData.detalhes_musicos.reduce((acc, curr) => acc + (Number(curr.quantidade) || 0), 0)}
+                    </span>
+                  </div>
+
+                  {formData.detalhes_musicos.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic py-1">
+                      Nenhuma família de instrumento apontada.
+                    </p>
+                  ) : (
+                    <div className="space-y-2 max-h-44 overflow-y-auto pr-1">
+                      {formData.detalhes_musicos.map((item, idx) => (
+                        <div key={idx} className="flex items-center space-x-2 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
+                          <select
+                            disabled={!isEditing}
+                            value={item.familia}
+                            onChange={(e) => handleUpdateFamilia(idx, 'familia', e.target.value)}
+                            className="flex-1 bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none cursor-pointer"
+                          >
+                            {FAMILIAS_INSTRUMENTOS.map(f => (
+                              <option key={f} value={f}>{f}</option>
+                            ))}
+                          </select>
+                          <div className="flex items-center space-x-1.5">
+                            <span className="text-[11px] text-slate-400">Qtd:</span>
+                            <input
+                              type="number"
+                              min="0"
+                              disabled={!isEditing}
+                              value={item.quantidade}
+                              onChange={(e) => handleUpdateFamilia(idx, 'quantidade', e.target.value)}
+                              className="w-16 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-xs font-mono font-bold text-center text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-emerald-500"
+                            />
+                          </div>
+                          {isEditing && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveFamilia(idx)}
+                              className="p-1 text-slate-400 hover:text-rose-500 transition cursor-pointer"
+                              title="Remover família"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {isEditing && (
+                    <button
+                      type="button"
+                      onClick={handleAddFamilia}
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-lg border border-emerald-200 dark:border-emerald-800/60 transition cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Adicionar Família</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Histórico e Logs de Auditoria deste Apontamento */}
+            {activeItem && activeItem.id && (
+              <div className="pt-1">
+                <ApontamentoAuditLogView
+                  registroId={activeItem.id}
+                  tabela="contagens_mocidade"
+                  initialCreatorName={(activeItem as any).usuario?.nome_completo}
+                  createdAt={activeItem.created_at}
+                  updatedAt={activeItem.updated_at}
+                  defaultExpanded={!isEditing}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Rodapé Fixo com Botões Sempre Visíveis */}
+          <div className="px-4 sm:px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/90 shrink-0 flex items-center justify-between">
             {activeItem && !isEditing ? (
               <div className="flex items-center justify-between w-full">
                 <button

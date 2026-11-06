@@ -7,3 +7,4 @@ WHERE LOWER(nome) = 'cjm' OR (LOWER(nome) LIKE '%cjm%' AND LOWER(nome) NOT LIKE 
 
 -- Notifica o PostgREST para recarregar o schema cache
 NOTIFY pgrst, 'reload schema';
+

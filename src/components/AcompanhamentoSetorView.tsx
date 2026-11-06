@@ -725,25 +725,25 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       {renderSortIcon(annualSortField === 'ano', annualSortDirection)}
                     </div>
                   </th>
-                  <th onClick={() => handleAnnualSort('meninas')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Meninas">
+                  <th onClick={() => handleAnnualSort('meninas')} className="py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Meninas">
                     <div className="flex items-center justify-center space-x-1">
                       <span>Meninas</span>
                       {renderSortIcon(annualSortField === 'meninas', annualSortDirection)}
                     </div>
                   </th>
-                  <th onClick={() => handleAnnualSort('meninos')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Meninos">
+                  <th onClick={() => handleAnnualSort('meninos')} className="py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Meninos">
                     <div className="flex items-center justify-center space-x-1">
                       <span>Meninos</span>
                       {renderSortIcon(annualSortField === 'meninos', annualSortDirection)}
                     </div>
                   </th>
-                  <th onClick={() => handleAnnualSort('mocas')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Moças">
+                  <th onClick={() => handleAnnualSort('mocas')} className="py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Moças">
                     <div className="flex items-center justify-center space-x-1">
                       <span>Moças</span>
                       {renderSortIcon(annualSortField === 'mocas', annualSortDirection)}
                     </div>
                   </th>
-                  <th onClick={() => handleAnnualSort('mocos')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Moços">
+                  <th onClick={() => handleAnnualSort('mocos')} className="py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Moços">
                     <div className="flex items-center justify-center space-x-1">
                       <span>Moços</span>
                       {renderSortIcon(annualSortField === 'mocos', annualSortDirection)}
@@ -773,10 +773,10 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                 {sortedAnnualData.map((row) => (
                   <tr key={row.ano} className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                     <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold">{row.ano}</td>
-                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
-                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
-                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
-                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
                     <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold">{row.subtotal.toLocaleString('pt-BR')}</td>
                     <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold text-slate-500">{row.expectativa.toLocaleString('pt-BR')}</td>
                     <td className={`py-2 px-2 font-bold ${row.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -799,7 +799,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
               <BarChartIcon className="w-5 h-5 mr-2 text-sky-400" />
               <h3 className="font-bold text-sm tracking-wider">MÉDIA MENSAL DE RECITATIVOS</h3>
             </div>
-            <span className="text-[11px] font-medium text-sky-300 bg-sky-950/60 border border-sky-700/60 px-2 py-0.5 rounded-full hidden sm:flex items-center gap-1 cursor-default">
+            <span className="text-[10px] sm:text-[11px] font-medium text-sky-300 bg-sky-950/60 border border-sky-700/60 px-2 py-0.5 rounded-full flex items-center gap-1 cursor-default">
               <Sparkles className="w-3 h-3 text-sky-400" /> Clique no mês para detalhar
             </span>
           </div>
@@ -868,25 +868,25 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       {renderSortIcon(monthlySortField === 'mes', monthlySortDirection)}
                     </div>
                   </th>
-                  <th onClick={() => handleMonthlySort('meninas')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Meninas">
+                  <th onClick={() => handleMonthlySort('meninas')} className="py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Meninas">
                     <div className="flex items-center justify-center space-x-1">
                       <span>Meninas</span>
                       {renderSortIcon(monthlySortField === 'meninas', monthlySortDirection)}
                     </div>
                   </th>
-                  <th onClick={() => handleMonthlySort('meninos')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Meninos">
+                  <th onClick={() => handleMonthlySort('meninos')} className="py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Meninos">
                     <div className="flex items-center justify-center space-x-1">
                       <span>Meninos</span>
                       {renderSortIcon(monthlySortField === 'meninos', monthlySortDirection)}
                     </div>
                   </th>
-                  <th onClick={() => handleMonthlySort('mocas')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Moças">
+                  <th onClick={() => handleMonthlySort('mocas')} className="py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Moças">
                     <div className="flex items-center justify-center space-x-1">
                       <span>Moças</span>
                       {renderSortIcon(monthlySortField === 'mocas', monthlySortDirection)}
                     </div>
                   </th>
-                  <th onClick={() => handleMonthlySort('mocos')} className="hidden sm:table-cell py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Moços">
+                  <th onClick={() => handleMonthlySort('mocos')} className="py-2 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group" title="Ordenar por Moços">
                     <div className="flex items-center justify-center space-x-1">
                       <span>Moços</span>
                       {renderSortIcon(monthlySortField === 'mocos', monthlySortDirection)}
@@ -923,10 +923,10 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                         <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-sky-500 inline opacity-40 group-hover:opacity-100 transition" />
                       </div>
                     </td>
-                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
-                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
-                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
-                    <td className="hidden sm:table-cell py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
+                    <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
                     <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold text-sky-700 dark:text-sky-300">{row.subtotal.toLocaleString('pt-BR')}</td>
                     <td className={`py-2 px-2 font-bold ${row.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {row.resultado.toLocaleString('pt-BR')}
@@ -945,31 +945,41 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
 
       {/* Modal de Detalhamento da Tabela do Mês Selecionado */}
       {selectedMonthModal && monthDetailData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 print:hidden">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100">
-            {/* Cabeçalho */}
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center">
-                  <BarChartIcon className="w-5 h-5" />
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-1.5 sm:p-6 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 print:hidden"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedMonthModal(null);
+            }
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl shadow-2xl max-w-6xl w-full h-[92vh] sm:h-auto sm:max-h-[92vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100"
+          >
+            {/* Cabeçalho Fixo */}
+            <div className="px-3 sm:px-6 py-2.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shrink-0">
+              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+                <div className="w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                  <BarChartIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold flex items-center gap-2">
-                    <span>Tabela de Recitativos - {monthDetailData.mes} de {monthDetailData.ano}</span>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
+                <div className="min-w-0">
+                  <h2 className="text-xs sm:text-lg font-bold flex flex-wrap items-center gap-1 sm:gap-2">
+                    <span className="truncate">Tabela de Recitativos - {monthDetailData.mes}/{monthDetailData.ano}</span>
+                    <span className="text-[10px] sm:text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-800 whitespace-nowrap">
                       {monthDetailData.comunsComLancamento} de {monthDetailData.totalComuns} congregações
                     </span>
                   </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
                     {selectedSetorId ? setores.find(s => s.id === selectedSetorId)?.nome : 'Setor: Visão Consolidada de Todas as Congregações'}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2 shrink-0 ml-2">
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  className="p-1.5 sm:p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                   title="Imprimir Tabela"
                 >
                   <Printer className="w-4 h-4" />
@@ -977,7 +987,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                 <button
                   type="button"
                   onClick={() => setSelectedMonthModal(null)}
-                  className="p-2 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  className="p-1.5 sm:p-2 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                   title="Fechar"
                 >
                   <X className="w-5 h-5" />
@@ -985,267 +995,275 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
               </div>
             </div>
 
-            {/* Cards de Resumo do Mês */}
-            <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
-                <div className="bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Meninas</span>
-                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100">{monthDetailData.totals.meninas.toLocaleString('pt-BR')}</span>
-                </div>
-                <div className="bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Meninos</span>
-                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100">{monthDetailData.totals.meninos.toLocaleString('pt-BR')}</span>
-                </div>
-                <div className="bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Moças</span>
-                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100">{monthDetailData.totals.mocas.toLocaleString('pt-BR')}</span>
-                </div>
-                <div className="bg-white dark:bg-slate-800 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Moços</span>
-                  <span className="text-lg font-bold text-slate-800 dark:text-slate-100">{monthDetailData.totals.mocos.toLocaleString('pt-BR')}</span>
-                </div>
-                <div className="bg-sky-50 dark:bg-sky-950/40 p-2.5 rounded-lg border border-sky-200 dark:border-sky-800 text-center shadow-xs">
-                  <span className="text-[11px] font-semibold text-sky-700 dark:text-sky-300 block">Subtotal Mês</span>
-                  <span className="text-lg font-bold text-sky-800 dark:text-sky-200">{monthDetailData.totals.subtotal.toLocaleString('pt-BR')}</span>
-                </div>
-                <div className="bg-slate-100 dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">Expectativa</span>
-                  <span className="text-lg font-bold text-slate-700 dark:text-slate-300">{monthDetailData.expectativaTotal.toLocaleString('pt-BR')}</span>
-                </div>
-                <div className={`p-2.5 rounded-lg border text-center shadow-xs ${monthDetailData.resultado >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300'}`}>
-                  <span className="text-[11px] font-semibold block">Resultado</span>
-                  <span className="text-lg font-bold">{monthDetailData.resultado.toLocaleString('pt-BR')}</span>
+            {/* Corpo Rolável em Bloco Único (impede colapso Flexbox da tabela no celular) */}
+            <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain">
+              {/* Cards de Resumo do Mês */}
+              <div className="p-2.5 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
+                <div className="grid grid-cols-4 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-2.5">
+                  <div className="bg-white dark:bg-slate-800 p-1.5 sm:p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
+                    <span className="text-[9px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400 block truncate">Meninas</span>
+                    <span className="text-xs sm:text-lg font-bold text-slate-800 dark:text-slate-100">{monthDetailData.totals.meninas.toLocaleString('pt-BR')}</span>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-1.5 sm:p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
+                    <span className="text-[9px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400 block truncate">Meninos</span>
+                    <span className="text-xs sm:text-lg font-bold text-slate-800 dark:text-slate-100">{monthDetailData.totals.meninos.toLocaleString('pt-BR')}</span>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-1.5 sm:p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
+                    <span className="text-[9px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400 block truncate">Moças</span>
+                    <span className="text-xs sm:text-lg font-bold text-slate-800 dark:text-slate-100">{monthDetailData.totals.mocas.toLocaleString('pt-BR')}</span>
+                  </div>
+                  <div className="bg-white dark:bg-slate-800 p-1.5 sm:p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
+                    <span className="text-[9px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400 block truncate">Moços</span>
+                    <span className="text-xs sm:text-lg font-bold text-slate-800 dark:text-slate-100">{monthDetailData.totals.mocos.toLocaleString('pt-BR')}</span>
+                  </div>
+                  <div className="bg-sky-50 dark:bg-sky-950/40 p-1.5 sm:p-2.5 rounded-lg border border-sky-200 dark:border-sky-800 text-center shadow-xs">
+                    <span className="text-[9px] sm:text-[11px] font-semibold text-sky-700 dark:text-sky-300 block truncate">Subtotal</span>
+                    <span className="text-xs sm:text-lg font-bold text-sky-800 dark:text-sky-200">{monthDetailData.totals.subtotal.toLocaleString('pt-BR')}</span>
+                  </div>
+                  <div className="bg-slate-100 dark:bg-slate-800/80 p-1.5 sm:p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center shadow-xs">
+                    <span className="text-[9px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400 block truncate">Expectativa</span>
+                    <span className="text-xs sm:text-lg font-bold text-slate-700 dark:text-slate-300">{monthDetailData.expectativaTotal.toLocaleString('pt-BR')}</span>
+                  </div>
+                  <div className={`col-span-2 sm:col-span-1 p-1.5 sm:p-2.5 rounded-lg border text-center shadow-xs ${monthDetailData.resultado >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300'}`}>
+                    <span className="text-[9px] sm:text-[11px] font-semibold block truncate">Resultado</span>
+                    <span className="text-xs sm:text-lg font-bold">{monthDetailData.resultado.toLocaleString('pt-BR')}</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Barra de Pesquisa de Congregação */}
-            <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-slate-900">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Buscar congregação por nome ou código..."
-                  value={modalSearchComum}
-                  onChange={(e) => setModalSearchComum(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                />
+              {/* Barra de Pesquisa de Congregação */}
+              <div className="px-3 sm:px-6 py-2 sm:py-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-white dark:bg-slate-900 sticky top-0 z-20">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Buscar congregação por nome ou código..."
+                    value={modalSearchComum}
+                    onChange={(e) => setModalSearchComum(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+                <div className="flex items-center justify-between sm:justify-end gap-2">
+                  <span className="text-[11px] sm:text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Mostrando {filteredAndSortedModalRows.length} congregações
+                  </span>
+                  <span className="text-[10px] text-sky-600 dark:text-sky-400 sm:hidden font-medium">
+                    ↔ Arraste a tabela para o lado
+                  </span>
+                </div>
               </div>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                Mostrando {filteredAndSortedModalRows.length} congregações
-              </span>
-            </div>
 
-            {/* Tabela Detalhada por Congregação */}
-            <div className="flex-1 overflow-y-auto overflow-x-auto">
-              <table className="min-w-full text-xs text-slate-700 dark:text-slate-300 text-center">
-                <thead className="bg-slate-700 text-white sticky top-0 z-10 select-none">
-                  <tr>
-                    <th
-                      onClick={() => handleModalSort('nome')}
-                      className="py-2.5 px-3 text-left border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
-                      title="Clique para ordenar por Congregação"
-                    >
-                      <div className="flex items-center justify-between space-x-1">
-                        <span>Congregação</span>
-                        {renderSortIcon(modalSortField === 'nome', modalSortDirection)}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleModalSort('setor')}
-                      className="py-2.5 px-2 text-left border-r border-slate-600 hidden md:table-cell cursor-pointer hover:bg-slate-600 transition group"
-                      title="Clique para ordenar por Setor"
-                    >
-                      <div className="flex items-center justify-between space-x-1">
-                        <span>Setor</span>
-                        {renderSortIcon(modalSortField === 'setor', modalSortDirection)}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleModalSort('datas')}
-                      className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
-                      title="Clique para ordenar por Quantidade de Lançamentos"
-                    >
-                      <div className="flex items-center justify-center space-x-1">
-                        <span>Datas Apontadas</span>
-                        {renderSortIcon(modalSortField === 'datas', modalSortDirection)}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleModalSort('meninas')}
-                      className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
-                      title="Clique para ordenar por Meninas"
-                    >
-                      <div className="flex items-center justify-center space-x-1">
-                        <span>Meninas</span>
-                        {renderSortIcon(modalSortField === 'meninas', modalSortDirection)}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleModalSort('meninos')}
-                      className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
-                      title="Clique para ordenar por Meninos"
-                    >
-                      <div className="flex items-center justify-center space-x-1">
-                        <span>Meninos</span>
-                        {renderSortIcon(modalSortField === 'meninos', modalSortDirection)}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleModalSort('mocas')}
-                      className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
-                      title="Clique para ordenar por Moças"
-                    >
-                      <div className="flex items-center justify-center space-x-1">
-                        <span>Moças</span>
-                        {renderSortIcon(modalSortField === 'mocas', modalSortDirection)}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleModalSort('mocos')}
-                      className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
-                      title="Clique para ordenar por Moços"
-                    >
-                      <div className="flex items-center justify-center space-x-1">
-                        <span>Moços</span>
-                        {renderSortIcon(modalSortField === 'mocos', modalSortDirection)}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleModalSort('subtotal')}
-                      className="py-2.5 px-2 border-r border-slate-600 font-bold bg-slate-800 cursor-pointer hover:bg-slate-750 transition group"
-                      title="Clique para ordenar por Subtotal"
-                    >
-                      <div className="flex items-center justify-center space-x-1">
-                        <span>Subtotal</span>
-                        {renderSortIcon(modalSortField === 'subtotal', modalSortDirection)}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleModalSort('expectativa')}
-                      className="py-2.5 px-2 border-r border-slate-600 font-bold bg-slate-800 cursor-pointer hover:bg-slate-750 transition group"
-                      title="Clique para ordenar por Expectativa"
-                    >
-                      <div className="flex items-center justify-center space-x-1">
-                        <span>Expectativa</span>
-                        {renderSortIcon(modalSortField === 'expectativa', modalSortDirection)}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleModalSort('resultado')}
-                      className="py-2.5 px-2 border-r border-slate-600 font-bold cursor-pointer hover:bg-slate-600 transition group"
-                      title="Clique para ordenar por Resultado"
-                    >
-                      <div className="flex items-center justify-center space-x-1">
-                        <span>Resultado</span>
-                        {renderSortIcon(modalSortField === 'resultado', modalSortDirection)}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleModalSort('status')}
-                      className="py-2.5 px-2 cursor-pointer hover:bg-slate-600 transition group"
-                      title="Clique para ordenar por Status"
-                    >
-                      <div className="flex items-center justify-center space-x-1">
-                        <span>Status</span>
-                        {renderSortIcon(modalSortField === 'status', modalSortDirection)}
-                      </div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {filteredAndSortedModalRows.map((r) => (
-                      <tr key={r.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                        <td className="py-2 px-3 text-left border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-900 dark:text-slate-100">
-                          {r.codigo !== '-' && <span className="text-[10px] text-slate-400 font-mono mr-1.5">{r.codigo}</span>}
-                          {r.nome}
-                        </td>
-                        <td className="py-2 px-2 text-left border-r border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 hidden md:table-cell">
-                          {r.setor}
-                        </td>
-                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 text-[11px]">
-                          {r.datas || <span className="text-slate-400 italic">Sem lançamento</span>}
-                        </td>
-                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.meninas.toLocaleString('pt-BR')}</td>
-                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.meninos.toLocaleString('pt-BR')}</td>
-                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.mocas.toLocaleString('pt-BR')}</td>
-                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.mocos.toLocaleString('pt-BR')}</td>
-                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold bg-slate-50/70 dark:bg-slate-800/60 text-sky-700 dark:text-sky-300">
-                          {r.subtotal.toLocaleString('pt-BR')}
-                        </td>
-                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-700 dark:text-slate-300 bg-slate-50/40 dark:bg-slate-800/30">
-                          {r.expectativa > 0 ? r.expectativa.toLocaleString('pt-BR') : '-'}
-                        </td>
-                        <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">
-                          {r.expectativa > 0 ? (
-                            r.isAcima ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs whitespace-nowrap">
-                                ▲ {r.diferenca >= 0 ? `+${r.diferenca}` : r.diferenca} (Acima)
+              {/* Tabela Detalhada por Congregação */}
+              <div className="w-full overflow-x-auto">
+                <table className="min-w-full text-xs text-slate-700 dark:text-slate-300 text-center border-collapse">
+                  <thead className="bg-slate-700 text-white select-none">
+                    <tr>
+                      <th
+                        onClick={() => handleModalSort('nome')}
+                        className="py-2.5 px-2.5 sm:px-3 text-left border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group sticky left-0 z-10 bg-slate-700"
+                        title="Clique para ordenar por Congregação"
+                      >
+                        <div className="flex items-center justify-between space-x-1">
+                          <span>Congregação</span>
+                          {renderSortIcon(modalSortField === 'nome', modalSortDirection)}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleModalSort('setor')}
+                        className="py-2.5 px-2 text-left border-r border-slate-600 hidden md:table-cell cursor-pointer hover:bg-slate-600 transition group"
+                        title="Clique para ordenar por Setor"
+                      >
+                        <div className="flex items-center justify-between space-x-1">
+                          <span>Setor</span>
+                          {renderSortIcon(modalSortField === 'setor', modalSortDirection)}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleModalSort('datas')}
+                        className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group whitespace-nowrap"
+                        title="Clique para ordenar por Quantidade de Lançamentos"
+                      >
+                        <div className="flex items-center justify-center space-x-1">
+                          <span>Datas</span>
+                          {renderSortIcon(modalSortField === 'datas', modalSortDirection)}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleModalSort('meninas')}
+                        className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                        title="Clique para ordenar por Meninas"
+                      >
+                        <div className="flex items-center justify-center space-x-1">
+                          <span>Meninas</span>
+                          {renderSortIcon(modalSortField === 'meninas', modalSortDirection)}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleModalSort('meninos')}
+                        className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                        title="Clique para ordenar por Meninos"
+                      >
+                        <div className="flex items-center justify-center space-x-1">
+                          <span>Meninos</span>
+                          {renderSortIcon(modalSortField === 'meninos', modalSortDirection)}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleModalSort('mocas')}
+                        className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                        title="Clique para ordenar por Moças"
+                      >
+                        <div className="flex items-center justify-center space-x-1">
+                          <span>Moças</span>
+                          {renderSortIcon(modalSortField === 'mocas', modalSortDirection)}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleModalSort('mocos')}
+                        className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                        title="Clique para ordenar por Moços"
+                      >
+                        <div className="flex items-center justify-center space-x-1">
+                          <span>Moços</span>
+                          {renderSortIcon(modalSortField === 'mocos', modalSortDirection)}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleModalSort('subtotal')}
+                        className="py-2.5 px-2 border-r border-slate-600 font-bold bg-slate-800 cursor-pointer hover:bg-slate-750 transition group"
+                        title="Clique para ordenar por Subtotal"
+                      >
+                        <div className="flex items-center justify-center space-x-1">
+                          <span>Subtotal</span>
+                          {renderSortIcon(modalSortField === 'subtotal', modalSortDirection)}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleModalSort('expectativa')}
+                        className="py-2.5 px-2 border-r border-slate-600 font-bold bg-slate-800 cursor-pointer hover:bg-slate-750 transition group"
+                        title="Clique para ordenar por Expectativa"
+                      >
+                        <div className="flex items-center justify-center space-x-1">
+                          <span>Expectativa</span>
+                          {renderSortIcon(modalSortField === 'expectativa', modalSortDirection)}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleModalSort('resultado')}
+                        className="py-2.5 px-2 border-r border-slate-600 font-bold cursor-pointer hover:bg-slate-600 transition group"
+                        title="Clique para ordenar por Resultado"
+                      >
+                        <div className="flex items-center justify-center space-x-1">
+                          <span>Resultado</span>
+                          {renderSortIcon(modalSortField === 'resultado', modalSortDirection)}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleModalSort('status')}
+                        className="py-2.5 px-2 cursor-pointer hover:bg-slate-600 transition group"
+                        title="Clique para ordenar por Status"
+                      >
+                        <div className="flex items-center justify-center space-x-1">
+                          <span>Status</span>
+                          {renderSortIcon(modalSortField === 'status', modalSortDirection)}
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                    {filteredAndSortedModalRows.map((r) => (
+                        <tr key={r.id} className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                          <td className="py-2 px-2.5 sm:px-3 text-left border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap sticky left-0 z-10 bg-white dark:bg-slate-900">
+                            {r.codigo !== '-' && <span className="text-[10px] text-slate-400 font-mono mr-1">{r.codigo}</span>}
+                            {r.nome}
+                          </td>
+                          <td className="py-2 px-2 text-left border-r border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 hidden md:table-cell">
+                            {r.setor}
+                          </td>
+                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 text-[11px] whitespace-nowrap">
+                            {r.datas || <span className="text-slate-400 italic">Sem lançamento</span>}
+                          </td>
+                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.meninas.toLocaleString('pt-BR')}</td>
+                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.meninos.toLocaleString('pt-BR')}</td>
+                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.mocas.toLocaleString('pt-BR')}</td>
+                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.mocos.toLocaleString('pt-BR')}</td>
+                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold bg-slate-50/70 dark:bg-slate-800/60 text-sky-700 dark:text-sky-300">
+                            {r.subtotal.toLocaleString('pt-BR')}
+                          </td>
+                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-700 dark:text-slate-300 bg-slate-50/40 dark:bg-slate-800/30">
+                            {r.expectativa > 0 ? r.expectativa.toLocaleString('pt-BR') : '-'}
+                          </td>
+                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">
+                            {r.expectativa > 0 ? (
+                              r.isAcima ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs whitespace-nowrap">
+                                  ▲ {r.diferenca >= 0 ? `+${r.diferenca}` : r.diferenca} (Acima)
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs whitespace-nowrap">
+                                  ▼ {r.diferenca} (Abaixo)
+                                </span>
+                              )
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic whitespace-nowrap">Sem expectativa</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-2">
+                            {r.hasLancement ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap">
+                                ✓ Lançado ({r.qtdLancamentos})
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs whitespace-nowrap">
-                                ▼ {r.diferenca} (Abaixo)
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap">
+                                Pendente
                               </span>
-                            )
-                          ) : (
-                            <span className="text-[11px] text-slate-400 italic">Sem expectativa</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-2">
-                          {r.hasLancement ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap">
-                              ✓ Lançado ({r.qtdLancamentos})
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap">
-                              Pendente
-                            </span>
-                          )}
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    {filteredAndSortedModalRows.length === 0 && (
+                      <tr>
+                        <td colSpan={11} className="py-8 text-center text-slate-400 italic">
+                          Nenhuma congregação encontrada com os filtros atuais.
                         </td>
                       </tr>
-                    ))}
-                  {filteredAndSortedModalRows.length === 0 && (
+                    )}
+                  </tbody>
+                  <tfoot className="bg-slate-100 dark:bg-slate-800 font-bold border-t-2 border-slate-300 dark:border-slate-700">
                     <tr>
-                      <td colSpan={11} className="py-8 text-center text-slate-400 italic">
-                        Nenhuma congregação encontrada com os filtros atuais.
+                      <td className="py-2.5 px-2.5 sm:px-3 text-left border-r border-slate-300 dark:border-slate-700 whitespace-nowrap sticky left-0 z-10 bg-slate-100 dark:bg-slate-800">TOTAL DO SETOR (MÉDIA MENSAL)</td>
+                      <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700 hidden md:table-cell">-</td>
+                      <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">-</td>
+                      <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">{monthDetailData.totals.meninas.toLocaleString('pt-BR')}</td>
+                      <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">{monthDetailData.totals.meninos.toLocaleString('pt-BR')}</td>
+                      <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">{monthDetailData.totals.mocas.toLocaleString('pt-BR')}</td>
+                      <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">{monthDetailData.totals.mocos.toLocaleString('pt-BR')}</td>
+                      <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700 text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50">
+                        {monthDetailData.totals.subtotal.toLocaleString('pt-BR')}
+                      </td>
+                      <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 bg-slate-200/50 dark:bg-slate-750">
+                        {monthDetailData.expectativaTotal.toLocaleString('pt-BR')}
+                      </td>
+                      <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap ${
+                          monthDetailData.resultado >= 0 
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700' 
+                            : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
+                        }`}>
+                          {monthDetailData.resultado >= 0 ? `▲ +${monthDetailData.resultado} (Acima)` : `▼ ${monthDetailData.resultado} (Abaixo)`}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2 whitespace-nowrap">
+                        {monthDetailData.comunsComLancamento}/{monthDetailData.totalComuns} congregações
                       </td>
                     </tr>
-                  )}
-                </tbody>
-                <tfoot className="bg-slate-100 dark:bg-slate-800 font-bold border-t-2 border-slate-300 dark:border-slate-700 sticky bottom-0">
-                  <tr>
-                    <td className="py-2.5 px-3 text-left border-r border-slate-300 dark:border-slate-700">TOTAL DO SETOR (MÉDIA MENSAL)</td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700 hidden md:table-cell">-</td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">-</td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">{monthDetailData.totals.meninas.toLocaleString('pt-BR')}</td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">{monthDetailData.totals.meninos.toLocaleString('pt-BR')}</td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">{monthDetailData.totals.mocas.toLocaleString('pt-BR')}</td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">{monthDetailData.totals.mocos.toLocaleString('pt-BR')}</td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700 text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50">
-                      {monthDetailData.totals.subtotal.toLocaleString('pt-BR')}
-                    </td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 bg-slate-200/50 dark:bg-slate-750">
-                      {monthDetailData.expectativaTotal.toLocaleString('pt-BR')}
-                    </td>
-                    <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap ${
-                        monthDetailData.resultado >= 0 
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700' 
-                          : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
-                      }`}>
-                        {monthDetailData.resultado >= 0 ? `▲ +${monthDetailData.resultado} (Acima)` : `▼ ${monthDetailData.resultado} (Abaixo)`}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-2">
-                      {monthDetailData.comunsComLancamento}/{monthDetailData.totalComuns} congregações
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                  </tfoot>
+                </table>
+              </div>
             </div>
 
-            {/* Rodapé do Modal */}
-            <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end bg-slate-50 dark:bg-slate-900/50">
+            {/* Rodapé Fixo do Modal */}
+            <div className="px-4 sm:px-6 py-2.5 sm:py-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end bg-slate-50 dark:bg-slate-900/50 shrink-0">
               <button
                 type="button"
                 onClick={() => setSelectedMonthModal(null)}

@@ -689,7 +689,7 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -698,11 +698,11 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full overflow-hidden text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800"
+        className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800"
       >
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2.5">
-            <h2 className="font-bold text-lg text-slate-900 dark:text-slate-100">
+            <h2 className="font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100">
               {activeRecitativo
                 ? (isEditing ? 'Editar Apontamento' : 'Visualizar Apontamento')
                 : 'Novo Apontamento de Recitativos'}
@@ -729,167 +729,169 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Data *</label>
-              <input
-                type="date"
-                required
-                disabled={!isEditing}
-                value={formData.data}
-                onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                onKeyDown={(e) => e.preventDefault()}
-                onClick={(e) => {
-                  if (!isEditing) return;
-                  try {
-                    if ('showPicker' in HTMLInputElement.prototype) {
-                      (e.target as HTMLInputElement).showPicker();
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Data *</label>
+                <input
+                  type="date"
+                  required
+                  disabled={!isEditing}
+                  value={formData.data}
+                  onChange={(e) => setFormData({ ...formData, data: e.target.value })}
+                  onKeyDown={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    if (!isEditing) return;
+                    try {
+                      if ('showPicker' in HTMLInputElement.prototype) {
+                        (e.target as HTMLInputElement).showPicker();
+                      }
+                    } catch (err) { }
+                  }}
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed select-none' : 'cursor-pointer'
+                    }`}
+                />
+                {formData.data && (
+                  <div className={`text-[11px] mt-1 font-semibold ${new Date(Number(formData.data.split('-')[0]), Number(formData.data.split('-')[1]) - 1, Number(formData.data.split('-')[2])).getDay() === 0
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-amber-600 dark:text-amber-500'
+                    }`}>
+                    {['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'][new Date(Number(formData.data.split('-')[0]), Number(formData.data.split('-')[1]) - 1, Number(formData.data.split('-')[2])).getDay()]}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Setor Pertencente</label>
+                <select
+                  disabled={!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId)}
+                  value={modalSetorId}
+                  onChange={(e) => {
+                    const newSetor = e.target.value;
+                    setModalSetorId(newSetor);
+                    if (newSetor) {
+                      const selSetor = setores.find(s => s.id === newSetor);
+                      const isComumIn = comuns.some(c => c.id === formData.comum_id && (c.setor_id === newSetor || (selSetor && c.setor_pertencente === selSetor.nome)));
+                      if (!isComumIn) setFormData(prev => ({ ...prev, comum_id: '' }));
                     }
-                  } catch (err) { }
-                }}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed select-none' : 'cursor-pointer'
-                  }`}
-              />
-              {formData.data && (
-                <div className={`text-[11px] mt-1 font-semibold ${new Date(Number(formData.data.split('-')[0]), Number(formData.data.split('-')[1]) - 1, Number(formData.data.split('-')[2])).getDay() === 0
-                    ? 'text-emerald-600 dark:text-emerald-400'
-                    : 'text-amber-600 dark:text-amber-500'
-                  }`}>
-                  {['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'][new Date(Number(formData.data.split('-')[0]), Number(formData.data.split('-')[1]) - 1, Number(formData.data.split('-')[2])).getDay()]}
-                </div>
-              )}
+                  }}
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
+                    }`}
+                >
+                  {!userScope.isSetor && <option value="">-- Todos os Setores --</option>}
+                  {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
+                    <option key={s.id} value={s.id}>{s.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Comum Congregação *</label>
+                <select
+                  required
+                  disabled={!isEditing || (isRestrictedUser && !!userComumId)}
+                  value={formData.comum_id}
+                  onChange={(e) => {
+                    const chosenId = e.target.value;
+                    setFormData({ ...formData, comum_id: chosenId });
+                    if (chosenId && !modalSetorId) {
+                      const c = comuns.find(item => item.id === chosenId);
+                      const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
+                      if (s) setModalSetorId(s.id);
+                    }
+                  }}
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
+                    }`}
+                >
+                  <option value="">Selecione...</option>
+                  {modalComunsFiltradas.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nome}</option>
+                  ))}
+                </select>
+                {isRestrictedUser && (
+                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center space-x-1 mt-1">
+                    <Lock className="w-3 h-3" />
+                    <span>Perfil restrito: registro permitido exclusivamente para sua comum congregação vinculada.</span>
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Setor Pertencente</label>
-              <select
-                disabled={!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId)}
-                value={modalSetorId}
-                onChange={(e) => {
-                  const newSetor = e.target.value;
-                  setModalSetorId(newSetor);
-                  if (newSetor) {
-                    const selSetor = setores.find(s => s.id === newSetor);
-                    const isComumIn = comuns.some(c => c.id === formData.comum_id && (c.setor_id === newSetor || (selSetor && c.setor_pertencente === selSetor.nome)));
-                    if (!isComumIn) setFormData(prev => ({ ...prev, comum_id: '' }));
-                  }
-                }}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
-                  }`}
-              >
-                {!userScope.isSetor && <option value="">-- Todos os Setores --</option>}
-                {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
-                  <option key={s.id} value={s.id}>{s.nome}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Moços</label>
+                <input
+                  type="number"
+                  min="0"
+                  disabled={!isEditing}
+                  value={formData.mocos}
+                  onChange={(e) => setFormData({ ...formData, mocos: Number(e.target.value) })}
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
+                    }`}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Moças</label>
+                <input
+                  type="number"
+                  min="0"
+                  disabled={!isEditing}
+                  value={formData.mocas}
+                  onChange={(e) => setFormData({ ...formData, mocas: Number(e.target.value) })}
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
+                    }`}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Meninos</label>
+                <input
+                  type="number"
+                  min="0"
+                  disabled={!isEditing}
+                  value={formData.meninos}
+                  onChange={(e) => setFormData({ ...formData, meninos: Number(e.target.value) })}
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
+                    }`}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Meninas</label>
+                <input
+                  type="number"
+                  min="0"
+                  disabled={!isEditing}
+                  value={formData.meninas}
+                  onChange={(e) => setFormData({ ...formData, meninas: Number(e.target.value) })}
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
+                    }`}
+                />
+              </div>
             </div>
 
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Comum Congregação *</label>
-              <select
-                required
-                disabled={!isEditing || (isRestrictedUser && !!userComumId)}
-                value={formData.comum_id}
-                onChange={(e) => {
-                  const chosenId = e.target.value;
-                  setFormData({ ...formData, comum_id: chosenId });
-                  if (chosenId && !modalSetorId) {
-                    const c = comuns.find(item => item.id === chosenId);
-                    const s = setores.find(st => st.id === c?.setor_id || (c?.setor_pertencente && st.nome === c.setor_pertencente));
-                    if (s) setModalSetorId(s.id);
-                  }
-                }}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
-                  }`}
-              >
-                <option value="">Selecione...</option>
-                {modalComunsFiltradas.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nome}</option>
-                ))}
-              </select>
-              {isRestrictedUser && (
-                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold flex items-center space-x-1 mt-1">
-                  <Lock className="w-3 h-3" />
-                  <span>Perfil restrito: registro permitido exclusivamente para sua comum congregação vinculada.</span>
-                </p>
-              )}
+            <div className="pt-2 bg-emerald-50 dark:bg-emerald-500/10 p-3 rounded-lg border border-emerald-200 dark:border-emerald-500/20 text-center">
+              <span className="text-sm text-slate-600 dark:text-slate-400 font-semibold uppercase">Total: </span>
+              <span className="font-mono font-bold text-xl text-emerald-700 dark:text-emerald-400">
+                {formData.mocos + formData.mocas + formData.meninos + formData.meninas}
+              </span>
             </div>
+
+            {/* Histórico e Logs de Auditoria deste Apontamento */}
+            {activeRecitativo && activeRecitativo.id && (
+              <div className="pt-1">
+                <ApontamentoAuditLogView
+                  registroId={activeRecitativo.id}
+                  tabela="recitativos"
+                  initialCreatorName={activeRecitativo.usuario?.nome_completo}
+                  createdAt={activeRecitativo.created_at}
+                  updatedAt={activeRecitativo.updated_at}
+                  defaultExpanded={!isEditing}
+                />
+              </div>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Moços</label>
-              <input
-                type="number"
-                min="0"
-                disabled={!isEditing}
-                value={formData.mocos}
-                onChange={(e) => setFormData({ ...formData, mocos: Number(e.target.value) })}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
-                  }`}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Moças</label>
-              <input
-                type="number"
-                min="0"
-                disabled={!isEditing}
-                value={formData.mocas}
-                onChange={(e) => setFormData({ ...formData, mocas: Number(e.target.value) })}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
-                  }`}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Meninos</label>
-              <input
-                type="number"
-                min="0"
-                disabled={!isEditing}
-                value={formData.meninos}
-                onChange={(e) => setFormData({ ...formData, meninos: Number(e.target.value) })}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
-                  }`}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Meninas</label>
-              <input
-                type="number"
-                min="0"
-                disabled={!isEditing}
-                value={formData.meninas}
-                onChange={(e) => setFormData({ ...formData, meninas: Number(e.target.value) })}
-                className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed font-medium' : ''
-                  }`}
-              />
-            </div>
-          </div>
-
-          <div className="pt-2 bg-emerald-50 dark:bg-emerald-500/10 p-3 rounded-lg border border-emerald-200 dark:border-emerald-500/20 text-center">
-            <span className="text-sm text-slate-600 dark:text-slate-400 font-semibold uppercase">Total: </span>
-            <span className="font-mono font-bold text-xl text-emerald-700 dark:text-emerald-400">
-              {formData.mocos + formData.mocas + formData.meninos + formData.meninas}
-            </span>
-          </div>
-
-          {/* Histórico e Logs de Auditoria deste Apontamento */}
-          {activeRecitativo && activeRecitativo.id && (
-            <div className="pt-1">
-              <ApontamentoAuditLogView
-                registroId={activeRecitativo.id}
-                tabela="recitativos"
-                initialCreatorName={activeRecitativo.usuario?.nome_completo}
-                createdAt={activeRecitativo.created_at}
-                updatedAt={activeRecitativo.updated_at}
-                defaultExpanded={!isEditing}
-              />
-            </div>
-          )}
-
-          <div className="pt-4 flex items-center justify-between border-t border-slate-200 dark:border-slate-800">
+          <div className="px-4 sm:px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/90 shrink-0 flex items-center justify-between">
             {activeRecitativo && !isEditing ? (
               <div className="flex items-center justify-between w-full">
                 <button

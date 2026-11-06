@@ -192,9 +192,9 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
     if (months === 0) {
       return { texto: `${years} ${years === 1 ? 'ano' : 'anos'}`, valido: true };
     }
-    return { 
-      texto: `${years} ${years === 1 ? 'ano' : 'anos'} e ${months} ${months === 1 ? 'mês' : 'meses'}`, 
-      valido: true 
+    return {
+      texto: `${years} ${years === 1 ? 'ano' : 'anos'} e ${months} ${months === 1 ? 'mês' : 'meses'}`,
+      valido: true
     };
   }, [formData.data_apresentacao]);
 
@@ -434,11 +434,10 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                   </select>
                   <div className="min-h-[20px] flex items-center mt-1">
                     {formData.selado_promessa && (
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                        formData.selado_promessa === 'Sim'
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${formData.selado_promessa === 'Sim'
                           ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
-                      }`}>
+                        }`}>
                         {formData.selado_promessa === 'Sim' ? '✓ Selado' : 'Não selado'}
                       </span>
                     )}
@@ -486,11 +485,10 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
               />
               <div className="min-h-[22px] flex items-center mt-1">
                 {tempoMinisterio && (
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold ${
-                    tempoMinisterio.valido
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold ${tempoMinisterio.valido
                       ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                       : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-                  }`}>
+                    }`}>
                     <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span>Tempo de Ministério:</span>
                     <strong className="text-emerald-900 dark:text-emerald-200 font-bold">{tempoMinisterio.texto}</strong>
@@ -512,11 +510,10 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
               />
               <div className="min-h-[22px] flex items-center mt-1">
                 {idade && (
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold ${
-                    idade.valido
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-semibold ${idade.valido
                       ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
                       : 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-                  }`}>
+                    }`}>
                     <User className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                     <span>Idade:</span>
                     <strong className="text-blue-900 dark:text-blue-200 font-bold">{idade.texto}</strong>
@@ -541,22 +538,20 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                     key={p.id}
                     type="button"
                     onClick={() => setFormData({ ...formData, perfil_id: p.id })}
-                    className={`p-3 rounded-lg border text-left transition cursor-pointer ${
-                      isSelected
+                    className={`p-3 rounded-lg border text-left transition cursor-pointer ${isSelected
                         ? 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-500 text-emerald-950 dark:text-white ring-1 ring-emerald-500/50 shadow-xs'
                         : 'bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-semibold text-sm">{p.nome}</span>
                       <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${
-                          p.nivel_acesso === 'global'
+                        className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-bold ${p.nivel_acesso === 'global'
                             ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300'
                             : p.nivel_acesso === 'setor'
-                            ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300'
-                            : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                        }`}
+                              ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                              : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                          }`}
                       >
                         {p.nivel_acesso}
                       </span>
@@ -564,9 +559,9 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-2">
                       {p.descricao || (
                         p.nome === 'Administrador' ? 'Visão global e irrestrita' :
-                        p.nome === 'CJM' ? 'Visão apenas da sua Comum' :
-                        p.nome === 'Apontamento' ? 'Visão apenas da sua Comum' :
-                        'Perfil personalizado'
+                          p.nome === 'CJM' ? 'Visão apenas da sua Comum' :
+                            p.nome === 'Apontamento' ? 'Visão apenas da sua Comum' :
+                              'Perfil personalizado'
                       )}
                     </p>
                   </button>
