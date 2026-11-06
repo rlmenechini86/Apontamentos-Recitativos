@@ -1657,39 +1657,64 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800"
+        className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full max-h-[85dvh] sm:max-h-[90vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800"
       >
         {/* Cabeçalho Fixo */}
-        <div className="px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-2">
-            <h2 className="font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100">
+        <div className="px-3.5 sm:px-6 py-2.5 sm:py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0 bg-slate-50/60 dark:bg-slate-900">
+          <div className="flex items-center space-x-2 min-w-0">
+            <h2 className="font-bold text-sm sm:text-lg text-slate-900 dark:text-slate-100 truncate">
               {activeItem
                 ? (isEditing ? 'Editar Contagem' : 'Visualizar Contagem')
                 : 'Nova Contagem Anual'}
             </h2>
             {activeItem && !isEditing && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1 shrink-0">
                 <Lock className="w-2.5 h-2.5 text-slate-400" />
                 Registrado
               </span>
             )}
             {activeItem && isEditing && (
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1 shrink-0">
                 <Edit2 className="w-2.5 h-2.5 text-amber-500" />
-                Modo Edição
+                Edição
               </span>
             )}
           </div>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
-            ✕
-          </button>
+          <div className="flex items-center space-x-1.5 shrink-0">
+            {activeItem && !isEditing && canEdit && (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition cursor-pointer"
+              >
+                <Edit2 className="w-3 h-3" />
+                <span>Editar</span>
+              </button>
+            )}
+            {isEditing && (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  const formEl = document.getElementById('form-contagem-mocidade') as HTMLFormElement | null;
+                  if (formEl) formEl.requestSubmit();
+                }}
+                className="inline-flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs disabled:opacity-50 transition cursor-pointer"
+              >
+                <span>{loading ? 'Salvando...' : 'Salvar'}</span>
+              </button>
+            )}
+            <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer">
+              ✕
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5">
+        <form id="form-contagem-mocidade" onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 sm:p-6 space-y-3">
             {/* Identificação de quem inseriu (se já registrado) */}
             {activeItem && (
-              <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 flex items-center space-x-2">
+              <div className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 flex items-center space-x-2">
                 <User className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400 block">Cadastrado por</span>
@@ -1698,11 +1723,11 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
               </div>
             )}
 
-            {/* Linha 1: Data de Referência e Tipo de Contagem */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Linha 1: Data de Referência e Tipo de Contagem (2 colunas mesmo no celular) */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
               {/* Data / Ano */}
               <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Data de Referência *</label>
+                <label className="text-[11px] sm:text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 block truncate">Data Referência *</label>
                 <input
                   type="date"
                   required
@@ -1718,20 +1743,20 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
                       }
                     } catch (err) { }
                   }}
-                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed select-none' : 'cursor-pointer'
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed select-none' : 'cursor-pointer'
                     }`}
                 />
               </div>
 
               {/* Tipo */}
               <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Tipo de Contagem *</label>
+                <label className="text-[11px] sm:text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 block truncate">Tipo Contagem *</label>
                 <select
                   required
                   disabled={!isEditing}
                   value={formData.tipo}
                   onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'Santa Ceia' | 'Mocidade' })}
-                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed' : 'cursor-pointer'
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing ? 'opacity-70 bg-slate-100 dark:bg-slate-800/60 cursor-not-allowed' : 'cursor-pointer'
                     }`}
                 >
                   <option value="Mocidade">Mocidade</option>
@@ -1740,11 +1765,11 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
               </div>
             </div>
 
-            {/* Linha 2: Setor e Comum Congregação */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Linha 2: Setor e Comum Congregação (2 colunas mesmo no celular) */}
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
               {/* Setor */}
               <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Setor Pertencente</label>
+                <label className="text-[11px] sm:text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 block truncate">Setor Pertencente</label>
                 <select
                   disabled={!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId)}
                   value={modalSetorId}
@@ -1757,7 +1782,7 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
                       if (!isComumIn) setFormData(prev => ({ ...prev, comum_id: '' }));
                     }
                   }}
-                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || userScope.isSetor || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
                     }`}
                 >
                   {!userScope.isSetor && <option value="">-- Todos os Setores --</option>}
@@ -1769,7 +1794,7 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
 
               {/* Comum */}
               <div className="space-y-1">
-                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">Comum Congregação *</label>
+                <label className="text-[11px] sm:text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 block truncate">Comum Congregação *</label>
                 <select
                   required
                   disabled={!isEditing || (isRestrictedUser && !!userComumId)}
@@ -1783,7 +1808,7 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
                       if (s) setModalSetorId(s.id);
                     }
                   }}
-                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
+                  className={`w-full bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm focus:ring-2 focus:ring-emerald-500 ${!isEditing || (isRestrictedUser && !!userComumId) ? 'opacity-70 cursor-not-allowed bg-slate-100 dark:bg-slate-800/60' : 'cursor-pointer'
                     }`}
                 >
                   <option value="">Selecione...</option>

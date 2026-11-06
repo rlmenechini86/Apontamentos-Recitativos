@@ -698,38 +698,63 @@ export const RecitativoFormModal: React.FC<RecitativoFormModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800"
+        className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl max-w-lg w-full max-h-[85dvh] sm:max-h-[90vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800"
       >
-        <div className="px-4 sm:px-6 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-2.5">
-            <h2 className="font-bold text-base sm:text-lg text-slate-900 dark:text-slate-100">
+        <div className="px-3.5 sm:px-6 py-2.5 sm:py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0 bg-slate-50/60 dark:bg-slate-900">
+          <div className="flex items-center space-x-2 min-w-0">
+            <h2 className="font-bold text-sm sm:text-lg text-slate-900 dark:text-slate-100 truncate">
               {activeRecitativo
                 ? (isEditing ? 'Editar Apontamento' : 'Visualizar Apontamento')
                 : 'Novo Apontamento de Recitativos'}
             </h2>
             {activeRecitativo && !isEditing && (
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1">
-                <Lock className="w-3 h-3 text-slate-400" />
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center gap-1 shrink-0">
+                <Lock className="w-2.5 h-2.5 text-slate-400" />
                 Registrado
               </span>
             )}
             {activeRecitativo && isEditing && (
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1">
-                <Edit2 className="w-3 h-3 text-amber-500" />
-                Modo Edição
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 flex items-center gap-1 shrink-0">
+                <Edit2 className="w-2.5 h-2.5 text-amber-500" />
+                Edição
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-          >
-            ✕
-          </button>
+          <div className="flex items-center space-x-1.5 shrink-0">
+            {activeRecitativo && !isEditing && canEdit && (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="inline-flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition cursor-pointer"
+              >
+                <Edit2 className="w-3 h-3" />
+                <span>Editar</span>
+              </button>
+            )}
+            {isEditing && (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => {
+                  const formEl = document.getElementById('form-recitativo-modal') as HTMLFormElement | null;
+                  if (formEl) formEl.requestSubmit();
+                }}
+                className="inline-flex items-center space-x-1 px-2.5 py-1 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs disabled:opacity-50 transition cursor-pointer"
+              >
+                <span>{loading ? 'Salvando...' : 'Salvar'}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+        <form id="form-recitativo-modal" onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1">

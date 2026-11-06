@@ -955,7 +955,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl shadow-2xl max-w-6xl w-full h-[92vh] sm:h-auto sm:max-h-[92vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl shadow-2xl max-w-6xl w-full h-[85dvh] sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100"
           >
             {/* Cabeçalho Fixo */}
             <div className="px-3 sm:px-6 py-2.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shrink-0">
