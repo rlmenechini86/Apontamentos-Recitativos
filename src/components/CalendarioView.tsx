@@ -94,13 +94,19 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
   const [filtroSetorId, setFiltroSetorId] = useState('');
   const [searchComum, setSearchComum] = useState('');
 
-  // Auto-lock de setor para Administrador (Setor)
+  // Auto-lock de setor e comum conforme escopo
   useEffect(() => {
     if (userScope.isSetor && userScope.userSetorId) {
       setSelectedSetorId(userScope.userSetorId);
       setFiltroSetorId(userScope.userSetorId);
+    } else if (userScope.isComum && userScope.userComumId) {
+      setSelectedComumId(userScope.userComumId);
+      if (userScope.userSetorId) {
+        setSelectedSetorId(userScope.userSetorId);
+        setFiltroSetorId(userScope.userSetorId);
+      }
     }
-  }, [userScope.isSetor, userScope.userSetorId]);
+  }, [userScope.isSetor, userScope.userSetorId, userScope.isComum, userScope.userComumId]);
 
   const [formData, setFormData] = useState({
     data: new Date().toISOString().split('T')[0],
@@ -124,7 +130,11 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
 
   // Comuns disponíveis conforme o setor selecionado no filtro principal
   const comunsDoSetor = useMemo(() => {
-    const baseList = userScope.isSetor ? comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores)) : comuns;
+    const baseList = userScope.isComum && userScope.userComumId
+      ? comuns.filter(c => c.id === userScope.userComumId)
+      : userScope.isSetor
+      ? comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores))
+      : comuns;
     if (!selectedSetorId) return baseList;
     const selectedSetor = setores.find(s => s.id === selectedSetorId);
     return baseList.filter(c =>
@@ -134,7 +144,7 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
   }, [comuns, setores, selectedSetorId, userScope]);
 
   const handleSetorFilterChange = (setorId: string) => {
-    if (userScope.isSetor) return;
+    if (userScope.isSetor || userScope.isComum) return;
     setSelectedSetorId(setorId);
     setSelectedComumId('');
   };
@@ -166,7 +176,10 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
     return reunioes.filter(r => {
       if (r.data !== dateStr || !r.status) return false;
 
-      // Restrição de setor: se for Administrador (Setor), não deve visualizar eventos específicos de outros setores
+      // Restrição de comum ou setor
+      if (userScope.isComum && userScope.userComumId && r.comum_id && r.comum_id !== userScope.userComumId) {
+        return false;
+      }
       if (userScope.isSetor && r.comum_id) {
         const c = comuns.find(item => item.id === r.comum_id);
         if (c && !isItemInUserSector(userScope, c, comuns, setores)) return false;
@@ -433,11 +446,11 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
           <select
             value={selectedSetorId}
             onChange={(e) => handleSetorFilterChange(e.target.value)}
-            disabled={userScope.isSetor}
-            className={`w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'}`}
+            disabled={userScope.isSetor || userScope.isComum}
+            className={`w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor || userScope.isComum ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'}`}
           >
-            {!userScope.isSetor && <option value="">Todos os Setores</option>}
-            {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
+            {!userScope.isSetor && !userScope.isComum && <option value="">Todos os Setores</option>}
+            {(userScope.isSetor || userScope.isComum ? (userScope.userSetor ? [userScope.userSetor] : []) : setores).map(s => (
               <option key={s.id} value={s.id}>{s.nome}</option>
             ))}
           </select>
@@ -446,13 +459,16 @@ export const CalendarioView: React.FC<CalendarioViewProps> = ({
         {/* 2º Filtro: Comum Congregação (filtrada pelo setor) */}
         <div className="w-full sm:w-56">
           <select
+            disabled={userScope.isComum}
             value={selectedComumId}
             onChange={(e) => setSelectedComumId(e.target.value)}
-            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            className={`w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 ${userScope.isComum ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
           >
-            <option value="">
-              {selectedSetorId ? 'Todas as Comuns do Setor' : 'Todas as Comuns'}
-            </option>
+            {!userScope.isComum && (
+              <option value="">
+                {selectedSetorId ? 'Todas as Comuns do Setor' : 'Todas as Comuns'}
+              </option>
+            )}
             {comunsDoSetor.map(c => (
               <option key={c.id} value={c.id}>{c.nome}</option>
             ))}

@@ -163,7 +163,7 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
       return (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20">
           <ShieldCheck className="w-3 h-3 mr-1 text-amber-600 dark:text-amber-400" />
-          CJM (Setor)
+          CJM (Comum)
         </span>
       );
     }
@@ -210,7 +210,7 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
           </div>
           <div>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">
-              CJMs (Visão Setor)
+              CJMs (Visão Comum)
             </p>
             <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{totalCJMs}</p>
           </div>

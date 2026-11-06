@@ -12,8 +12,8 @@ let inMemoryPerfis: Perfil[] = [
   {
     id: '22222222-2222-2222-2222-222222222222',
     nome: 'CJM',
-    descricao: 'Cooperador de Jovens e Menores com visão consolidada do seu Setor.',
-    nivel_acesso: 'setor',
+    descricao: 'Cooperador de Jovens e Menores com visão consolidada da sua Comum Congregação.',
+    nivel_acesso: 'comum',
   },
   {
     id: '33333333-3333-3333-3333-333333333333',
@@ -33,6 +33,17 @@ export class PerfilService {
 
       if (error) {
         return { data: inMemoryPerfis, isFallback: true };
+      }
+
+      if (data && data.length > 0) {
+        const perfisList = (data as Perfil[]).map(p => {
+          if (p.nome.toLowerCase() === 'cjm' && p.nivel_acesso !== 'comum') {
+            supabase.from('perfis').update({ nivel_acesso: 'comum' }).eq('id', p.id).then();
+            return { ...p, nivel_acesso: 'comum' as const };
+          }
+          return p;
+        });
+        return { data: perfisList, isFallback: false };
       }
 
       return { data: (data as Perfil[]) || [], isFallback: false };

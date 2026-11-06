@@ -100,8 +100,8 @@ export const hasPermission = (user: Usuario | null, actionId: string): boolean =
 
 export interface UserScope {
   isGlobal: boolean;            // Administrador Geral (vê e cadastra em todos os setores)
-  isSetor: boolean;             // Administrador (Setor) ou CJM (somente do seu setor pertencente)
-  isComum: boolean;             // Apontamento (somente da sua congregação)
+  isSetor: boolean;             // Administrador (Setor) (somente do seu setor pertencente)
+  isComum: boolean;             // Apontamento ou CJM (somente da sua congregação)
   userSetorId: string | null;   // ID do setor do usuário
   userSetorNome: string | null; // Nome do setor do usuário
   userComumId: string | null;   // ID da comum do usuário
@@ -150,8 +150,9 @@ export function getUserScope(
   const userComumId = user.comum_congregacao_id || user.comum_congregacao?.id || null;
   const userComumNome = userComum?.nome || null;
 
-  // 1. Perfil Comum (Apontamento)
-  const isComum = nivelAcesso === 'comum' || roleName.includes('apontamento');
+  // 1. Perfil Comum: Apontamento ou CJM (restrito exclusivamente à sua própria Comum Congregação)
+  const isCjm = roleName === 'cjm' || (roleName.includes('cjm') && !roleName.includes('setor'));
+  const isComum = nivelAcesso === 'comum' || roleName.includes('apontamento') || isCjm;
 
   // 2. Perfil Global (Administrador Geral com visão global de todos os setores)
   const isGlobal = !isComum && (
@@ -159,11 +160,10 @@ export function getUserScope(
     (roleName === 'administrador' && !roleName.includes('setor') && canViewAllSectors)
   );
 
-  // 3. Perfil Setorial: Administrador (Setor), CJM ou qualquer usuário restrito ao seu setor
+  // 3. Perfil Setorial: Administrador (Setor) (restrito ao seu setor pertencente)
   const isSetor = !isGlobal && !isComum && (
     nivelAcesso === 'setor' || 
     roleName.includes('setor') || 
-    roleName.includes('cjm') || 
     !canViewAllSectors
   );
 

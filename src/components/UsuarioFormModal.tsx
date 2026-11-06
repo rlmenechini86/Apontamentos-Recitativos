@@ -564,7 +564,7 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight line-clamp-2">
                       {p.descricao || (
                         p.nome === 'Administrador' ? 'Visão global e irrestrita' :
-                        p.nome === 'CJM' ? 'Visão consolidada do Setor' :
+                        p.nome === 'CJM' ? 'Visão apenas da sua Comum' :
                         p.nome === 'Apontamento' ? 'Visão apenas da sua Comum' :
                         'Perfil personalizado'
                       )}

@@ -128,8 +128,23 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
     { value: '11', label: 'Novembro' }, { value: '12', label: 'Dezembro' }
   ];
 
-  // Ajusta ancião selecionado quando troca o setor ou carrega
+  // Ajusta setor e ancião selecionado conforme escopo do usuário
   useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+    } else if (userScope.isComum && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+    }
+  }, [userScope.isSetor, userScope.userSetorId, userScope.isComum]);
+
+  useEffect(() => {
+    if (userScope.isComum && userComumId) {
+      const userC = propComuns.find((c: any) => c.id === userComumId);
+      if (userC?.anciao_id) {
+        setSelectedAnciaoId(userC.anciao_id);
+        return;
+      }
+    }
     if (anciaosDoSetor.length > 0) {
       if (!selectedAnciaoId || !anciaosDoSetor.some(a => a.id === selectedAnciaoId)) {
         setSelectedAnciaoId(anciaosDoSetor[0].id);
@@ -137,7 +152,7 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
     } else {
       setSelectedAnciaoId('');
     }
-  }, [anciaosDoSetor]);
+  }, [anciaosDoSetor, userScope.isComum, userComumId, propComuns]);
 
   const selectedAnciao = anciaos.find(a => a.id === selectedAnciaoId);
 
@@ -244,13 +259,13 @@ export const AcompanhamentoAnciaosView: React.FC<Props> = ({ comuns: propComuns,
         <div className="flex items-center space-x-2 w-full sm:w-auto">
           <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Setor:</span>
           <select
-            disabled={userScope.isSetor}
+            disabled={userScope.isSetor || userScope.isComum}
             value={selectedSetorId}
             onChange={(e) => setSelectedSetorId(e.target.value)}
-            className={`flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'}`}
+            className={`flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-[#2a3449] font-medium ${userScope.isSetor || userScope.isComum ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'}`}
           >
-            {!userScope.isSetor && <option value="">Todos os Setores</option>}
-            {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
+            {!userScope.isSetor && !userScope.isComum && <option value="">Todos os Setores</option>}
+            {(userScope.isSetor || userScope.isComum ? (userScope.userSetor ? [userScope.userSetor] : []) : setores).map(s => (
               <option key={s.id} value={s.id}>{s.nome}</option>
             ))}
           </select>

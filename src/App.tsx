@@ -151,11 +151,16 @@ export default function App() {
   useEffect(() => {
     if (userScope.isSetor && userScope.userSetorId) {
       setSelectedSetorIdComuns(userScope.userSetorId);
+    } else if (userScope.isComum && userScope.userSetorId) {
+      setSelectedSetorIdComuns(userScope.userSetorId);
     }
-  }, [userScope.isSetor, userScope.userSetorId]);
+  }, [userScope.isSetor, userScope.isComum, userScope.userSetorId]);
 
   // Contadores com escopo para o perfil do usuário
   const scopedComunsCount = useMemo(() => {
+    if (userScope.isComum && userScope.userComumId) {
+      return comuns.filter(c => c.id === userScope.userComumId).length;
+    }
     if (userScope.isSetor) {
       return comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores)).length;
     }
@@ -163,6 +168,9 @@ export default function App() {
   }, [comuns, userScope, setores]);
 
   const scopedUsuariosCount = useMemo(() => {
+    if (userScope.isComum && userScope.userComumId) {
+      return usuarios.filter(u => u.comum_congregacao_id === userScope.userComumId).length;
+    }
     if (userScope.isSetor) {
       return usuarios.filter(u => isItemInUserSector(userScope, u, comuns, setores)).length;
     }
@@ -535,6 +543,9 @@ export default function App() {
 
   // Filtragem local complementar para resposta instantânea
   const filteredComuns = comuns.filter((item) => {
+    if (userScope.isComum && userScope.userComumId && item.id !== userScope.userComumId) {
+      return false;
+    }
     if (userScope.isSetor && !isItemInUserSector(userScope, item, comuns, setores)) {
       return false;
     }
@@ -868,7 +879,13 @@ export default function App() {
           {/* ROTA 1.5: AGENDA DE VISITAS */}
           {currentRoute === 'agenda-visitas' && (
             <AgendaVisitasView
-              comuns={userScope.isSetor ? comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores)) : comuns}
+              comuns={
+                userScope.isComum && userScope.userComumId
+                  ? comuns.filter(c => c.id === userScope.userComumId)
+                  : userScope.isSetor
+                  ? comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores))
+                  : comuns
+              }
               setores={userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores}
             />
           )}
@@ -878,7 +895,13 @@ export default function App() {
             <CalendarioView
               reunioes={reunioesEventos}
               tiposEvento={tiposEvento}
-              comuns={userScope.isSetor ? comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores)) : comuns}
+              comuns={
+                userScope.isComum && userScope.userComumId
+                  ? comuns.filter(c => c.id === userScope.userComumId)
+                  : userScope.isSetor
+                  ? comuns.filter(c => isItemInUserSector(userScope, c, comuns, setores))
+                  : comuns
+              }
               setores={userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores}
               onUpdate={fetchReunioesEventos}
             />
@@ -957,11 +980,11 @@ export default function App() {
                     <select
                       value={selectedSetorIdComuns}
                       onChange={(e) => setSelectedSetorIdComuns(e.target.value)}
-                      disabled={userScope.isSetor}
-                      className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'}`}
+                      disabled={userScope.isSetor || userScope.isComum}
+                      className={`w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor || userScope.isComum ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-900' : 'cursor-pointer'}`}
                     >
-                      {!userScope.isSetor && <option value="">Setor (Todos)</option>}
-                      {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map((s) => (
+                      {!userScope.isSetor && !userScope.isComum && <option value="">Setor (Todos)</option>}
+                      {(userScope.isSetor || userScope.isComum ? (userScope.userSetor ? [userScope.userSetor] : []) : setores).map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.nome}
                         </option>

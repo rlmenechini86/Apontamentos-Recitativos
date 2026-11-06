@@ -93,12 +93,17 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
   const userScope = useMemo(() => getUserScope(user, propComuns, setores), [user, propComuns, setores]);
   const isRestrictedProfile = userScope.isComum;
 
-  // Se o usuário for Administrador (Setor), fixa a seleção no seu setor
+  // Se o usuário for Administrador (Setor), fixa a seleção no seu setor; se for Comum/CJM, fixa na comum
   useEffect(() => {
     if (userScope.isSetor && userScope.userSetorId) {
       setSelectedSetorId(userScope.userSetorId);
+    } else if (userScope.isComum && userScope.userComumId) {
+      setSelectedComumId(userScope.userComumId);
+      if (userScope.userSetorId) {
+        setSelectedSetorId(userScope.userSetorId);
+      }
     }
-  }, [userScope.isSetor, userScope.userSetorId]);
+  }, [userScope.isSetor, userScope.userSetorId, userScope.isComum, userScope.userComumId]);
 
   const comuns = useMemo(() => {
     if (userScope.isComum && userScope.userComumId) {
@@ -562,26 +567,27 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           <select
-            disabled={userScope.isSetor}
+            disabled={userScope.isSetor || userScope.isComum}
             value={selectedSetorId}
             onChange={(e) => {
               setSelectedSetorId(e.target.value);
               setSelectedComumId('');
             }}
-            className={`bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold print:hidden ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
+            className={`bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold print:hidden ${userScope.isSetor || userScope.isComum ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
           >
-            {!userScope.isSetor && <option value="">Todos os Setores</option>}
-            {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
+            {!userScope.isSetor && !userScope.isComum && <option value="">Todos os Setores</option>}
+            {(userScope.isSetor || userScope.isComum ? (userScope.userSetor ? [userScope.userSetor] : []) : setores).map(s => (
               <option key={s.id} value={s.id}>{s.nome}</option>
             ))}
           </select>
 
           <select
+            disabled={userScope.isComum}
             value={selectedComumId}
             onChange={(e) => setSelectedComumId(e.target.value)}
-            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold print:hidden cursor-pointer"
+            className={`bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg px-4 py-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold print:hidden ${userScope.isComum ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
           >
-            <option value="">{selectedSetorId ? 'Todas as Congregações do Setor' : 'Todas as Congregações'}</option>
+            {!userScope.isComum && <option value="">{selectedSetorId ? 'Todas as Congregações do Setor' : 'Todas as Congregações'}</option>}
             {comunsDoSetor.map(c => (
               <option key={c.id} value={c.id}>{c.nome}</option>
             ))}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   UserCheck,
   Filter,
@@ -17,6 +17,7 @@ import {
 import { ComumCongregacao, Setor } from '../types';
 import { Pagination } from './Pagination';
 import { useAuth } from '../context/AuthContext';
+import { getUserScope } from '../utils/permissions';
 
 const INSTRUMENTOS_PADRAO = [
   'Violino', 'Viola', 'Celo', 'Flauta', 'Clarineta', 
@@ -84,10 +85,23 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
   const [todosInstrumentos, setTodosInstrumentos] = useState<string[]>(INSTRUMENTOS_PADRAO);
   const instrumentosDinamicos = todosInstrumentos;
   const [searchTerm, setSearchTerm] = useState('');
+
+  const userScope = useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
   
   // Filtros em cascata da barra superior: Setor Pertencente -> Congregações
   const [selectedSetorId, setSelectedSetorId] = useState('');
   const [selectedComumId, setSelectedComumId] = useState('');
+
+  useEffect(() => {
+    if (userScope.isSetor && userScope.userSetorId) {
+      setSelectedSetorId(userScope.userSetorId);
+    } else if (userScope.isComum && userScope.userComumId) {
+      setSelectedComumId(userScope.userComumId);
+      if (userScope.userSetorId) {
+        setSelectedSetorId(userScope.userSetorId);
+      }
+    }
+  }, [userScope.isSetor, userScope.userSetorId, userScope.isComum, userScope.userComumId]);
   // Novos Filtros Avançados: Sexo, Auxiliar, Músico, Família e Instrumento
   const [selectedSexo, setSelectedSexo] = useState('');
   const [selectedAuxiliar, setSelectedAuxiliar] = useState(''); // '' | 'sim' | 'nao'
@@ -119,13 +133,16 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
 
   // Congregações filtradas pelo Setor selecionado na barra de filtros
   const comunsDoSetor = React.useMemo(() => {
+    if (userScope.isComum && userScope.userComumId) {
+      return comuns.filter(c => c.id === userScope.userComumId);
+    }
     if (!selectedSetorId) return comuns;
     const selectedSetor = setores.find(s => s.id === selectedSetorId);
     return comuns.filter(c => 
       c.setor_id === selectedSetorId || 
       (selectedSetor && c.setor_pertencente === selectedSetor.nome)
     );
-  }, [comuns, setores, selectedSetorId]);
+  }, [comuns, setores, selectedSetorId, userScope]);
 
   // Congregações filtradas pelo Setor selecionado dentro do modal
   const modalComunsFiltradas = React.useMemo(() => {
@@ -408,12 +425,13 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
             {/* 1º Filtro: Setor Pertencente */}
             <div className="w-full sm:w-auto">
               <select
+                disabled={userScope.isSetor || userScope.isComum}
                 value={selectedSetorId}
                 onChange={(e) => handleSetorFilterChange(e.target.value)}
-                className="w-full sm:w-auto bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-2.5 py-1.5 sm:py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                className={`w-full sm:w-auto bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-2.5 py-1.5 sm:py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-emerald-500 ${userScope.isSetor || userScope.isComum ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
               >
-                <option value="">Todos os Setores</option>
-                {setores.map((s) => (
+                {!userScope.isSetor && !userScope.isComum && <option value="">Todos os Setores</option>}
+                {(userScope.isSetor || userScope.isComum ? (userScope.userSetor ? [userScope.userSetor] : []) : setores).map((s) => (
                   <option key={s.id} value={s.id}>{s.nome}</option>
                 ))}
               </select>
@@ -422,11 +440,12 @@ export const AuxiliaresCJMView: React.FC<AuxiliaresCJMViewProps> = ({ comuns, se
             {/* 2º Filtro: Congregações */}
             <div className="w-full sm:w-auto">
               <select
+                disabled={userScope.isComum}
                 value={selectedComumId}
                 onChange={(e) => { setSelectedComumId(e.target.value); setCurrentPage(1); }}
-                className="w-full sm:w-auto bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-2.5 py-1.5 sm:py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-emerald-500 cursor-pointer shadow-xs"
+                className={`w-full sm:w-auto bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg px-2.5 py-1.5 sm:py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-hidden focus:ring-1 focus:ring-emerald-500 shadow-xs ${userScope.isComum ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
               >
-                <option value="">{selectedSetorId ? 'Todas as Congregações deste Setor' : 'Todas as Congregações'}</option>
+                {!userScope.isComum && <option value="">{selectedSetorId ? 'Todas as Congregações deste Setor' : 'Todas as Congregações'}</option>}
                 {comunsDoSetor.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.codigo ? `${c.codigo} - ` : ''}{c.nome}

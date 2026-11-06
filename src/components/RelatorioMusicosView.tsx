@@ -47,6 +47,7 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
       setSelectedComumId('');
     } else if (userScope.isComum && userScope.userComumId) {
       setSelectedComumId(userScope.userComumId);
+      if (userScope.userSetorId) setSelectedSetorId(userScope.userSetorId);
     }
   }, [userScope.isSetor, userScope.userSetorId, userScope.isComum, userScope.userComumId]);
 
@@ -294,24 +295,25 @@ export const RelatorioMusicosView: React.FC<Props> = ({ comuns: propComuns, seto
 
           {/* Setor */}
           <select
-            disabled={userScope.isSetor}
+            disabled={userScope.isSetor || userScope.isComum}
             value={selectedSetorId}
             onChange={(e) => { setSelectedSetorId(e.target.value); setSelectedComumId(''); setCurrentPage(1); }}
-            className={`px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
+            className={`px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 ${userScope.isSetor || userScope.isComum ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
           >
-            {!userScope.isSetor && <option value="">Setores (Todos)</option>}
-            {(userScope.isSetor && userScope.userSetor ? [userScope.userSetor] : setores).map(s => (
+            {!userScope.isSetor && !userScope.isComum && <option value="">Setores (Todos)</option>}
+            {(userScope.isSetor || userScope.isComum ? (userScope.userSetor ? [userScope.userSetor] : []) : setores).map(s => (
               <option key={s.id} value={s.id}>{s.nome}</option>
             ))}
           </select>
 
           {/* Comum */}
           <select
+            disabled={userScope.isComum}
             value={selectedComumId}
             onChange={(e) => { setSelectedComumId(e.target.value); setCurrentPage(1); }}
-            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            className={`px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 ${userScope.isComum ? 'opacity-80 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : 'cursor-pointer'}`}
           >
-            <option value="">Congregações (Todas)</option>
+            {!userScope.isComum && <option value="">Congregações (Todas)</option>}
             {comunsDoSetor.map(c => (
               <option key={c.id} value={c.id}>{c.nome}</option>
             ))}
