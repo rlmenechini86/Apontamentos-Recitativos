@@ -378,8 +378,8 @@ export const PreCadastroPublicoView: React.FC = () => {
                         {!selectedSetorId
                           ? 'Selecione o setor primeiro...'
                           : comunsFiltradas.length === 0
-                          ? 'Nenhuma comum encontrada'
-                          : 'Selecione a Comum Congregação...'}
+                            ? 'Nenhuma comum encontrada'
+                            : 'Selecione a Comum Congregação...'}
                       </option>
                       {comunsFiltradas.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -456,7 +456,7 @@ export const PreCadastroPublicoView: React.FC = () => {
                   >
                     <option value="Secretário / CJM">Secretário / CJM</option>
                     <option value="CJM">CJM (Cooperador de Jovens e Menores)</option>
-                    <option value="Auxiliar de Jovens">Auxiliar de Jovens</option>
+                    <option value="Responsável pelos Apontamento">Responsável pelos Apontamento</option>
                     <option value="Ancião">Ancião</option>
                     <option value="Nenhum">Nenhum / Membro</option>
                   </select>
@@ -479,11 +479,10 @@ export const PreCadastroPublicoView: React.FC = () => {
                     <div className="min-h-[22px] mt-1.5 flex items-center">
                       {tempoMinisterio && (
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${
-                            tempoMinisterio.valido
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${tempoMinisterio.valido
                               ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
                               : 'bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
-                          }`}
+                            }`}
                         >
                           {tempoMinisterio.texto}
                         </span>
@@ -506,11 +505,10 @@ export const PreCadastroPublicoView: React.FC = () => {
                     <div className="min-h-[22px] mt-1.5 flex items-center">
                       {idade && (
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${
-                            idade.valido
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${idade.valido
                               ? 'bg-teal-100 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-700'
                               : 'bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
-                          }`}
+                            }`}
                         >
                           {idade.texto}
                         </span>

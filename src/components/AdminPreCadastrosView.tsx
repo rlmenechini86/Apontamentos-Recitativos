@@ -145,7 +145,7 @@ export const AdminPreCadastrosView: React.FC<AdminPreCadastrosViewProps> = ({
     // Tenta pré-selecionar o perfil mais adequado com base no cargo
     let defaultPerfil = perfis[0]?.id || '';
     const cargoLower = item.cargo.toLowerCase();
-    if (cargoLower.includes('secretário')) {
+    if (cargoLower.includes('secretário') || cargoLower.includes('apontamento') || cargoLower.includes('responsável')) {
       const p = perfis.find((x) => x.nome.toLowerCase().includes('apontamento') || x.nome.toLowerCase().includes('secretário'));
       if (p) defaultPerfil = p.id;
     } else if (cargoLower.includes('cjm')) {
@@ -476,7 +476,7 @@ export const AdminPreCadastrosView: React.FC<AdminPreCadastrosViewProps> = ({
                       )}
 
                       <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                        {item.cargo}
+                        {item.cargo === 'Auxiliar de Jovens' ? 'Responsável pelos Apontamento' : item.cargo}
                       </span>
                     </div>
 
@@ -614,7 +614,7 @@ export const AdminPreCadastrosView: React.FC<AdminPreCadastrosViewProps> = ({
                   <strong>E-mail:</strong> {approvingItem.email}
                 </div>
                 <div className="text-slate-600 dark:text-slate-300">
-                  <strong>Cargo Solicitado:</strong> {approvingItem.cargo}
+                  <strong>Cargo Solicitado:</strong> {approvingItem.cargo === 'Auxiliar de Jovens' ? 'Responsável pelos Apontamento' : approvingItem.cargo}
                 </div>
                 <div className="text-slate-600 dark:text-slate-300">
                   <strong>Comum:</strong> {approvingItem.comum_congregacao?.nome || 'Não informada'}

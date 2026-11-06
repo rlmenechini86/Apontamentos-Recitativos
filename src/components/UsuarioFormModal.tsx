@@ -84,7 +84,7 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
           nome_completo: initialData.nome_completo || '',
           email: initialData.email || '',
           celular: initialData.celular || '',
-          cargo_ministerio: initialData.cargo_ministerio || '',
+          cargo_ministerio: initialData.cargo_ministerio === 'Auxiliar de Jovens' ? 'Responsável pelos Apontamento' : (initialData.cargo_ministerio || ''),
           data_apresentacao: initialData.data_apresentacao ? initialData.data_apresentacao.substring(0, 10) : '',
           data_nascimento: initialData.data_nascimento ? initialData.data_nascimento.substring(0, 10) : '',
           ano_casamento: initialData.ano_casamento !== undefined && initialData.ano_casamento !== null ? String(initialData.ano_casamento) : '',
@@ -378,7 +378,7 @@ export const UsuarioFormModal: React.FC<UsuarioFormModalProps> = ({
             >
               <option value="Nenhum">Nenhum</option>
               <option value="Secretário / CJM">Secretário / CJM</option>
-              <option value="Auxiliar de Jovens">Auxiliar de Jovens</option>
+              <option value="Responsável pelos Apontamento">Responsável pelos Apontamento</option>
               <option value="CJM">CJM</option>
               <option value="Ancião">Ancião</option>
             </select>

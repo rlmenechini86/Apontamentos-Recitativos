@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
+import {
   Users, BarChart as BarChartIcon, Clock, ArrowUpDown, Filter, X
 } from 'lucide-react';
 import {
@@ -17,8 +17,8 @@ interface RelatorioTempoMinisterioViewProps {
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioViewProps> = ({ 
-  comuns, 
+export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioViewProps> = ({
+  comuns,
   usuarios,
   setores: propSetores
 }) => {
@@ -60,7 +60,11 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
 
   // Lista de cargos únicos para o filtro
   const cargos = useMemo(() => {
-    const unique = new Set(usuariosValidos.map(u => u.cargo_ministerio).filter(Boolean) as string[]);
+    const unique = new Set(
+      usuariosValidos
+        .map(u => u.cargo_ministerio === 'Auxiliar de Jovens' ? 'Responsável pelos Apontamento' : u.cargo_ministerio)
+        .filter(Boolean) as string[]
+    );
     return Array.from(unique).sort();
   }, [usuariosValidos]);
 
@@ -68,8 +72,8 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
   const comunsDoSetor = useMemo(() => {
     if (!selectedSetorId) return comuns;
     const selectedSetor = setores.find(s => s.id === selectedSetorId);
-    return comuns.filter(c => 
-      c.setor_id === selectedSetorId || 
+    return comuns.filter(c =>
+      c.setor_id === selectedSetorId ||
       (selectedSetor && c.setor_pertencente === selectedSetor.nome)
     );
   }, [comuns, setores, selectedSetorId]);
@@ -92,7 +96,10 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
       data = data.filter(u => u.comum_congregacao_id === selectedComumId);
     }
     if (selectedCargo) {
-      data = data.filter(u => u.cargo_ministerio === selectedCargo);
+      data = data.filter(u => {
+        const cargoNorm = u.cargo_ministerio === 'Auxiliar de Jovens' ? 'Responsável pelos Apontamento' : u.cargo_ministerio;
+        return cargoNorm === selectedCargo;
+      });
     }
     return data;
   }, [usuariosValidos, selectedSetorId, selectedComumId, selectedCargo, comuns, setores]);
@@ -101,10 +108,10 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
   const tableData = useMemo(() => {
     const processed = filteredUsuarios.map(u => {
       const comumNome = comuns.find(c => c.id === u.comum_congregacao_id)?.nome || 'Sem Comum';
-      
+
       let tempoAnos = 0;
       let dataFormatada = '-';
-      
+
       if (u.data_apresentacao) {
         const [y, m, d] = u.data_apresentacao.split('-');
         dataFormatada = `${d}/${m}/${y}`;
@@ -116,14 +123,14 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
         }
         tempoAnos = years >= 0 ? years : 0;
       }
-      
-      return { 
-        ...u, 
-        comumNome, 
-        dataFormatada, 
-        tempoAnos, 
-        cargo: u.cargo_ministerio || 'Não informado',
-        timeMs: u.data_apresentacao ? new Date(u.data_apresentacao).getTime() : 0 
+
+      return {
+        ...u,
+        comumNome,
+        dataFormatada,
+        tempoAnos,
+        cargo: (u.cargo_ministerio === 'Auxiliar de Jovens' ? 'Responsável pelos Apontamento' : u.cargo_ministerio) || 'Não informado',
+        timeMs: u.data_apresentacao ? new Date(u.data_apresentacao).getTime() : 0
       };
     });
 
@@ -131,10 +138,10 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
       processed.sort((a, b) => {
         let valA: any = a[sortConfig.key as keyof typeof a];
         let valB: any = b[sortConfig.key as keyof typeof b];
-        
+
         if (sortConfig.key === 'dataFormatada') {
-           valA = a.timeMs;
-           valB = b.timeMs;
+          valA = a.timeMs;
+          valB = b.timeMs;
         }
 
         if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -144,7 +151,7 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
     } else {
       processed.sort((a, b) => a.comumNome.localeCompare(b.comumNome) || b.tempoAnos - a.tempoAnos);
     }
-    
+
     return processed;
   }, [filteredUsuarios, comuns, sortConfig]);
 
@@ -193,7 +200,7 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
 
   return (
     <div className="flex-1 flex flex-col space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[98%] mx-auto">
-      
+
       {/* Header */}
       <div className="bg-slate-800 text-white rounded-xl shadow-lg flex flex-col md:flex-row overflow-hidden border border-slate-700">
         <div className="flex-1 px-8 py-6 flex items-center relative overflow-hidden">
@@ -213,7 +220,7 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
             <Filter className="w-5 h-5 mr-2" />
             <span className="font-medium">Filtros:</span>
           </div>
-          
+
           <select
             disabled={userScope.isSetor || userScope.isComum}
             value={selectedSetorId}
@@ -274,22 +281,22 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
           <BarChartIcon className="w-5 h-5 mr-2 text-sky-400" />
           <h3 className="font-bold text-sm tracking-wider uppercase">DISTRIBUIÇÃO POR FAIXA DE TEMPO</h3>
         </div>
-        
+
         <div className="p-4 bg-slate-50 dark:bg-slate-950/50 w-full h-[350px]">
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis 
-                  dataKey="label" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#64748b', fontSize: 12, fontWeight: 500 }} 
+                <XAxis
+                  dataKey="label"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 12, fontWeight: 500 }}
                 />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: '#64748b' }} 
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b' }}
                   allowDecimals={false}
                 />
                 <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.05)' }} />

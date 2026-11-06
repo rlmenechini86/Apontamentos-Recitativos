@@ -380,7 +380,7 @@ export const UsuarioListView: React.FC<UsuarioListViewProps> = ({
                           <div className="flex flex-wrap items-center gap-1.5 mt-0.5 text-[11px]">
                             {user.cargo_ministerio && (
                               <span className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.2 rounded font-medium text-[10px]">
-                                {user.cargo_ministerio}
+                                {user.cargo_ministerio === 'Auxiliar de Jovens' ? 'Responsável pelos Apontamento' : user.cargo_ministerio}
                               </span>
                             )}
                             {user.ano_casamento && (
