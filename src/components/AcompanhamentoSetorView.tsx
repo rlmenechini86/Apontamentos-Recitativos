@@ -946,7 +946,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
       {/* Modal de Detalhamento da Tabela do Mês Selecionado */}
       {selectedMonthModal && monthDetailData && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-1.5 sm:p-6 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 print:hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center p-1.5 sm:p-3 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200 print:hidden"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setSelectedMonthModal(null);
@@ -955,7 +955,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl shadow-2xl max-w-6xl w-full h-[85dvh] sm:h-auto sm:max-h-[90vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100"
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl sm:rounded-2xl shadow-2xl max-w-[98vw] 2xl:max-w-[1600px] w-full h-[88dvh] sm:h-auto sm:max-h-[94vh] flex flex-col overflow-hidden text-slate-900 dark:text-slate-100"
           >
             {/* Cabeçalho Fixo */}
             <div className="px-3 sm:px-6 py-2.5 sm:py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 shrink-0">
@@ -1070,7 +1070,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       </th>
                       <th
                         onClick={() => handleModalSort('setor')}
-                        className="py-2.5 px-2 text-left border-r border-slate-600 hidden md:table-cell cursor-pointer hover:bg-slate-600 transition group"
+                        className="py-2 px-2 text-left border-r border-slate-600 hidden md:table-cell cursor-pointer hover:bg-slate-600 transition group whitespace-nowrap"
                         title="Clique para ordenar por Setor"
                       >
                         <div className="flex items-center justify-between space-x-1">
@@ -1080,7 +1080,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       </th>
                       <th
                         onClick={() => handleModalSort('datas')}
-                        className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group whitespace-nowrap"
+                        className="py-2 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group whitespace-nowrap"
                         title="Clique para ordenar por Quantidade de Lançamentos"
                       >
                         <div className="flex items-center justify-center space-x-1">
@@ -1090,7 +1090,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       </th>
                       <th
                         onClick={() => handleModalSort('meninas')}
-                        className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                        className="py-2 px-1.5 sm:px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group whitespace-nowrap"
                         title="Clique para ordenar por Meninas"
                       >
                         <div className="flex items-center justify-center space-x-1">
@@ -1100,7 +1100,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       </th>
                       <th
                         onClick={() => handleModalSort('meninos')}
-                        className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                        className="py-2 px-1.5 sm:px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group whitespace-nowrap"
                         title="Clique para ordenar por Meninos"
                       >
                         <div className="flex items-center justify-center space-x-1">
@@ -1110,7 +1110,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       </th>
                       <th
                         onClick={() => handleModalSort('mocas')}
-                        className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                        className="py-2 px-1.5 sm:px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group whitespace-nowrap"
                         title="Clique para ordenar por Moças"
                       >
                         <div className="flex items-center justify-center space-x-1">
@@ -1120,7 +1120,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       </th>
                       <th
                         onClick={() => handleModalSort('mocos')}
-                        className="py-2.5 px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group"
+                        className="py-2 px-1.5 sm:px-2 border-r border-slate-600 cursor-pointer hover:bg-slate-600 transition group whitespace-nowrap"
                         title="Clique para ordenar por Moços"
                       >
                         <div className="flex items-center justify-center space-x-1">
@@ -1130,7 +1130,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       </th>
                       <th
                         onClick={() => handleModalSort('subtotal')}
-                        className="py-2.5 px-2 border-r border-slate-600 font-bold bg-slate-800 cursor-pointer hover:bg-slate-750 transition group"
+                        className="py-2 px-1.5 sm:px-2 border-r border-slate-600 font-bold bg-slate-800 cursor-pointer hover:bg-slate-750 transition group whitespace-nowrap"
                         title="Clique para ordenar por Subtotal"
                       >
                         <div className="flex items-center justify-center space-x-1">
@@ -1140,7 +1140,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       </th>
                       <th
                         onClick={() => handleModalSort('expectativa')}
-                        className="py-2.5 px-2 border-r border-slate-600 font-bold bg-slate-800 cursor-pointer hover:bg-slate-750 transition group"
+                        className="py-2 px-1.5 sm:px-2 border-r border-slate-600 font-bold bg-slate-800 cursor-pointer hover:bg-slate-750 transition group whitespace-nowrap"
                         title="Clique para ordenar por Expectativa"
                       >
                         <div className="flex items-center justify-center space-x-1">
@@ -1150,7 +1150,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       </th>
                       <th
                         onClick={() => handleModalSort('resultado')}
-                        className="py-2.5 px-2 border-r border-slate-600 font-bold cursor-pointer hover:bg-slate-600 transition group"
+                        className="py-2 px-1.5 sm:px-2 border-r border-slate-600 font-bold cursor-pointer hover:bg-slate-600 transition group whitespace-nowrap"
                         title="Clique para ordenar por Resultado"
                       >
                         <div className="flex items-center justify-center space-x-1">
@@ -1160,7 +1160,7 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       </th>
                       <th
                         onClick={() => handleModalSort('status')}
-                        className="py-2.5 px-2 cursor-pointer hover:bg-slate-600 transition group"
+                        className="py-2 px-1.5 sm:px-2 cursor-pointer hover:bg-slate-600 transition group whitespace-nowrap"
                         title="Clique para ordenar por Status"
                       >
                         <div className="flex items-center justify-center space-x-1">
@@ -1173,34 +1173,34 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                     {filteredAndSortedModalRows.map((r) => (
                         <tr key={r.id} className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                          <td className="py-2 px-2.5 sm:px-3 text-left border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap sticky left-0 z-10 bg-white dark:bg-slate-900">
+                          <td className="py-1.5 px-2 sm:px-2.5 text-left border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap sticky left-0 z-10 bg-white dark:bg-slate-900">
                             {r.codigo !== '-' && <span className="text-[10px] text-slate-400 font-mono mr-1">{r.codigo}</span>}
                             {r.nome}
                           </td>
-                          <td className="py-2 px-2 text-left border-r border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 hidden md:table-cell">
+                          <td className="py-1.5 px-2 text-left border-r border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 hidden md:table-cell whitespace-nowrap">
                             {r.setor}
                           </td>
-                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 text-[11px] whitespace-nowrap">
+                          <td className="py-1.5 px-2 border-r border-slate-200 dark:border-slate-800 text-[11px] whitespace-nowrap">
                             {r.datas || <span className="text-slate-400 italic">Sem lançamento</span>}
                           </td>
-                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.meninas.toLocaleString('pt-BR')}</td>
-                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.meninos.toLocaleString('pt-BR')}</td>
-                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.mocas.toLocaleString('pt-BR')}</td>
-                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">{r.mocos.toLocaleString('pt-BR')}</td>
-                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-bold bg-slate-50/70 dark:bg-slate-800/60 text-sky-700 dark:text-sky-300">
+                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">{r.meninas.toLocaleString('pt-BR')}</td>
+                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">{r.meninos.toLocaleString('pt-BR')}</td>
+                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">{r.mocas.toLocaleString('pt-BR')}</td>
+                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">{r.mocos.toLocaleString('pt-BR')}</td>
+                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800 font-bold bg-slate-50/70 dark:bg-slate-800/60 text-sky-700 dark:text-sky-300">
                             {r.subtotal.toLocaleString('pt-BR')}
                           </td>
-                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-700 dark:text-slate-300 bg-slate-50/40 dark:bg-slate-800/30">
+                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-700 dark:text-slate-300 bg-slate-50/40 dark:bg-slate-800/30">
                             {r.expectativa > 0 ? r.expectativa.toLocaleString('pt-BR') : '-'}
                           </td>
-                          <td className="py-2 px-2 border-r border-slate-200 dark:border-slate-800">
+                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">
                             {r.expectativa > 0 ? (
                               r.isAcima ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs whitespace-nowrap">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs whitespace-nowrap">
                                   ▲ {r.diferenca >= 0 ? `+${r.diferenca}` : r.diferenca} (Acima)
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs whitespace-nowrap">
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs whitespace-nowrap">
                                   ▼ {r.diferenca} (Abaixo)
                                 </span>
                               )
@@ -1208,13 +1208,13 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                               <span className="text-[11px] text-slate-400 italic whitespace-nowrap">Sem expectativa</span>
                             )}
                           </td>
-                          <td className="py-2 px-2">
+                          <td className="py-1.5 px-1.5 sm:px-2">
                             {r.hasLancement ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap">
                                 ✓ Lançado ({r.qtdLancamentos})
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap">
                                 Pendente
                               </span>
                             )}

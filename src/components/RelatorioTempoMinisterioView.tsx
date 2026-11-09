@@ -53,16 +53,27 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
     }
   }, [propSetores]);
 
-  // Filtra apenas usuários ativos que possuem data de apresentação
+  // Filtra apenas usuários ativos que possuem data de apresentação e exclui Responsável pelos Apontamento
   const usuariosValidos = useMemo(() => {
-    return usuarios.filter(u => u.ativo && u.data_apresentacao);
+    return usuarios.filter(u => {
+      if (!u.ativo || !u.data_apresentacao) return false;
+      const cargoLower = (u.cargo_ministerio || '').trim().toLowerCase();
+      if (
+        cargoLower === 'auxiliar de jovens' ||
+        cargoLower.includes('responsável pelos apontamento') ||
+        cargoLower.includes('responsavel pelos apontamento')
+      ) {
+        return false;
+      }
+      return true;
+    });
   }, [usuarios]);
 
   // Lista de cargos únicos para o filtro
   const cargos = useMemo(() => {
     const unique = new Set(
       usuariosValidos
-        .map(u => u.cargo_ministerio === 'Auxiliar de Jovens' ? 'Responsável pelos Apontamento' : u.cargo_ministerio)
+        .map(u => u.cargo_ministerio)
         .filter(Boolean) as string[]
     );
     return Array.from(unique).sort();
@@ -96,10 +107,7 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
       data = data.filter(u => u.comum_congregacao_id === selectedComumId);
     }
     if (selectedCargo) {
-      data = data.filter(u => {
-        const cargoNorm = u.cargo_ministerio === 'Auxiliar de Jovens' ? 'Responsável pelos Apontamento' : u.cargo_ministerio;
-        return cargoNorm === selectedCargo;
-      });
+      data = data.filter(u => u.cargo_ministerio === selectedCargo);
     }
     return data;
   }, [usuariosValidos, selectedSetorId, selectedComumId, selectedCargo, comuns, setores]);
@@ -129,7 +137,7 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
         comumNome,
         dataFormatada,
         tempoAnos,
-        cargo: (u.cargo_ministerio === 'Auxiliar de Jovens' ? 'Responsável pelos Apontamento' : u.cargo_ministerio) || 'Não informado',
+        cargo: u.cargo_ministerio || 'Não informado',
         timeMs: u.data_apresentacao ? new Date(u.data_apresentacao).getTime() : 0
       };
     });
