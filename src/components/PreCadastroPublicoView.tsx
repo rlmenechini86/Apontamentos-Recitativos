@@ -90,6 +90,12 @@ export const PreCadastroPublicoView: React.FC = () => {
     return c.includes('cjm') || c.includes('secretário');
   }, [cargo]);
 
+  // Se o cargo é Responsável pelos Apontamentos (desabilita Data de Apresentação)
+  const isResponsavelApontamento = useMemo(() => {
+    const c = cargo.toLowerCase();
+    return c.includes('responsável') || c.includes('responsavel') || c.includes('apontamento');
+  }, [cargo]);
+
   const currentYear = new Date().getFullYear();
 
   // Cálculo tempo de ministério
@@ -201,7 +207,7 @@ export const PreCadastroPublicoView: React.FC = () => {
         email: email.trim(),
         celular: celular.trim(),
         cargo: cargo.trim(),
-        data_apresentacao: dataApresentacao || null,
+        data_apresentacao: !isResponsavelApontamento && dataApresentacao ? dataApresentacao : null,
         data_nascimento: dataNascimento || null,
         ano_casamento: isCjmOrSecretario && anoCasamento ? Number(anoCasamento) : null,
         selado_promessa: isCjmOrSecretario && seladoPromessa ? seladoPromessa === 'Sim' : null,
@@ -451,7 +457,13 @@ export const PreCadastroPublicoView: React.FC = () => {
                   <select
                     required
                     value={cargo}
-                    onChange={(e) => setCargo(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCargo(val);
+                      if (val.toLowerCase().includes('responsável') || val.toLowerCase().includes('apontamento')) {
+                        setDataApresentacao('');
+                      }
+                    }}
                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition cursor-pointer"
                   >
                     <option value="Secretário / CJM">Secretário / CJM</option>
@@ -466,18 +478,19 @@ export const PreCadastroPublicoView: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Data de Apresentação */}
                   <div>
-                    <label className="block text-xs font-semibold uppercase text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <label className={`block text-xs font-semibold uppercase mb-1.5 flex items-center gap-1.5 ${isResponsavelApontamento ? 'text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-300'}`}>
+                      <Calendar className={`w-3.5 h-3.5 ${isResponsavelApontamento ? 'text-slate-400 dark:text-slate-500' : 'text-emerald-600 dark:text-emerald-400'}`} />
                       <span>Data de Apresentação</span>
                     </label>
                     <input
                       type="date"
-                      value={dataApresentacao}
+                      disabled={isResponsavelApontamento}
+                      value={isResponsavelApontamento ? '' : dataApresentacao}
                       onChange={(e) => setDataApresentacao(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-slate-100 dark:disabled:bg-slate-900"
                     />
                     <div className="min-h-[22px] mt-1.5 flex items-center">
-                      {tempoMinisterio && (
+                      {!isResponsavelApontamento && tempoMinisterio && (
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${tempoMinisterio.valido
                               ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
