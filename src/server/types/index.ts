@@ -185,6 +185,11 @@ export interface DetalheMusicoFamilia {
   quantidade: number;
 }
 
+export interface JustificativaDiminuicao {
+  motivo: 'Casamento' | 'Mudança' | string;
+  quantidade: number;
+}
+
 export interface ContagemMocidade {
   id: string;
   data: string;
@@ -195,6 +200,7 @@ export interface ContagemMocidade {
   auxiliares_mocos?: number;
   total_musicos?: number;
   detalhes_musicos?: DetalheMusicoFamilia[];
+  justificativas_diminuicao?: JustificativaDiminuicao[];
   cadastrado_por: string | null;
   created_at?: string;
   updated_at?: string;
@@ -211,6 +217,7 @@ export interface CreateContagemMocidadeDTO {
   auxiliares_mocos?: number;
   total_musicos?: number;
   detalhes_musicos?: DetalheMusicoFamilia[];
+  justificativas_diminuicao?: JustificativaDiminuicao[];
   cadastrado_por?: string | null;
 }
 
@@ -223,6 +230,7 @@ export interface UpdateContagemMocidadeDTO {
   auxiliares_mocos?: number;
   total_musicos?: number;
   detalhes_musicos?: DetalheMusicoFamilia[];
+  justificativas_diminuicao?: JustificativaDiminuicao[];
   cadastrado_por?: string | null;
 }
 

@@ -1,5 +1,59 @@
 import { supabase } from '../config/supabase.js';
-import { ContagemMocidade, CreateContagemMocidadeDTO, UpdateContagemMocidadeDTO } from '../types/index.js';
+import { ContagemMocidade, CreateContagemMocidadeDTO, UpdateContagemMocidadeDTO, JustificativaDiminuicao, DetalheMusicoFamilia } from '../types/index.js';
+
+function normalizeContagemRecord(raw: any): ContagemMocidade {
+  if (!raw) return raw;
+  const rawDetalhes = Array.isArray(raw.detalhes_musicos) ? raw.detalhes_musicos : [];
+  const detalhesMusicos: DetalheMusicoFamilia[] = [];
+  const embeddedJustificativas: JustificativaDiminuicao[] = [];
+
+  for (const item of rawDetalhes) {
+    if (item && item._tipo === 'justificativa_diminuicao') {
+      if (item.motivo && Number(item.quantidade) > 0) {
+        embeddedJustificativas.push({
+          motivo: String(item.motivo),
+          quantidade: Number(item.quantidade) || 0,
+        });
+      }
+    } else if (item && item.familia) {
+      detalhesMusicos.push({
+        familia: String(item.familia),
+        quantidade: Number(item.quantidade) || 0,
+      });
+    }
+  }
+
+  const colJustificativas: JustificativaDiminuicao[] = Array.isArray(raw.justificativas_diminuicao)
+    ? raw.justificativas_diminuicao
+        .filter((j: any) => j && j.motivo && Number(j.quantidade) > 0)
+        .map((j: any) => ({ motivo: String(j.motivo), quantidade: Number(j.quantidade) || 0 }))
+    : [];
+
+  return {
+    ...raw,
+    detalhes_musicos: detalhesMusicos,
+    justificativas_diminuicao: colJustificativas.length > 0 ? colJustificativas : embeddedJustificativas,
+  };
+}
+
+function buildCombinedDetalhesJsonb(
+  detalhes?: DetalheMusicoFamilia[],
+  justificativas?: JustificativaDiminuicao[]
+): any[] {
+  const cleanMusicos = (Array.isArray(detalhes) ? detalhes : [])
+    .filter((m: any) => m && m._tipo !== 'justificativa_diminuicao' && m.familia)
+    .map(m => ({ familia: m.familia, quantidade: Number(m.quantidade) || 0 }));
+
+  const cleanJustificativas = (Array.isArray(justificativas) ? justificativas : [])
+    .filter(j => j && j.motivo && Number(j.quantidade) > 0)
+    .map(j => ({
+      _tipo: 'justificativa_diminuicao',
+      motivo: j.motivo,
+      quantidade: Number(j.quantidade) || 0,
+    }));
+
+  return [...cleanMusicos, ...cleanJustificativas];
+}
 
 export class ContagensService {
   async getAll(): Promise<{ data: ContagemMocidade[]; source: string }> {
@@ -14,7 +68,8 @@ export class ContagensService {
         .order('data', { ascending: false });
 
       if (error) throw new Error(error.message);
-      return { data: (data as unknown as ContagemMocidade[]) || [], source: 'supabase' };
+      const normalized = Array.isArray(data) ? data.map(normalizeContagemRecord) : [];
+      return { data: normalized, source: 'supabase' };
     } catch (err: any) {
       console.error('[ContagensService] Exceção na listagem:', err.message);
       throw err;
@@ -36,7 +91,9 @@ export class ContagensService {
       if (dto.auxiliares_mocos !== undefined) sanitized.auxiliares_mocos = Number(dto.auxiliares_mocos) || 0;
       if (dto.auxiliares_mocas !== undefined) sanitized.auxiliares_mocas = Number(dto.auxiliares_mocas) || 0;
       if (dto.total_musicos !== undefined) sanitized.total_musicos = Number(dto.total_musicos) || 0;
-      if (dto.detalhes_musicos !== undefined) sanitized.detalhes_musicos = dto.detalhes_musicos;
+      if (dto.detalhes_musicos !== undefined || dto.justificativas_diminuicao !== undefined) {
+        sanitized.detalhes_musicos = buildCombinedDetalhesJsonb(dto.detalhes_musicos, dto.justificativas_diminuicao);
+      }
       if (dto.cadastrado_por !== undefined) sanitized.cadastrado_por = dto.cadastrado_por || null;
 
       const { data, error } = await supabase
@@ -50,7 +107,7 @@ export class ContagensService {
         .single();
 
       if (error) throw new Error(error.message);
-      return data as unknown as ContagemMocidade;
+      return normalizeContagemRecord(data);
     } catch (err: any) {
       console.error('[ContagensService] Exceção na criação:', err.message);
       throw err;
@@ -70,7 +127,9 @@ export class ContagensService {
       if (dto.auxiliares_mocos !== undefined) sanitized.auxiliares_mocos = Number(dto.auxiliares_mocos) || 0;
       if (dto.auxiliares_mocas !== undefined) sanitized.auxiliares_mocas = Number(dto.auxiliares_mocas) || 0;
       if (dto.total_musicos !== undefined) sanitized.total_musicos = Number(dto.total_musicos) || 0;
-      if (dto.detalhes_musicos !== undefined) sanitized.detalhes_musicos = dto.detalhes_musicos;
+      if (dto.detalhes_musicos !== undefined || dto.justificativas_diminuicao !== undefined) {
+        sanitized.detalhes_musicos = buildCombinedDetalhesJsonb(dto.detalhes_musicos, dto.justificativas_diminuicao);
+      }
       if (dto.cadastrado_por !== undefined) sanitized.cadastrado_por = dto.cadastrado_por || null;
 
       const { data, error } = await supabase
@@ -85,7 +144,7 @@ export class ContagensService {
         .single();
 
       if (error) throw new Error(error.message);
-      return data as unknown as ContagemMocidade;
+      return normalizeContagemRecord(data);
     } catch (err: any) {
       console.error('[ContagensService] Exceção na atualização:', err.message);
       throw err;
@@ -105,7 +164,7 @@ export class ContagensService {
         .single();
 
       if (error) return null;
-      return data as unknown as ContagemMocidade;
+      return normalizeContagemRecord(data);
     } catch (err: any) {
       console.error('[ContagensService] Exceção ao buscar por ID:', err.message);
       return null;

@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Users, Search, Plus, Music, RefreshCw, Trash2, Edit2, Calendar, Building2,
-  User, ArrowUpDown, Lock, AlertCircle, CheckCircle2, TrendingUp,
+  User, ArrowUpDown, Lock, AlertCircle, CheckCircle2, TrendingUp, TrendingDown,
   Layers, ListFilter, Sparkles, Filter, ChevronRight, Eye, EyeOff, History
 } from 'lucide-react';
-import { ContagemMocidade, ComumCongregacao, Usuario, Setor, DetalheMusicoFamilia, FAMILIAS_INSTRUMENTOS } from '../types';
+import {
+  ContagemMocidade, ComumCongregacao, Usuario, Setor,
+  DetalheMusicoFamilia, FAMILIAS_INSTRUMENTOS,
+  JustificativaDiminuicao, MOTIVOS_DIMINUICAO_MOCIDADE
+} from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Pagination } from './Pagination';
 import { apiGet, apiPost, apiPut, clearApiCache } from '../utils/api';
@@ -1417,6 +1421,7 @@ export const ContagensMocidadeView: React.FC<ContagensMocidadeViewProps> = ({
           comuns={comuns}
           setores={setores}
           usuarios={usuarios}
+          contagens={contagens}
           onSuccess={(saved) => {
             setIsModalOpen(false);
             setEditingItem(null);
@@ -1439,11 +1444,30 @@ export interface ContagemFormModalProps {
   comuns: ComumCongregacao[];
   setores?: Setor[];
   usuarios?: Usuario[];
+  contagens?: ContagemMocidade[];
   onSuccess: (saved?: ContagemMocidade) => void;
 }
 
+const extractCleanDetalhesMusicos = (item?: ContagemMocidade | null): DetalheMusicoFamilia[] => {
+  if (!item || !Array.isArray(item.detalhes_musicos)) return [];
+  return item.detalhes_musicos.filter((m: any) => m && m._tipo !== 'justificativa_diminuicao' && m.familia);
+};
+
+const extractCleanJustificativas = (item?: ContagemMocidade | null): JustificativaDiminuicao[] => {
+  if (!item) return [];
+  if (Array.isArray(item.justificativas_diminuicao) && item.justificativas_diminuicao.length > 0) {
+    return item.justificativas_diminuicao;
+  }
+  if (Array.isArray(item.detalhes_musicos)) {
+    return item.detalhes_musicos
+      .filter((m: any) => m && m._tipo === 'justificativa_diminuicao' && m.motivo)
+      .map((m: any) => ({ motivo: String(m.motivo), quantidade: Number(m.quantidade) || 0 }));
+  }
+  return [];
+};
+
 export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
-  isOpen, onClose, initialData, initialParams, comuns, setores = [], usuarios = [], onSuccess
+  isOpen, onClose, initialData, initialParams, comuns, setores = [], usuarios = [], contagens = [], onSuccess
 }) => {
   const { user } = useAuth();
   const userScope = useMemo(() => getUserScope(user, comuns, setores), [user, comuns, setores]);
@@ -1467,6 +1491,7 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
     auxiliares_mocos: 0,
     auxiliares_mocas: 0,
     detalhes_musicos: [] as DetalheMusicoFamilia[],
+    justificativas_diminuicao: [] as JustificativaDiminuicao[],
   });
   const [loading, setLoading] = useState(false);
   const recordKeyRef = useRef<string | null>(null);
@@ -1493,7 +1518,8 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
         tipo: initialData.tipo,
         auxiliares_mocos: initialData.auxiliares_mocos ?? 0,
         auxiliares_mocas: initialData.auxiliares_mocas ?? 0,
-        detalhes_musicos: Array.isArray(initialData.detalhes_musicos) ? initialData.detalhes_musicos : [],
+        detalhes_musicos: extractCleanDetalhesMusicos(initialData),
+        justificativas_diminuicao: extractCleanJustificativas(initialData),
       });
     } else {
       setActiveItem(null);
@@ -1519,9 +1545,78 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
         auxiliares_mocos: 0,
         auxiliares_mocas: 0,
         detalhes_musicos: [],
+        justificativas_diminuicao: [],
       });
     }
   }, [initialData, initialParams, comuns, setores, isRestrictedUser, userComumId, user?.comum_congregacao?.nome]);
+
+  // Busca a contagem de Mocidade do ano anterior para a mesma congregação
+  const previousYearInfo = useMemo(() => {
+    const enforcedComumId = (isRestrictedUser && userComumId) ? userComumId : formData.comum_id;
+    if (formData.tipo !== 'Mocidade' || !enforcedComumId || !formData.data) return null;
+
+    const currentYear = Number(formData.data.split('T')[0].split('-')[0]);
+    if (!currentYear || isNaN(currentYear)) return null;
+
+    const prevYearStr = String(currentYear - 1);
+    const exactPrev = contagens.find(c =>
+      c.comum_id === enforcedComumId &&
+      c.tipo === 'Mocidade' &&
+      c.data?.split('T')[0]?.split('-')[0] === prevYearStr &&
+      c.id !== activeItem?.id
+    );
+
+    if (exactPrev) {
+      return {
+        year: prevYearStr,
+        quantidade: Number(exactPrev.quantidade) || 0,
+        record: exactPrev,
+      };
+    }
+
+    // Caso não exista exatamente no ano anterior (ano - 1), verifica o registro de ano anterior mais recente (< currentYear)
+    const olderRecords = contagens
+      .filter(c =>
+        c.comum_id === enforcedComumId &&
+        c.tipo === 'Mocidade' &&
+        c.id !== activeItem?.id &&
+        Number(c.data?.split('T')[0]?.split('-')[0]) < currentYear
+      )
+      .sort((a, b) => b.data.localeCompare(a.data));
+
+    if (olderRecords.length > 0) {
+      const latest = olderRecords[0];
+      const y = latest.data.split('T')[0].split('-')[0];
+      return {
+        year: y,
+        quantidade: Number(latest.quantidade) || 0,
+        record: latest,
+      };
+    }
+
+    return null;
+  }, [formData.tipo, formData.comum_id, formData.data, contagens, activeItem?.id, isRestrictedUser, userComumId]);
+
+  const currentQtd = Number(formData.quantidade) || 0;
+  const isDecrease = Boolean(
+    formData.tipo === 'Mocidade' &&
+    previousYearInfo &&
+    previousYearInfo.quantidade > 0 &&
+    currentQtd < previousYearInfo.quantidade
+  );
+  const decreaseDiff = isDecrease && previousYearInfo
+    ? previousYearInfo.quantidade - currentQtd
+    : 0;
+
+  // Quando houver diminuição em modo de edição e ainda não houver linha de justificativa, cria 1 linha inicial automaticamente
+  useEffect(() => {
+    if (isEditing && isDecrease && formData.justificativas_diminuicao.length === 0) {
+      setFormData(prev => ({
+        ...prev,
+        justificativas_diminuicao: [{ motivo: '', quantidade: 0 }],
+      }));
+    }
+  }, [isEditing, isDecrease, formData.justificativas_diminuicao.length]);
 
   const modalComunsFiltradas = useMemo(() => {
     if (isRestrictedUser && userComumId) {
@@ -1549,7 +1644,8 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
         tipo: activeItem.tipo,
         auxiliares_mocos: activeItem.auxiliares_mocos ?? 0,
         auxiliares_mocas: activeItem.auxiliares_mocas ?? 0,
-        detalhes_musicos: Array.isArray(activeItem.detalhes_musicos) ? activeItem.detalhes_musicos : [],
+        detalhes_musicos: extractCleanDetalhesMusicos(activeItem),
+        justificativas_diminuicao: extractCleanJustificativas(activeItem),
       });
       setIsEditing(false);
     } else {
@@ -1595,16 +1691,67 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
     }));
   };
 
+  const handleAddJustificativa = () => {
+    setFormData(prev => ({
+      ...prev,
+      justificativas_diminuicao: [
+        ...prev.justificativas_diminuicao,
+        { motivo: '', quantidade: 0 }
+      ]
+    }));
+  };
+
+  const handleUpdateJustificativa = (index: number, field: 'motivo' | 'quantidade', value: any) => {
+    setFormData(prev => {
+      const updated = [...prev.justificativas_diminuicao];
+      updated[index] = {
+        ...updated[index],
+        [field]: field === 'quantidade' ? Math.max(0, Number(value) || 0) : value
+      };
+      return { ...prev, justificativas_diminuicao: updated };
+    });
+  };
+
+  const handleRemoveJustificativa = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      justificativas_diminuicao: prev.justificativas_diminuicao.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      setLoading(true);
-
       const enforcedComumId = (isRestrictedUser && userComumId) ? userComumId : formData.comum_id;
+
+      // Validação de justificativa obrigatória quando a quantidade de Mocidade é menor que a do ano anterior
+      let finalJustificativas: JustificativaDiminuicao[] = [];
+      if (isDecrease && previousYearInfo) {
+        const validJustificativas = formData.justificativas_diminuicao.filter(
+          j => j.motivo && (j.motivo === 'Casamento' || j.motivo === 'Mudança') && Number(j.quantidade) > 0
+        );
+        const hasInvalidRow = formData.justificativas_diminuicao.some(
+          j => !j.motivo || (j.motivo !== 'Casamento' && j.motivo !== 'Mudança') || Number(j.quantidade) <= 0
+        );
+
+        if (validJustificativas.length === 0 || hasInvalidRow) {
+          alert(
+            `A quantidade de mocidade informada (${currentQtd}) é menor que a do ano anterior (${previousYearInfo.year}: ${previousYearInfo.quantidade}).\n\nPor favor, preencha a justificativa pela diminuição selecionando o motivo (Casamento ou Mudança) e informando a Quantidade maior que zero.`
+          );
+          return;
+        }
+        finalJustificativas = validJustificativas.map(j => ({
+          motivo: j.motivo,
+          quantidade: Number(j.quantidade) || 0,
+        }));
+      }
+
+      setLoading(true);
 
       const totalMusicos = formData.detalhes_musicos.reduce((s, m) => s + (Number(m.quantidade) || 0), 0);
       const payload = {
         ...formData,
+        justificativas_diminuicao: finalJustificativas,
         total_musicos: totalMusicos,
         comum_id: enforcedComumId,
         cadastrado_por: user?.id || null,
@@ -1627,6 +1774,7 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
           auxiliares_mocas: Number(formData.auxiliares_mocas) || 0,
           total_musicos: totalMusicos,
           detalhes_musicos: formData.detalhes_musicos,
+          justificativas_diminuicao: finalJustificativas,
           cadastrado_por: user?.id || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -1820,10 +1968,17 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
             </div>
 
             {/* Quantidade Geral */}
-            <div className="space-y-1">
-              <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">
-                {formData.tipo === 'Mocidade' ? 'Presença Geral da Mocidade *' : 'Participantes da Santa Ceia *'}
-              </label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <label className="text-xs font-semibold uppercase text-slate-700 dark:text-slate-300">
+                  {formData.tipo === 'Mocidade' ? 'Presença Geral da Mocidade *' : 'Participantes da Santa Ceia *'}
+                </label>
+                {formData.tipo === 'Mocidade' && previousYearInfo && (
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                    Ano anterior ({previousYearInfo.year}): <strong className="font-mono text-slate-900 dark:text-white">{previousYearInfo.quantidade}</strong>
+                  </span>
+                )}
+              </div>
               <input
                 type="number"
                 min="0"
@@ -1835,6 +1990,94 @@ export const ContagemFormModal: React.FC<ContagemFormModalProps> = ({
                   }`}
               />
             </div>
+
+            {/* Justificativa pela Diminuição da Mocidade (quando menor que o ano anterior ou já registrada) */}
+            {formData.tipo === 'Mocidade' && (isDecrease || (!isEditing && formData.justificativas_diminuicao.length > 0)) && (
+              <div className="p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800/70 space-y-2.5 animate-in fade-in duration-200">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start space-x-2">
+                    <TrendingDown className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-xs font-bold text-amber-900 dark:text-amber-200 uppercase tracking-wider block">
+                        Justificativa pela Diminuição *
+                      </span>
+                      {previousYearInfo && isDecrease && (
+                        <span className="text-[11px] text-amber-800 dark:text-amber-300/90 block mt-0.5">
+                          Redução de <strong className="font-mono">{decreaseDiff}</strong> em relação a {previousYearInfo.year} ({previousYearInfo.quantidade} → {currentQtd}). Informe o motivo e a quantidade:
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-2.5 py-0.5 rounded-full border border-amber-300 dark:border-amber-700 shrink-0">
+                    Total: {formData.justificativas_diminuicao.reduce((acc, curr) => acc + (Number(curr.quantidade) || 0), 0)}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {formData.justificativas_diminuicao.map((item, idx) => (
+                    <div key={idx} className="grid grid-cols-12 gap-2 items-end bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-amber-200 dark:border-amber-800/60">
+                      <div className={`${isEditing && formData.justificativas_diminuicao.length > 1 ? 'col-span-6 sm:col-span-7' : 'col-span-7'} space-y-1`}>
+                        <label className="text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400 block">
+                          Justificativa *
+                        </label>
+                        <select
+                          required={isDecrease}
+                          disabled={!isEditing}
+                          value={item.motivo}
+                          onChange={(e) => handleUpdateJustificativa(idx, 'motivo', e.target.value)}
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                        >
+                          <option value="">Selecione...</option>
+                          {MOTIVOS_DIMINUICAO_MOCIDADE.map(motivo => (
+                            <option key={motivo} value={motivo}>{motivo}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className={`${isEditing && formData.justificativas_diminuicao.length > 1 ? 'col-span-4' : 'col-span-5'} space-y-1`}>
+                        <label className="text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400 block">
+                          Quantidade *
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          required={isDecrease}
+                          disabled={!isEditing}
+                          value={item.quantidade || ''}
+                          placeholder="0"
+                          onChange={(e) => handleUpdateJustificativa(idx, 'quantidade', e.target.value)}
+                          className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-center text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+
+                      {isEditing && formData.justificativas_diminuicao.length > 1 && (
+                        <div className="col-span-2 sm:col-span-1 flex justify-end pb-1">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveJustificativa(idx)}
+                            className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                            title="Remover justificativa"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={handleAddJustificativa}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-900/40 hover:bg-amber-200/80 dark:hover:bg-amber-900/60 rounded-lg border border-amber-300 dark:border-amber-700/60 transition cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Adicionar Outra Justificativa</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Seção Unificada: Auxiliares e Músicos (Exclusivo para Reunião da Mocidade) */}
             {formData.tipo === 'Mocidade' && (

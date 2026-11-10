@@ -114,6 +114,9 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
 
   // Processa dados para a tabela
   const tableData = useMemo(() => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+
     const processed = filteredUsuarios.map(u => {
       const comumNome = comuns.find(c => c.id === u.comum_congregacao_id)?.nome || 'Sem Comum';
 
@@ -121,22 +124,51 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
       let dataFormatada = '-';
 
       if (u.data_apresentacao) {
-        const [y, m, d] = u.data_apresentacao.split('-');
+        const [y, m, d] = u.data_apresentacao.split('T')[0].split('-');
         dataFormatada = `${d}/${m}/${y}`;
         const presDate = new Date(Number(y), Number(m) - 1, Number(d));
-        const today = new Date();
-        let years = today.getFullYear() - presDate.getFullYear();
+        let years = currentYear - presDate.getFullYear();
         if (today.getMonth() < presDate.getMonth() || (today.getMonth() === presDate.getMonth() && today.getDate() < presDate.getDate())) {
           years--;
         }
         tempoAnos = years >= 0 ? years : 0;
       }
 
+      let idade: number | null = null;
+      if (u.data_nascimento) {
+        const [by, bm, bd] = u.data_nascimento.split('T')[0].split('-');
+        if (by && bm && bd) {
+          const birthDate = new Date(Number(by), Number(bm) - 1, Number(bd));
+          let age = currentYear - birthDate.getFullYear();
+          if (today.getMonth() < birthDate.getMonth() || (today.getMonth() === birthDate.getMonth() && today.getDate() < birthDate.getDate())) {
+            age--;
+          }
+          if (age >= 0) idade = age;
+        }
+      }
+
+      const seladoLabel =
+        u.selado_promessa === true ? 'Sim' : u.selado_promessa === false ? 'Não' : '-';
+
+      const tempoCasado =
+        u.ano_casamento !== null && u.ano_casamento !== undefined && Number(u.ano_casamento) > 0
+          ? Math.max(0, currentYear - Number(u.ano_casamento))
+          : null;
+
+      const tempoBatismo =
+        u.ano_batismo !== null && u.ano_batismo !== undefined && Number(u.ano_batismo) > 0
+          ? Math.max(0, currentYear - Number(u.ano_batismo))
+          : null;
+
       return {
         ...u,
         comumNome,
         dataFormatada,
         tempoAnos,
+        idade,
+        seladoLabel,
+        tempoCasado,
+        tempoBatismo,
         cargo: u.cargo_ministerio || 'Não informado',
         timeMs: u.data_apresentacao ? new Date(u.data_apresentacao).getTime() : 0
       };
@@ -151,6 +183,9 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
           valA = a.timeMs;
           valB = b.timeMs;
         }
+
+        if (valA === null || valA === undefined) valA = -1;
+        if (valB === null || valB === undefined) valB = -1;
 
         if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
         if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
@@ -339,44 +374,95 @@ export const RelatorioTempoMinisterioView: React.FC<RelatorioTempoMinisterioView
           <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
             <thead className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs uppercase sticky top-0 shadow-sm z-10">
               <tr>
-                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('comumNome')}>
+                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap" onClick={() => handleSort('comumNome')}>
                   <div className="flex items-center space-x-1"><span>Comum</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('nome_completo')}>
+                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap" onClick={() => handleSort('nome_completo')}>
                   <div className="flex items-center space-x-1"><span>Nome</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="hidden sm:table-cell px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('cargo')}>
+                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap" onClick={() => handleSort('cargo')}>
                   <div className="flex items-center space-x-1"><span>Cargo</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="hidden md:table-cell px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('dataFormatada')}>
+                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap" onClick={() => handleSort('dataFormatada')}>
                   <div className="flex items-center justify-center space-x-1"><span>Apresentação</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
-                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700" onClick={() => handleSort('tempoAnos')}>
-                  <div className="flex items-center justify-center space-x-1"><span>Anos</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap" onClick={() => handleSort('tempoAnos')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Tempo Ministério</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap" onClick={() => handleSort('idade')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Idade</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap" onClick={() => handleSort('seladoLabel')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Selado com a Promessa</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap" onClick={() => handleSort('tempoCasado')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Tempo de Casado</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
+                </th>
+                <th className="px-3 sm:px-4 py-2.5 sm:py-3 font-semibold text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap" onClick={() => handleSort('tempoBatismo')}>
+                  <div className="flex items-center justify-center space-x-1"><span>Tempo de Batismo</span><ArrowUpDown className="w-3 h-3 text-slate-400" /></div>
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
               {tableData.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={9} className="px-4 py-8 text-center text-slate-500">
                     Nenhum irmão encontrado com data de apresentação.
                   </td>
                 </tr>
               ) : (
                 tableData.map((u, i) => (
                   <tr key={u.id || i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-slate-800 dark:text-slate-200 text-xs sm:text-sm">{u.comumNome}</td>
-                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm">
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 font-medium text-slate-800 dark:text-slate-200 text-xs sm:text-sm whitespace-nowrap">{u.comumNome}</td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm whitespace-nowrap">
                       <div className="font-semibold text-slate-900 dark:text-slate-100">{u.nome_completo}</div>
-                      <div className="sm:hidden text-[11px] text-slate-500 mt-0.5">{u.cargo}</div>
                     </td>
-                    <td className="hidden sm:table-cell px-3 sm:px-4 py-2.5 sm:py-3 text-slate-500 dark:text-slate-400 text-xs">{u.cargo}</td>
-                    <td className="hidden md:table-cell px-3 sm:px-4 py-2.5 sm:py-3 text-center text-slate-600 dark:text-slate-300 text-xs">{u.dataFormatada}</td>
-                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center">
-                      <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                        {u.tempoAnos}
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">{u.cargo}</td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center text-slate-600 dark:text-slate-300 text-xs whitespace-nowrap">{u.dataFormatada}</td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                        {u.tempoAnos} {u.tempoAnos === 1 ? 'ano' : 'anos'}
                       </span>
+                    </td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center text-xs whitespace-nowrap">
+                      {u.idade !== null ? (
+                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-semibold rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                          {u.idade} {u.idade === 1 ? 'ano' : 'anos'}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center text-xs whitespace-nowrap">
+                      {u.seladoLabel === 'Sim' ? (
+                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-bold rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                          Sim
+                        </span>
+                      ) : u.seladoLabel === 'Não' ? (
+                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-medium rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                          Não
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center text-xs whitespace-nowrap">
+                      {u.tempoCasado !== null ? (
+                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-semibold rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800" title={`Casado em ${u.ano_casamento}`}>
+                          {u.tempoCasado} {u.tempoCasado === 1 ? 'ano' : 'anos'}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-3 sm:px-4 py-2.5 sm:py-3 text-center text-xs whitespace-nowrap">
+                      {u.tempoBatismo !== null ? (
+                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 text-xs font-semibold rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800" title={`Batizado em ${u.ano_batismo}`}>
+                          {u.tempoBatismo} {u.tempoBatismo === 1 ? 'ano' : 'anos'}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
                     </td>
                   </tr>
                 ))

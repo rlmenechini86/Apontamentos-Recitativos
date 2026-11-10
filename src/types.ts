@@ -109,6 +109,16 @@ export interface DetalheMusicoFamilia {
   quantidade: number;
 }
 
+export interface JustificativaDiminuicao {
+  motivo: 'Casamento' | 'Mudança' | string;
+  quantidade: number;
+}
+
+export const MOTIVOS_DIMINUICAO_MOCIDADE = [
+  'Casamento',
+  'Mudança',
+] as const;
+
 export interface ContagemMocidade {
   id: string;
   data: string;
@@ -119,6 +129,7 @@ export interface ContagemMocidade {
   auxiliares_mocos?: number;
   total_musicos?: number;
   detalhes_musicos?: DetalheMusicoFamilia[];
+  justificativas_diminuicao?: JustificativaDiminuicao[];
   cadastrado_por: string | null;
   created_at?: string;
   updated_at?: string;

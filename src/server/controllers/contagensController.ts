@@ -96,6 +96,9 @@ export const contagensController = {
           quantidade: result.quantidade,
           comum_id: result.comum_id,
           data: result.data,
+          ...(result.justificativas_diminuicao && result.justificativas_diminuicao.length > 0
+            ? { justificativas_diminuicao: result.justificativas_diminuicao }
+            : {}),
         },
         ip: getClientIp(req),
         userAgent: req.headers['user-agent'] as string,
