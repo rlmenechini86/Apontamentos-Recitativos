@@ -22,6 +22,8 @@ import {
   Clock,
   Shield,
   UserPlus,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { Sidebar, NavRoute } from './components/Sidebar';
 import { LgpdTermsModal } from './components/LgpdTermsModal';
@@ -63,7 +65,22 @@ export default function App() {
   const { isAuthenticated, logout, user } = useAuth();
   const [currentRoute, setCurrentRoute] = useState<NavRoute>('dashboard');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [isLgpdModalOpen, setIsLgpdModalOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebar_collapsed', String(isSidebarCollapsed));
+    } catch {
+      // ignora erro de localStorage
+    }
+  }, [isSidebarCollapsed]);
 
   // Dados de Comuns e Setores
   const [comuns, setComuns] = useState<ComumCongregacao[]>([]);
@@ -709,6 +726,8 @@ export default function App() {
         perfisCount={perfis.length}
         isOpenMobile={isMobileMenuOpen}
         onCloseMobile={() => setIsMobileMenuOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(prev => !prev)}
         reunioesHojeCount={compromissosHoje.reunioesHoje.length}
         visitasHojeCount={compromissosHoje.visitasHoje.length}
         reunioesAmanhaCount={compromissosHoje.reunioesAmanha.length}
@@ -717,7 +736,11 @@ export default function App() {
       />
 
       {/* Área Principal de Conteúdo (Lado Direito) */}
-      <div className="flex-1 lg:pl-72 print:pl-0 flex flex-col min-w-0 min-h-screen print:min-h-0 print:h-auto print:block">
+      <div
+        className={`flex-1 ${
+          isSidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'
+        } print:pl-0 flex flex-col min-w-0 min-h-screen transition-all duration-300 ease-in-out print:min-h-0 print:h-auto print:block`}
+      >
         {/* Top Navbar */}
         <header className="sticky top-0 z-30 h-16 bg-white/90 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/90 dark:border-slate-800 px-4 sm:px-6 lg:px-8 flex items-center justify-between print:hidden">
           <div className="flex items-center space-x-3">
@@ -727,6 +750,20 @@ export default function App() {
               className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden cursor-pointer"
             >
               <Menu className="w-5 h-5" />
+            </button>
+
+            {/* Botão Retrair / Expandir Menu (Desktop) */}
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed(prev => !prev)}
+              title={isSidebarCollapsed ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+              className="hidden lg:inline-flex p-2 rounded-lg text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+            >
+              {isSidebarCollapsed ? (
+                <PanelLeftOpen className="w-5 h-5" />
+              ) : (
+                <PanelLeftClose className="w-5 h-5" />
+              )}
             </button>
 
             {/* Título da Rota Ativa */}
