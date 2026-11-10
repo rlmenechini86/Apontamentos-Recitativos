@@ -17,6 +17,7 @@ import { getUserScope, isItemInUserSector } from '../utils/permissions';
 type ModalSortField = 'nome' | 'setor' | 'datas' | 'meninas' | 'meninos' | 'mocas' | 'mocos' | 'subtotal' | 'expectativa' | 'resultado' | 'status';
 type MonthlySortField = 'mes' | 'meninas' | 'meninos' | 'mocas' | 'mocos' | 'subtotal' | 'resultado';
 type AnnualSortField = 'ano' | 'meninas' | 'meninos' | 'mocas' | 'mocos' | 'subtotal' | 'expectativa' | 'resultado';
+type SetorSortField = 'nome' | 'comunsCount' | 'meninas' | 'meninos' | 'mocas' | 'mocos' | 'subtotal' | 'mocidade' | 'santaCeia' | 'expectativa' | 'resultado' | 'atingimento';
 type SortDirection = 'asc' | 'desc';
 
 interface Props {
@@ -44,6 +45,11 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
 
   const [annualSortField, setAnnualSortField] = useState<AnnualSortField>('ano');
   const [annualSortDirection, setAnnualSortDirection] = useState<SortDirection>('asc');
+
+  const [setorSortField, setSetorSortField] = useState<SetorSortField>('nome');
+  const [setorSortDirection, setSetorSortDirection] = useState<SortDirection>('asc');
+  const [comparativoMes, setComparativoMes] = useState<string>('anual');
+  const [comparativoModo, setComparativoModo] = useState<'expectativa' | 'categorias' | 'efetivo'>('expectativa');
 
   // Data states
   const [recitativos, setRecitativos] = useState<Recitativo[]>([]);
@@ -446,6 +452,145 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
       setAnnualSortDirection(field === 'ano' ? 'asc' : 'desc');
     }
   };
+
+  const handleSetorSort = (field: SetorSortField) => {
+    if (setorSortField === field) {
+      setSetorSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSetorSortField(field);
+      setSetorSortDirection(field === 'nome' ? 'asc' : 'desc');
+    }
+  };
+
+  // Dados para o Gráfico e Tabela Comparativa de Setores
+  const setoresComparisonData = useMemo(() => {
+    const activeSetores = setores.length > 0
+      ? [...setores].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+      : [];
+
+    return activeSetores.map(setor => {
+      const setorComuns = propComuns.filter(c =>
+        c.ativo !== false &&
+        (c.setor_id === setor.id || (setor.nome && c.setor_pertencente === setor.nome))
+      );
+      const setorComumIds = new Set(setorComuns.map(c => c.id));
+
+      // Recitativos do setor no ano selecionado
+      const setorRecsAno = recitativos.filter(
+        r => setorComumIds.has(r.comum_id) && r.data && r.data.startsWith(selectedYear)
+      );
+
+      let meninas = 0;
+      let meninos = 0;
+      let mocas = 0;
+      let mocos = 0;
+      let subtotal = 0;
+
+      if (comparativoMes === 'anual') {
+        // Média anual dos meses ativos no ano selecionado
+        const byMonth: Record<string, Recitativo[]> = {};
+        setorRecsAno.forEach(r => {
+          const [, m] = r.data.split('-');
+          if (!m) return;
+          if (!byMonth[m]) byMonth[m] = [];
+          byMonth[m].push(r);
+        });
+        const monthKeys = Object.keys(byMonth);
+        if (monthKeys.length > 0) {
+          let sumMeninas = 0, sumMeninos = 0, sumMocas = 0, sumMocos = 0;
+          monthKeys.forEach(m => {
+            const mTotals = calculateSetorMonthlyTotals(byMonth[m]);
+            sumMeninas += mTotals.meninas;
+            sumMeninos += mTotals.meninos;
+            sumMocas += mTotals.mocas;
+            sumMocos += mTotals.mocos;
+          });
+          meninas = Math.round(sumMeninas / monthKeys.length);
+          meninos = Math.round(sumMeninos / monthKeys.length);
+          mocas = Math.round(sumMocas / monthKeys.length);
+          mocos = Math.round(sumMocos / monthKeys.length);
+          subtotal = meninas + meninos + mocas + mocos;
+        }
+      } else {
+        // Mês específico ('01' a '12')
+        const monthRecs = setorRecsAno.filter(r => r.data.startsWith(`${selectedYear}-${comparativoMes}`));
+        const mTotals = calculateSetorMonthlyTotals(monthRecs);
+        meninas = mTotals.meninas;
+        meninos = mTotals.meninos;
+        mocas = mTotals.mocas;
+        mocos = mTotals.mocos;
+        subtotal = mTotals.subtotal;
+      }
+
+      // Contagens de Mocidade e Santa Ceia do Setor no Ano (mais recente por comum)
+      const getLatestSetorSum = (tipo: 'Mocidade' | 'Santa Ceia') => {
+        const porComum = new Map<string, ContagemMocidade>();
+        contagens
+          .filter(c => setorComumIds.has(c.comum_id) && c.tipo === tipo && c.data && c.data.startsWith(selectedYear))
+          .forEach(c => {
+            const existing = porComum.get(c.comum_id);
+            if (!existing || new Date(c.data) > new Date(existing.data)) {
+              porComum.set(c.comum_id, c);
+            }
+          });
+        return Array.from(porComum.values()).reduce((acc, curr) => acc + (Number(curr.quantidade) || 0), 0);
+      };
+
+      const mocidade = getLatestSetorSum('Mocidade');
+      const santaCeia = getLatestSetorSum('Santa Ceia');
+      const expectativa = Math.round(mocidade * 0.70);
+      const resultado = subtotal - expectativa;
+      const atingimento = expectativa > 0 ? Math.round((subtotal / expectativa) * 100) : 0;
+
+      return {
+        id: setor.id,
+        nome: setor.nome,
+        comunsCount: setorComuns.length,
+        meninas,
+        meninos,
+        mocas,
+        mocos,
+        subtotal,
+        mocidade,
+        santaCeia,
+        expectativa,
+        resultado,
+        atingimento,
+      };
+    });
+  }, [setores, propComuns, recitativos, contagens, selectedYear, comparativoMes]);
+
+  const sortedSetoresComparisonData = useMemo(() => {
+    return [...setoresComparisonData].sort((a, b) => {
+      let comp = 0;
+      if (setorSortField === 'nome') {
+        comp = a.nome.localeCompare(b.nome, 'pt-BR');
+      } else {
+        comp = ((a as any)[setorSortField] || 0) - ((b as any)[setorSortField] || 0);
+      }
+      return setorSortDirection === 'asc' ? comp : -comp;
+    });
+  }, [setoresComparisonData, setorSortField, setorSortDirection]);
+
+  const setoresComparisonTotals = useMemo(() => {
+    const totals = setoresComparisonData.reduce(
+      (acc, curr) => ({
+        comunsCount: acc.comunsCount + curr.comunsCount,
+        meninas: acc.meninas + curr.meninas,
+        meninos: acc.meninos + curr.meninos,
+        mocas: acc.mocas + curr.mocas,
+        mocos: acc.mocos + curr.mocos,
+        subtotal: acc.subtotal + curr.subtotal,
+        mocidade: acc.mocidade + curr.mocidade,
+        santaCeia: acc.santaCeia + curr.santaCeia,
+        expectativa: acc.expectativa + curr.expectativa,
+      }),
+      { comunsCount: 0, meninas: 0, meninos: 0, mocas: 0, mocos: 0, subtotal: 0, mocidade: 0, santaCeia: 0, expectativa: 0 }
+    );
+    const resultado = totals.subtotal - totals.expectativa;
+    const atingimento = totals.expectativa > 0 ? Math.round((totals.subtotal / totals.expectativa) * 100) : 0;
+    return { ...totals, resultado, atingimento };
+  }, [setoresComparisonData]);
 
   const renderSortIcon = (isActive: boolean, direction: SortDirection) => {
     if (isActive) {
@@ -941,6 +1086,362 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
           </div>
         </div>
 
+      </div>
+
+      {/* Gráfico e Tabela Comparativa entre Setores */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xs overflow-hidden flex flex-col print:break-inside-avoid">
+        <div className="bg-slate-800 text-white px-4 py-3 border-b border-slate-700 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex items-center">
+            <BarChartIcon className="w-5 h-5 mr-2 text-emerald-400 shrink-0" />
+            <div>
+              <h3 className="font-bold text-sm tracking-wider uppercase">
+                GRÁFICO COMPARATIVO DE SETORES ({selectedYear})
+              </h3>
+              <p className="text-[11px] text-slate-300 font-normal">
+                Comparação de desempenho, recitativos, expectativa e efetivo entre os setores
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 print:hidden">
+            {/* Seletor de Modo do Gráfico */}
+            <div className="flex items-center bg-slate-900/80 p-1 rounded-lg border border-slate-700">
+              <button
+                type="button"
+                onClick={() => setComparativoModo('expectativa')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
+                  comparativoModo === 'expectativa'
+                    ? 'bg-emerald-600 text-white shadow-2xs'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                Recitativos vs Expectativa
+              </button>
+              <button
+                type="button"
+                onClick={() => setComparativoModo('categorias')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
+                  comparativoModo === 'categorias'
+                    ? 'bg-emerald-600 text-white shadow-2xs'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                Por Categoria
+              </button>
+              <button
+                type="button"
+                onClick={() => setComparativoModo('efetivo')}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
+                  comparativoModo === 'efetivo'
+                    ? 'bg-emerald-600 text-white shadow-2xs'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                Mocidade & Santa Ceia
+              </button>
+            </div>
+
+            {/* Seletor de Período (Média Anual ou Mês específico) */}
+            <select
+              value={comparativoMes}
+              onChange={(e) => setComparativoMes(e.target.value)}
+              className="bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-semibold text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              <option value="anual">Média Anual ({selectedYear})</option>
+              <option value="01">Janeiro / {selectedYear}</option>
+              <option value="02">Fevereiro / {selectedYear}</option>
+              <option value="03">Março / {selectedYear}</option>
+              <option value="04">Abril / {selectedYear}</option>
+              <option value="05">Maio / {selectedYear}</option>
+              <option value="06">Junho / {selectedYear}</option>
+              <option value="07">Julho / {selectedYear}</option>
+              <option value="08">Agosto / {selectedYear}</option>
+              <option value="09">Setembro / {selectedYear}</option>
+              <option value="10">Outubro / {selectedYear}</option>
+              <option value="11">Novembro / {selectedYear}</option>
+              <option value="12">Dezembro / {selectedYear}</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Área do Gráfico */}
+        <div className="p-4 sm:p-6 print:p-2 bg-slate-50 dark:bg-slate-950/50">
+          <div className="h-72 sm:h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={setoresComparisonData}
+                margin={{ top: 25, right: 20, left: 0, bottom: 10 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis
+                  dataKey="nome"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#475569', fontSize: 12, fontWeight: 600 }}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#64748b', fontSize: 11 }}
+                />
+                <RechartsTooltip
+                  cursor={{ fill: 'rgba(14, 165, 233, 0.08)' }}
+                  contentStyle={{ borderRadius: '10px', border: 'none', boxShadow: '0 8px 16px -2px rgb(0 0 0 / 0.12)' }}
+                  formatter={(value: any, name: any) => [Number(value).toLocaleString('pt-BR'), name]}
+                />
+                <Legend wrapperStyle={{ fontSize: '12px', fontWeight: 600, paddingTop: '8px' }} />
+
+                {comparativoModo === 'expectativa' && (
+                  <>
+                    <Bar
+                      dataKey="subtotal"
+                      name="Média Recitativos"
+                      fill="#0ea5e9"
+                      radius={[4, 4, 0, 0]}
+                      barSize={42}
+                      label={{ position: 'top', fill: '#0284c7', fontSize: 11, fontWeight: 'bold', formatter: (val: any) => val > 0 ? Number(val).toLocaleString('pt-BR') : '' }}
+                    />
+                    <Bar
+                      dataKey="expectativa"
+                      name="Expectativa (70%)"
+                      fill="#10b981"
+                      radius={[4, 4, 0, 0]}
+                      barSize={42}
+                      label={{ position: 'top', fill: '#059669', fontSize: 11, fontWeight: 'bold', formatter: (val: any) => val > 0 ? Number(val).toLocaleString('pt-BR') : '' }}
+                    />
+                  </>
+                )}
+
+                {comparativoModo === 'categorias' && (
+                  <>
+                    <Bar
+                      dataKey="meninas"
+                      name="Meninas"
+                      fill="#ec4899"
+                      radius={[4, 4, 0, 0]}
+                      barSize={26}
+                      label={{ position: 'top', fill: '#db2777', fontSize: 10, fontWeight: 'bold', formatter: (val: any) => val > 0 ? Number(val).toLocaleString('pt-BR') : '' }}
+                    />
+                    <Bar
+                      dataKey="meninos"
+                      name="Meninos"
+                      fill="#3b82f6"
+                      radius={[4, 4, 0, 0]}
+                      barSize={26}
+                      label={{ position: 'top', fill: '#2563eb', fontSize: 10, fontWeight: 'bold', formatter: (val: any) => val > 0 ? Number(val).toLocaleString('pt-BR') : '' }}
+                    />
+                    <Bar
+                      dataKey="mocas"
+                      name="Moças"
+                      fill="#a855f7"
+                      radius={[4, 4, 0, 0]}
+                      barSize={26}
+                      label={{ position: 'top', fill: '#9333ea', fontSize: 10, fontWeight: 'bold', formatter: (val: any) => val > 0 ? Number(val).toLocaleString('pt-BR') : '' }}
+                    />
+                    <Bar
+                      dataKey="mocos"
+                      name="Moços"
+                      fill="#14b8a6"
+                      radius={[4, 4, 0, 0]}
+                      barSize={26}
+                      label={{ position: 'top', fill: '#0d9488', fontSize: 10, fontWeight: 'bold', formatter: (val: any) => val > 0 ? Number(val).toLocaleString('pt-BR') : '' }}
+                    />
+                  </>
+                )}
+
+                {comparativoModo === 'efetivo' && (
+                  <>
+                    <Bar
+                      dataKey="mocidade"
+                      name="Mocidade"
+                      fill="#2563eb"
+                      radius={[4, 4, 0, 0]}
+                      barSize={36}
+                      label={{ position: 'top', fill: '#1d4ed8', fontSize: 11, fontWeight: 'bold', formatter: (val: any) => val > 0 ? Number(val).toLocaleString('pt-BR') : '' }}
+                    />
+                    <Bar
+                      dataKey="santaCeia"
+                      name="Santa Ceia"
+                      fill="#f59e0b"
+                      radius={[4, 4, 0, 0]}
+                      barSize={36}
+                      label={{ position: 'top', fill: '#d97706', fontSize: 11, fontWeight: 'bold', formatter: (val: any) => val > 0 ? Number(val).toLocaleString('pt-BR') : '' }}
+                    />
+                    <Bar
+                      dataKey="subtotal"
+                      name="Média Recitativos"
+                      fill="#0ea5e9"
+                      radius={[4, 4, 0, 0]}
+                      barSize={36}
+                      label={{ position: 'top', fill: '#0284c7', fontSize: 11, fontWeight: 'bold', formatter: (val: any) => val > 0 ? Number(val).toLocaleString('pt-BR') : '' }}
+                    />
+                  </>
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Tabela Comparativa de Setores */}
+        <div className="overflow-x-auto border-t border-slate-200 dark:border-slate-800">
+          <table className="min-w-full text-center text-xs text-slate-700 dark:text-slate-300">
+            <thead className="bg-slate-600 text-white select-none">
+              <tr>
+                <th onClick={() => handleSetorSort('nome')} className="py-2.5 px-3 text-left border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group">
+                  <div className="flex items-center space-x-1">
+                    <span>Setor</span>
+                    {renderSortIcon(setorSortField === 'nome', setorSortDirection)}
+                  </div>
+                </th>
+                <th onClick={() => handleSetorSort('comunsCount')} className="py-2.5 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group">
+                  <div className="flex items-center justify-center space-x-1">
+                    <span>Comuns</span>
+                    {renderSortIcon(setorSortField === 'comunsCount', setorSortDirection)}
+                  </div>
+                </th>
+                <th onClick={() => handleSetorSort('meninas')} className="py-2.5 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group">
+                  <div className="flex items-center justify-center space-x-1">
+                    <span>Meninas</span>
+                    {renderSortIcon(setorSortField === 'meninas', setorSortDirection)}
+                  </div>
+                </th>
+                <th onClick={() => handleSetorSort('meninos')} className="py-2.5 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group">
+                  <div className="flex items-center justify-center space-x-1">
+                    <span>Meninos</span>
+                    {renderSortIcon(setorSortField === 'meninos', setorSortDirection)}
+                  </div>
+                </th>
+                <th onClick={() => handleSetorSort('mocas')} className="py-2.5 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group">
+                  <div className="flex items-center justify-center space-x-1">
+                    <span>Moças</span>
+                    {renderSortIcon(setorSortField === 'mocas', setorSortDirection)}
+                  </div>
+                </th>
+                <th onClick={() => handleSetorSort('mocos')} className="py-2.5 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group">
+                  <div className="flex items-center justify-center space-x-1">
+                    <span>Moços</span>
+                    {renderSortIcon(setorSortField === 'mocos', setorSortDirection)}
+                  </div>
+                </th>
+                <th onClick={() => handleSetorSort('subtotal')} className="py-2.5 px-2 border-r border-slate-500 font-bold cursor-pointer hover:bg-slate-500 transition group">
+                  <div className="flex items-center justify-center space-x-1">
+                    <span>Subtotal</span>
+                    {renderSortIcon(setorSortField === 'subtotal', setorSortDirection)}
+                  </div>
+                </th>
+                <th onClick={() => handleSetorSort('mocidade')} className="py-2.5 px-2 border-r border-slate-500 cursor-pointer hover:bg-slate-500 transition group">
+                  <div className="flex items-center justify-center space-x-1">
+                    <span>Mocidade</span>
+                    {renderSortIcon(setorSortField === 'mocidade', setorSortDirection)}
+                  </div>
+                </th>
+                <th onClick={() => handleSetorSort('expectativa')} className="py-2.5 px-2 border-r border-slate-500 font-bold cursor-pointer hover:bg-slate-500 transition group">
+                  <div className="flex items-center justify-center space-x-1">
+                    <span>Expectativa</span>
+                    {renderSortIcon(setorSortField === 'expectativa', setorSortDirection)}
+                  </div>
+                </th>
+                <th onClick={() => handleSetorSort('resultado')} className="py-2.5 px-2 border-r border-slate-500 font-bold cursor-pointer hover:bg-slate-500 transition group">
+                  <div className="flex items-center justify-center space-x-1">
+                    <span>Resultado</span>
+                    {renderSortIcon(setorSortField === 'resultado', setorSortDirection)}
+                  </div>
+                </th>
+                <th onClick={() => handleSetorSort('atingimento')} className="py-2.5 px-2 font-bold cursor-pointer hover:bg-slate-500 transition group">
+                  <div className="flex items-center justify-center space-x-1">
+                    <span>% Ating.</span>
+                    {renderSortIcon(setorSortField === 'atingimento', setorSortDirection)}
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              {sortedSetoresComparisonData.map((row) => {
+                const isSelected = selectedSetorId === row.id;
+                return (
+                  <tr
+                    key={row.id}
+                    onClick={() => {
+                      if (!userScope.isSetor && !userScope.isComum) {
+                        setSelectedSetorId(prev => prev === row.id ? '' : row.id);
+                        setSelectedComumId('');
+                      }
+                    }}
+                    className={`transition ${
+                      isSelected
+                        ? 'bg-emerald-50/80 dark:bg-emerald-950/30'
+                        : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                    } ${!userScope.isSetor && !userScope.isComum ? 'cursor-pointer' : ''}`}
+                    title={!userScope.isSetor && !userScope.isComum ? `Clique para filtrar por ${row.nome}` : row.nome}
+                  >
+                    <td className="py-2.5 px-3 text-left border-r border-slate-200 dark:border-slate-800 font-bold text-slate-900 dark:text-slate-100">
+                      <div className="flex items-center space-x-2">
+                        <Building2 className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-emerald-600' : 'text-slate-400'}`} />
+                        <span>{row.nome}</span>
+                      </div>
+                    </td>
+                    <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold">{row.comunsCount}</td>
+                    <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninas.toLocaleString('pt-BR')}</td>
+                    <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800">{row.meninos.toLocaleString('pt-BR')}</td>
+                    <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocas.toLocaleString('pt-BR')}</td>
+                    <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800">{row.mocos.toLocaleString('pt-BR')}</td>
+                    <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800 font-bold text-sky-700 dark:text-sky-300">{row.subtotal.toLocaleString('pt-BR')}</td>
+                    <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800 font-semibold text-blue-700 dark:text-blue-400">{row.mocidade.toLocaleString('pt-BR')}</td>
+                    <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800 font-bold text-slate-600 dark:text-slate-400">{row.expectativa.toLocaleString('pt-BR')}</td>
+                    <td className={`py-2.5 px-2 border-r border-slate-200 dark:border-slate-800 font-bold ${row.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {row.resultado > 0 ? `+${row.resultado.toLocaleString('pt-BR')}` : row.resultado.toLocaleString('pt-BR')}
+                    </td>
+                    <td className="py-2.5 px-2 font-bold">
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                        row.atingimento >= 100
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                          : row.atingimento >= 80
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                            : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                      }`}>
+                        {row.atingimento}%
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+              {sortedSetoresComparisonData.length === 0 && (
+                <tr><td colSpan={11} className="py-8 text-slate-500">Nenhum setor encontrado.</td></tr>
+              )}
+            </tbody>
+            {sortedSetoresComparisonData.length > 0 && (
+              <tfoot className="bg-slate-100 dark:bg-slate-950 font-bold border-t-2 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100">
+                <tr>
+                  <td className="py-2.5 px-3 text-left border-r border-slate-200 dark:border-slate-800 uppercase text-[11px] tracking-wider">
+                    Total Consolidado ({sortedSetoresComparisonData.length} setores)
+                  </td>
+                  <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800">{setoresComparisonTotals.comunsCount}</td>
+                  <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800">{setoresComparisonTotals.meninas.toLocaleString('pt-BR')}</td>
+                  <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800">{setoresComparisonTotals.meninos.toLocaleString('pt-BR')}</td>
+                  <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800">{setoresComparisonTotals.mocas.toLocaleString('pt-BR')}</td>
+                  <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800">{setoresComparisonTotals.mocos.toLocaleString('pt-BR')}</td>
+                  <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800 text-sky-700 dark:text-sky-300">{setoresComparisonTotals.subtotal.toLocaleString('pt-BR')}</td>
+                  <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800 text-blue-700 dark:text-blue-400">{setoresComparisonTotals.mocidade.toLocaleString('pt-BR')}</td>
+                  <td className="py-2.5 px-2 border-r border-slate-200 dark:border-slate-800">{setoresComparisonTotals.expectativa.toLocaleString('pt-BR')}</td>
+                  <td className={`py-2.5 px-2 border-r border-slate-200 dark:border-slate-800 ${setoresComparisonTotals.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {setoresComparisonTotals.resultado > 0 ? `+${setoresComparisonTotals.resultado.toLocaleString('pt-BR')}` : setoresComparisonTotals.resultado.toLocaleString('pt-BR')}
+                  </td>
+                  <td className="py-2.5 px-2">
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                      setoresComparisonTotals.atingimento >= 100
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : setoresComparisonTotals.atingimento >= 80
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                          : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
+                    }`}>
+                      {setoresComparisonTotals.atingimento}%
+                    </span>
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
       </div>
 
       {/* Modal de Detalhamento da Tabela do Mês Selecionado */}
