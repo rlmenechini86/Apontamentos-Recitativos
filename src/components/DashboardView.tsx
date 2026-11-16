@@ -186,6 +186,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, [anciaos, userScope, scopedComuns]);
 
   const totalAuxiliares = useMemo(() => {
+    const porComum = new Map<string, ContagemMocidade>();
+    contagens.forEach(c => {
+      if (scopedComumIds.has(c.comum_id) && c.tipo === 'Mocidade' && c.data?.startsWith(currentYear)) {
+        const existing = porComum.get(c.comum_id);
+        if (!existing || new Date(c.data) > new Date(existing.data)) {
+          porComum.set(c.comum_id, c);
+        }
+      }
+    });
+    const sumFromContagens = Array.from(porComum.values()).reduce(
+      (acc, curr) => acc + (Number(curr.auxiliares_mocos) || 0) + (Number(curr.auxiliares_mocas) || 0),
+      0
+    );
+    if (sumFromContagens > 0) return sumFromContagens;
+
     return auxiliares.filter(a => {
       if (!a.ativo || !a.is_auxiliar) return false;
       if (userScope.isComum && userComumId) {
@@ -196,7 +211,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       }
       return true;
     }).length;
-  }, [auxiliares, userScope, userComumId, comuns, setores]);
+  }, [contagens, currentYear, scopedComumIds, auxiliares, userScope, userComumId, comuns, setores]);
 
   // =========================================================================
   // CÁLCULO DOS APONTAMENTOS FALTANTES / PENDENTES COM IDENTIFICAÇÃO DAS DATAS

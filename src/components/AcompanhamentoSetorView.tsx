@@ -176,8 +176,6 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
     [cjmUsuarios]
   );
 
-  const totalAuxiliares = filteredAuxiliares.length;
-
   const contagensAno = filteredContagens.filter(c => c.data.startsWith(selectedYear));
 
   // Para Mocidade e Santa Ceia, se houver múltiplos registros no ano, pegar o mais recente de cada congregação antes de somar.
@@ -190,6 +188,26 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
     });
     return Array.from(porComum.values()).reduce((acc, curr) => acc + curr.quantidade, 0);
   };
+
+  // Total de Auxiliares (Moços + Moças) obtido dos lançamentos de Mocidade do ano selecionado por localidade
+  const totalAuxiliares = useMemo(() => {
+    const porComum = new Map<string, ContagemMocidade>();
+    contagensAno
+      .filter(c => c.tipo === 'Mocidade')
+      .forEach(c => {
+        const existing = porComum.get(c.comum_id);
+        if (!existing || new Date(c.data) > new Date(existing.data)) {
+          porComum.set(c.comum_id, c);
+        }
+      });
+
+    const sumFromContagens = Array.from(porComum.values()).reduce(
+      (acc, curr) => acc + (Number(curr.auxiliares_mocos) || 0) + (Number(curr.auxiliares_mocas) || 0),
+      0
+    );
+
+    return sumFromContagens > 0 ? sumFromContagens : filteredAuxiliares.length;
+  }, [contagensAno, filteredAuxiliares]);
 
   const totalSantaCeia = getLatestSum('Santa Ceia');
   const totalMocidade = getLatestSum('Mocidade');
