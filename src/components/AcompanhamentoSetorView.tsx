@@ -163,7 +163,18 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
 
   // Compute Top Cards Data
   const totalLocalidades = filteredComuns.length;
-  const totalCJM = filteredUsuarios.filter(u => u.ativo && isCjmOrSecretarioCjm(u.cargo_ministerio)).length;
+  const cjmUsuarios = useMemo(
+    () =>
+      filteredUsuarios
+        .filter(u => u.ativo && isCjmOrSecretarioCjm(u.cargo_ministerio))
+        .sort((a, b) => (a.nome_completo || '').localeCompare(b.nome_completo || '', 'pt-BR')),
+    [filteredUsuarios]
+  );
+  const totalCJM = cjmUsuarios.length;
+  const cjmNamesLabel = useMemo(
+    () => cjmUsuarios.map(u => u.nome_completo).filter(Boolean).join(' • '),
+    [cjmUsuarios]
+  );
 
   const totalAuxiliares = filteredAuxiliares.length;
 
@@ -790,9 +801,26 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
           </div>
         </div>
 
-        <div className="bg-slate-500 text-white rounded-xl overflow-hidden shadow-md flex flex-col print:break-inside-avoid">
+        <div
+          className="bg-slate-500 text-white rounded-xl overflow-hidden shadow-md flex flex-col print:break-inside-avoid"
+          title={selectedComumId ? (cjmNamesLabel || 'Sem Cooperador de Jovens cadastrado') : undefined}
+        >
           <div className="p-4 print:p-1 flex-1 flex flex-col justify-center items-center text-center">
-            <span className="text-3xl print:text-xl font-bold">{totalCJM.toLocaleString('pt-BR')}</span>
+            {selectedComumId ? (
+              cjmUsuarios.length > 0 ? (
+                <div className="flex flex-col items-center justify-center gap-0.5 px-1">
+                  {cjmUsuarios.map(u => (
+                    <span key={u.id} className="text-sm sm:text-base print:text-xs font-bold leading-snug">
+                      {u.nome_completo}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-2xl print:text-xl font-bold">-</span>
+              )
+            ) : (
+              <span className="text-3xl print:text-xl font-bold">{totalCJM.toLocaleString('pt-BR')}</span>
+            )}
           </div>
           <div className="bg-slate-800 py-2 text-center text-xs font-bold uppercase tracking-wider">
             CJM
@@ -1109,33 +1137,30 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
               <button
                 type="button"
                 onClick={() => setComparativoModo('expectativa')}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
-                  comparativoModo === 'expectativa'
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${comparativoModo === 'expectativa'
                     ? 'bg-emerald-600 text-white shadow-2xs'
                     : 'text-slate-300 hover:text-white'
-                }`}
+                  }`}
               >
                 Recitativos vs Expectativa
               </button>
               <button
                 type="button"
                 onClick={() => setComparativoModo('categorias')}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
-                  comparativoModo === 'categorias'
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${comparativoModo === 'categorias'
                     ? 'bg-emerald-600 text-white shadow-2xs'
                     : 'text-slate-300 hover:text-white'
-                }`}
+                  }`}
               >
                 Por Categoria
               </button>
               <button
                 type="button"
                 onClick={() => setComparativoModo('efetivo')}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${
-                  comparativoModo === 'efetivo'
+                className={`px-2.5 py-1 text-xs font-semibold rounded-md transition cursor-pointer ${comparativoModo === 'efetivo'
                     ? 'bg-emerald-600 text-white shadow-2xs'
                     : 'text-slate-300 hover:text-white'
-                }`}
+                  }`}
               >
                 Mocidade & Santa Ceia
               </button>
@@ -1367,11 +1392,10 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                         setSelectedComumId('');
                       }
                     }}
-                    className={`transition ${
-                      isSelected
+                    className={`transition ${isSelected
                         ? 'bg-emerald-50/80 dark:bg-emerald-950/30'
                         : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                    } ${!userScope.isSetor && !userScope.isComum ? 'cursor-pointer' : ''}`}
+                      } ${!userScope.isSetor && !userScope.isComum ? 'cursor-pointer' : ''}`}
                     title={!userScope.isSetor && !userScope.isComum ? `Clique para filtrar por ${row.nome}` : row.nome}
                   >
                     <td className="py-2.5 px-3 text-left border-r border-slate-200 dark:border-slate-800 font-bold text-slate-900 dark:text-slate-100">
@@ -1392,13 +1416,12 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                       {row.resultado > 0 ? `+${row.resultado.toLocaleString('pt-BR')}` : row.resultado.toLocaleString('pt-BR')}
                     </td>
                     <td className="py-2.5 px-2 font-bold">
-                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                        row.atingimento >= 100
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${row.atingimento >= 100
                           ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
                           : row.atingimento >= 80
                             ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
                             : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                      }`}>
+                        }`}>
                         {row.atingimento}%
                       </span>
                     </td>
@@ -1427,13 +1450,12 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                     {setoresComparisonTotals.resultado > 0 ? `+${setoresComparisonTotals.resultado.toLocaleString('pt-BR')}` : setoresComparisonTotals.resultado.toLocaleString('pt-BR')}
                   </td>
                   <td className="py-2.5 px-2">
-                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                      setoresComparisonTotals.atingimento >= 100
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${setoresComparisonTotals.atingimento >= 100
                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
                         : setoresComparisonTotals.atingimento >= 80
                           ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
                           : 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300'
-                    }`}>
+                      }`}>
                       {setoresComparisonTotals.atingimento}%
                     </span>
                   </td>
@@ -1673,55 +1695,55 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                     {filteredAndSortedModalRows.map((r) => (
-                        <tr key={r.id} className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                          <td className="py-1.5 px-2 sm:px-2.5 text-left border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap sticky left-0 z-10 bg-white dark:bg-slate-900">
-                            {r.codigo !== '-' && <span className="text-[10px] text-slate-400 font-mono mr-1">{r.codigo}</span>}
-                            {r.nome}
-                          </td>
-                          <td className="py-1.5 px-2 text-left border-r border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 hidden md:table-cell whitespace-nowrap">
-                            {r.setor}
-                          </td>
-                          <td className="py-1.5 px-2 border-r border-slate-200 dark:border-slate-800 text-[11px] whitespace-nowrap">
-                            {r.datas || <span className="text-slate-400 italic">Sem lançamento</span>}
-                          </td>
-                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">{r.meninas.toLocaleString('pt-BR')}</td>
-                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">{r.meninos.toLocaleString('pt-BR')}</td>
-                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">{r.mocas.toLocaleString('pt-BR')}</td>
-                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">{r.mocos.toLocaleString('pt-BR')}</td>
-                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800 font-bold bg-slate-50/70 dark:bg-slate-800/60 text-sky-700 dark:text-sky-300">
-                            {r.subtotal.toLocaleString('pt-BR')}
-                          </td>
-                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-700 dark:text-slate-300 bg-slate-50/40 dark:bg-slate-800/30">
-                            {r.expectativa > 0 ? r.expectativa.toLocaleString('pt-BR') : '-'}
-                          </td>
-                          <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">
-                            {r.expectativa > 0 ? (
-                              r.isAcima ? (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs whitespace-nowrap">
-                                  ▲ {r.diferenca >= 0 ? `+${r.diferenca}` : r.diferenca} (Acima)
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs whitespace-nowrap">
-                                  ▼ {r.diferenca} (Abaixo)
-                                </span>
-                              )
-                            ) : (
-                              <span className="text-[11px] text-slate-400 italic whitespace-nowrap">Sem expectativa</span>
-                            )}
-                          </td>
-                          <td className="py-1.5 px-1.5 sm:px-2">
-                            {r.hasLancement ? (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap">
-                                ✓ Lançado ({r.qtdLancamentos})
+                      <tr key={r.id} className="bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                        <td className="py-1.5 px-2 sm:px-2.5 text-left border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap sticky left-0 z-10 bg-white dark:bg-slate-900">
+                          {r.codigo !== '-' && <span className="text-[10px] text-slate-400 font-mono mr-1">{r.codigo}</span>}
+                          {r.nome}
+                        </td>
+                        <td className="py-1.5 px-2 text-left border-r border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 hidden md:table-cell whitespace-nowrap">
+                          {r.setor}
+                        </td>
+                        <td className="py-1.5 px-2 border-r border-slate-200 dark:border-slate-800 text-[11px] whitespace-nowrap">
+                          {r.datas || <span className="text-slate-400 italic">Sem lançamento</span>}
+                        </td>
+                        <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">{r.meninas.toLocaleString('pt-BR')}</td>
+                        <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">{r.meninos.toLocaleString('pt-BR')}</td>
+                        <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">{r.mocas.toLocaleString('pt-BR')}</td>
+                        <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">{r.mocos.toLocaleString('pt-BR')}</td>
+                        <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800 font-bold bg-slate-50/70 dark:bg-slate-800/60 text-sky-700 dark:text-sky-300">
+                          {r.subtotal.toLocaleString('pt-BR')}
+                        </td>
+                        <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-700 dark:text-slate-300 bg-slate-50/40 dark:bg-slate-800/30">
+                          {r.expectativa > 0 ? r.expectativa.toLocaleString('pt-BR') : '-'}
+                        </td>
+                        <td className="py-1.5 px-1.5 sm:px-2 border-r border-slate-200 dark:border-slate-800">
+                          {r.expectativa > 0 ? (
+                            r.isAcima ? (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs whitespace-nowrap">
+                                ▲ {r.diferenca >= 0 ? `+${r.diferenca}` : r.diferenca} (Acima)
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap">
-                                Pendente
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs whitespace-nowrap">
+                                ▼ {r.diferenca} (Abaixo)
                               </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                            )
+                          ) : (
+                            <span className="text-[11px] text-slate-400 italic whitespace-nowrap">Sem expectativa</span>
+                          )}
+                        </td>
+                        <td className="py-1.5 px-1.5 sm:px-2">
+                          {r.hasLancement ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap">
+                              ✓ Lançado ({r.qtdLancamentos})
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap">
+                              Pendente
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                     {filteredAndSortedModalRows.length === 0 && (
                       <tr>
                         <td colSpan={11} className="py-8 text-center text-slate-400 italic">
@@ -1746,11 +1768,10 @@ export const AcompanhamentoSetorView: React.FC<Props> = ({ comuns: propComuns, u
                         {monthDetailData.expectativaTotal.toLocaleString('pt-BR')}
                       </td>
                       <td className="py-2.5 px-2 border-r border-slate-300 dark:border-slate-700">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap ${
-                          monthDetailData.resultado >= 0 
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700' 
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap ${monthDetailData.resultado >= 0
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
                             : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
-                        }`}>
+                          }`}>
                           {monthDetailData.resultado >= 0 ? `▲ +${monthDetailData.resultado} (Acima)` : `▼ ${monthDetailData.resultado} (Abaixo)`}
                         </span>
                       </td>

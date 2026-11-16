@@ -163,15 +163,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return Object.values(maxPorComum).reduce((a, b) => a + b, 0);
   }, [contagens, currentYear, scopedComumIds]);
 
-  const totalCJM = useMemo(() => {
-    return usuarios.filter(u => {
-      if (!u.ativo) return false;
-      if (userScope.isSetor && !isItemInUserSector(userScope, u, comuns, setores)) return false;
-      if (userScope.isComum && userComumId && u.comum_congregacao_id !== userComumId) return false;
-      const c = (u.cargo_ministerio || '').trim().toLowerCase();
-      return c === 'cjm' || c === 'secretário / cjm' || c === 'secretario / cjm';
-    }).length;
+  const cjmUsuarios = useMemo(() => {
+    return usuarios
+      .filter(u => {
+        if (!u.ativo) return false;
+        if (userScope.isSetor && !isItemInUserSector(userScope, u, comuns, setores)) return false;
+        if (userScope.isComum && userComumId && u.comum_congregacao_id !== userComumId) return false;
+        const c = (u.cargo_ministerio || '').trim().toLowerCase();
+        return c === 'cjm' || c === 'secretário / cjm' || c === 'secretario / cjm';
+      })
+      .sort((a, b) => (a.nome_completo || '').localeCompare(b.nome_completo || '', 'pt-BR'));
   }, [usuarios, userScope, userComumId, comuns, setores]);
+
+  const totalCJM = cjmUsuarios.length;
 
   const totalAnciaos = useMemo(() => {
     if (userScope.isComum || userScope.isSetor) {
@@ -295,8 +299,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return filteredComuns.map(comum => {
       const datasFaltando = relevantSundays.filter(sunday => !isComumPresenteNaSemana(sunday, comum.id));
 
-      const responsavel = usuarios.find(u => 
-        u.id === comum.secretario_id || 
+      const responsavel = usuarios.find(u =>
+        u.id === comum.secretario_id ||
         (u.comum_congregacao_id === comum.id && (u.cargo_ministerio?.toLowerCase().includes('cjm') || u.cargo_ministerio?.toLowerCase().includes('secretário')))
       );
 
@@ -409,9 +413,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onClick={() => {
             if (hasPermission(user, 'gerenciar_comuns')) onNavigate('admin-comuns');
           }}
-          className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs transition group ${
-            hasPermission(user, 'gerenciar_comuns') ? 'hover:border-emerald-400 dark:hover:border-emerald-500/40 cursor-pointer' : ''
-          }`}
+          className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs transition group ${hasPermission(user, 'gerenciar_comuns') ? 'hover:border-emerald-400 dark:hover:border-emerald-500/40 cursor-pointer' : ''
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -450,21 +453,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Card 2: Apontamentos Faltantes (Destaque Alerta) */}
         <div
           onClick={() => onNavigate('controle-apontamentos')}
-          className={`border rounded-xl p-5 shadow-xs transition group cursor-pointer ${
-            totalApontamentosFaltantes > 0
+          className={`border rounded-xl p-5 shadow-xs transition group cursor-pointer ${totalApontamentosFaltantes > 0
               ? 'bg-rose-50/60 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/50 hover:border-rose-400'
               : 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/50 hover:border-emerald-400'
-          }`}
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400">
               Apontamentos Faltando
             </span>
-            <div className={`w-9 h-9 rounded-lg flex items-center justify-center border group-hover:scale-105 transition ${
-              totalApontamentosFaltantes > 0
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center border group-hover:scale-105 transition ${totalApontamentosFaltantes > 0
                 ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/30'
                 : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
-            }`}>
+              }`}>
               <AlertTriangle className="w-5 h-5" />
             </div>
           </div>
@@ -481,7 +482,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Card 3: Total Mocidade */}
-        <div 
+        <div
           onClick={() => onNavigate('apontamentos-contagens')}
           className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs hover:border-blue-400 dark:hover:border-blue-500/40 transition cursor-pointer group"
         >
@@ -503,7 +504,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Card 4: Santa Ceia */}
-        <div 
+        <div
           onClick={() => onNavigate('apontamentos-contagens')}
           className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs hover:border-purple-400 dark:hover:border-purple-500/40 transition cursor-pointer group"
         >
@@ -528,14 +529,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              CJM Ativos
+              {isRestrictedComum ? 'CJM' : 'CJM Ativos'}
             </span>
             <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3 flex items-baseline space-x-2">
-            <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{totalCJM}</span>
+            {isRestrictedComum && cjmUsuarios.length > 0 ? (
+              <span className="text-base font-extrabold text-slate-900 dark:text-white truncate" title={cjmUsuarios.map(u => u.nome_completo).join(' / ')}>
+                {cjmUsuarios.map(u => u.nome_completo).join(' / ')}
+              </span>
+            ) : (
+              <span className="text-3xl font-extrabold text-slate-900 dark:text-white">{totalCJM}</span>
+            )}
           </div>
         </div>
 
@@ -575,11 +582,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base flex items-center space-x-2">
                   <span>Apontamentos Faltando ser Realizados</span>
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
-                    totalApontamentosFaltantes > 0
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${totalApontamentosFaltantes > 0
                       ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800'
                       : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-                  }`}>
+                    }`}>
                     {totalApontamentosFaltantes} {totalApontamentosFaltantes === 1 ? 'pendência' : 'pendências'}
                   </span>
                 </h3>
